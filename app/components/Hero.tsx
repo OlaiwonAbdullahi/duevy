@@ -23,7 +23,7 @@ export default function Hero() {
         </span>
       </div>
 
-      <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] tracking-tight mb-6 max-w-4xl">
+      <h1 className="text-[2.6rem] sm:text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] tracking-tight mb-6 max-w-4xl">
         University dues,
         <br />
         <span className="text-[#10B981]">finally simplified.</span>
@@ -37,18 +37,18 @@ export default function Hero() {
 
       <div className="w-full max-w-md">
         {!submitted ? (
-          <form onSubmit={handleSubmit} className="flex gap-0">
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-0">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your university email"
               required
-              className="flex-1 bg-black/[0.03] border border-black/[0.12] border-r-0 px-4 py-3.5 text-sm text-[#0f172a] placeholder:text-black/30 outline-none focus:border-[#10B981] transition-all"
+              className="flex-1 bg-black/[0.03] border border-black/[0.12] sm:border-r-0 px-4 py-3.5 text-sm text-[#0f172a] placeholder:text-black/30 outline-none focus:border-[#10B981] transition-all"
             />
             <button
               type="submit"
-              className="bg-[#10B981] text-white px-6 py-3.5 text-sm font-bold tracking-wide flex items-center gap-2 hover:bg-[#0ea572] transition-colors whitespace-nowrap"
+              className="bg-[#10B981] text-white px-6 py-3.5 text-sm font-bold tracking-wide flex items-center justify-center gap-2 hover:bg-[#0ea572] transition-colors whitespace-nowrap"
             >
               Join Waitlist
               <ArrowRightIcon size={16} />
