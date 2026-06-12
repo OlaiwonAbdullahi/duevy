@@ -15,7 +15,14 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative z-10 px-6 md:px-12 pt-24 pb-20 max-w-6xl mx-auto flex flex-col items-center text-center">
+    <section
+      className="relative z-10 px-6 md:px-12 pt-24 pb-20 max-w-6xl mx-auto flex flex-col items-center text-center"
+      style={{
+        backgroundImage:
+          "radial-gradient(circle, rgba(16,185,129,0.12) 1px, transparent 1px)",
+        backgroundSize: "28px 28px",
+      }}
+    >
       <div className="inline-flex items-center gap-2 border border-[#10B981]/30 bg-[#10B981]/[0.05] px-4 py-2 mb-10">
         <span className="text-xs font-semibold tracking-[0.15em] uppercase text-[#10B981] flex items-center gap-1.5">
           We&apos;re building something big
