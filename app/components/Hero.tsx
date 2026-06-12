@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { ArrowRightIcon, CheckIcon } from "./icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PartyIcon } from "@hugeicons/core-free-icons";
 
 export default function Hero() {
   const [email, setEmail] = useState("");
@@ -17,37 +19,7 @@ export default function Hero() {
       <div className="inline-flex items-center gap-2 border border-[#10B981]/30 bg-[#10B981]/[0.05] px-4 py-2 mb-10">
         <span className="text-xs font-semibold tracking-[0.15em] uppercase text-[#10B981] flex items-center gap-1.5">
           We&apos;re building something big
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M4 4l2 2M8 2v3M2 8h3"
-              stroke="#10B981"
-              strokeWidth="1.8"
-              strokeLinecap="square"
-            />
-            <path
-              d="M7 13l8 8"
-              stroke="#10B981"
-              strokeWidth="1.8"
-              strokeLinecap="square"
-            />
-            <path
-              d="M11 9l4 4-6 6-4-4 6-6z"
-              fill="#10B981"
-              fillOpacity="0.2"
-              stroke="#10B981"
-              strokeWidth="1.8"
-              strokeLinejoin="miter"
-            />
-            <circle cx="19" cy="5" r="1.5" fill="#10B981" fillOpacity="0.5" />
-            <circle cx="21" cy="10" r="1" fill="#10B981" fillOpacity="0.3" />
-            <circle cx="15" cy="3" r="1" fill="#10B981" fillOpacity="0.4" />
-          </svg>
+          <HugeiconsIcon icon={PartyIcon} size={14} color="#10B981" strokeWidth={1.8} />
         </span>
       </div>
 
