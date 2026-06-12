@@ -15,15 +15,77 @@ const bricolageGrotesque = Bricolage_Grotesque({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+const BASE_URL = "https://duevy.app";
+
 export const metadata: Metadata = {
-  title: "Duevy — University Payments, Simplified",
+  metadataBase: new URL(BASE_URL),
+
+  title: {
+    default: "Duevy — University Payments, Simplified",
+    template: "%s | Duevy",
+  },
   description:
-    "The all-in-one payment platform for Nigerian university students. Pay dues, handouts, and departmental fees instantly — no more WhatsApp chasing.",
+    "Duevy is the digital payment layer for university students — pay dues, handouts, and departmental fees instantly.",
+  keywords: [
+    "university payments Nigeria",
+    "student dues payment",
+    "departmental fees",
+    "Nigerian university fintech",
+    "course rep payments",
+    "university payment app",
+    "duevy",
+  ],
+  authors: [{ name: "Duevy", url: BASE_URL }],
+  creator: "Duevy",
+  publisher: "Duevy",
+  category: "fintech",
+
   openGraph: {
-    title: "Duevy",
-    description: "University payments, finally simplified.",
-    url: "https://duevy.app",
+    type: "website",
+    url: BASE_URL,
     siteName: "Duevy",
+    title: "Duevy — University Payments, Simplified",
+    description:
+      "Pay university dues, handouts, and departmental fees instantly with Duevy.",
+    images: [
+      {
+        url: "/ogimage.png",
+        width: 1200,
+        height: 630,
+        alt: "Duevy — University payments, finally simplified.",
+      },
+    ],
+    locale: "en_NG",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    site: "@duevyapp",
+    creator: "@duevyapp",
+    title: "Duevy — University Payments, Simplified",
+    description:
+      "Pay university dues, handouts, and departmental fees instantly with Duevy.",
+    images: ["/ogimage.png"],
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
+
+  alternates: {
+    canonical: BASE_URL,
   },
 };
 
