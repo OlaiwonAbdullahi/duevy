@@ -77,3 +77,51 @@ export const CheckIcon = ({ size = 14, className = "" }: IconProps) => (
     <path d="M4 12L9 17L20 6"/>
   </svg>
 );
+
+export const CloseIcon = ({ size = 14, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M18 6L6 18"/>
+    <path d="M6 6L18 18"/>
+  </svg>
+);
+
+export const EyeIcon = ({ size = 24, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>
+    <path d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"/>
+    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"/>
+  </svg>
+);
+
+export const BellIcon = ({ size = 24, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>
+    <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"/>
+    <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21"/>
+  </svg>
+);
+
+export const LinkIcon = ({ size = 24, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>
+    <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.4579 20.4791 3.52091C19.5521 2.58392 18.298 2.05798 16.987 2.04656C15.676 2.03514 14.413 2.53916 13.47 3.45L11.75 5.16"/>
+    <path d="M14 11C13.5705 10.4259 13.0226 9.95083 12.3934 9.60705C11.7643 9.26327 11.0685 9.05885 10.3533 9.00763C9.63819 8.95641 8.92037 9.05961 8.24861 9.31018C7.57685 9.56074 6.96684 9.95296 6.46 10.46L3.46 13.46C2.54916 14.403 2.04514 15.6661 2.05656 16.977C2.06798 18.288 2.59392 19.5421 3.52091 20.4791C4.4479 21.4161 5.702 21.942 7.013 21.9534C8.32399 21.9649 9.587 21.4608 10.53 20.55L12.24 18.84"/>
+  </svg>
+);
+
+export const ArrowDownIcon = ({ size = 20, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" className={className}>
+    <path d="M12 5V19"/>
+    <path d="M19 12L12 19L5 12"/>
+  </svg>
+);
+
+export const MinusIcon = ({ size = 20, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" className={className}>
+    <path d="M5 12H19"/>
+  </svg>
+);
+
+export const PlusIcon = ({ size = 20, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" className={className}>
+    <path d="M12 5V19"/>
+    <path d="M5 12H19"/>
+  </svg>
+);

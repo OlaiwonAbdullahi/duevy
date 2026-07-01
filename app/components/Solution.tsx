@@ -1,48 +1,38 @@
-import { WalletIcon, ShieldIcon, EyeIcon, ReceiptIcon, BuildingIcon } from "./icons";
+import { WalletIcon, EyeIcon, ShieldIcon } from "./icons";
 
-const features = [
+const blocks = [
   {
     icon: WalletIcon,
-    title: "Wallet top-up & spend",
-    body: "Fund once, pay for anything on your department's list.",
-  },
-  {
-    icon: ShieldIcon,
-    title: "Approval-based payouts",
-    body: "Funds release only after a quorum of students or execs approve.",
+    title: "Wallet-based collection",
+    body: "Students top up their Duevy wallet, then pay dues, levies, and fees in seconds. No chasing transfers or counting cash.",
   },
   {
     icon: EyeIcon,
-    title: "Live payment tracking",
-    body: "See who has paid, who hasn't, and send reminders in one tap.",
+    title: "Transparent by default",
+    body: "Every student sees what was collected, who has paid, and what the money was spent on. No more “trust me.”",
   },
   {
-    icon: ReceiptIcon,
-    title: "Automatic receipts",
-    body: "Every payment generates proof for both student and rep.",
-  },
-  {
-    icon: BuildingIcon,
-    title: "Multi-school ready",
-    body: "Built to run across departments, faculties, and campuses.",
+    icon: ShieldIcon,
+    title: "Reps stay accountable",
+    body: "Payouts need approval from a quorum before funds are released. The rep can't move money alone, and nobody can accuse them of it.",
   },
 ];
 
-export default function Features() {
+export default function Solution() {
   return (
-    <section id="pricing" className="bg-[#e6f2ec] px-6 md:px-12 py-24">
+    <section className="bg-[#e6f2ec] px-6 md:px-12 py-24">
       <div className="max-w-[1280px] mx-auto">
         <div className="max-w-2xl mb-16">
           <span className="inline-flex items-center bg-[#fbfaf7] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
-            Features
+            What Duevy does
           </span>
           <h2 className="text-[#1b2520] font-semibold tracking-tight text-3xl md:text-4xl leading-tight">
-            The whole platform, in plain words.
+            Three ways Duevy keeps campus money clean.
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map(({ icon: Icon, title, body }) => (
+        <div className="grid md:grid-cols-3 gap-6">
+          {blocks.map(({ icon: Icon, title, body }) => (
             <div
               key={title}
               className="bg-[#fbfaf7] rounded-3xl border border-[#e6f2ec] p-6 flex flex-col"

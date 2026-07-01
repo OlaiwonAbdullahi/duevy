@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { DM_Sans, Bricolage_Grotesque } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import SmoothScroll from "./components/SmoothScroll";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const bricolageGrotesque = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
@@ -21,18 +16,18 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: "Duevy — University Payments, Simplified",
+    default: "Duevy — Collect dues. Track every kobo. No wahala.",
     template: "%s | Duevy",
   },
   description:
-    "Duevy is the digital payment layer for university students — pay dues, handouts, and departmental fees instantly.",
+    "Duevy gives Nigerian campus reps a wallet-based way to collect dues, levies, and payments — while every student sees exactly where their money went.",
   keywords: [
-    "university payments Nigeria",
+    "campus dues collection Nigeria",
     "student dues payment",
-    "departmental fees",
+    "departmental levies",
     "Nigerian university fintech",
     "course rep payments",
-    "university payment app",
+    "class rep wallet",
     "duevy",
   ],
   authors: [{ name: "Duevy", url: BASE_URL }],
@@ -44,15 +39,15 @@ export const metadata: Metadata = {
     type: "website",
     url: BASE_URL,
     siteName: "Duevy",
-    title: "Duevy — University Payments, Simplified",
+    title: "Duevy — Collect dues. Track every kobo. No wahala.",
     description:
-      "Pay university dues, handouts, and departmental fees instantly with Duevy.",
+      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
     images: [
       {
         url: "/ogimage.png",
-        width: 1200,
-        height: 630,
-        alt: "Duevy — University payments, finally simplified.",
+        width: 1352,
+        height: 648,
+        alt: "Duevy — Campus dues, made transparent.",
       },
     ],
     locale: "en_NG",
@@ -62,9 +57,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@duevyapp",
     creator: "@duevyapp",
-    title: "Duevy — University Payments, Simplified",
+    title: "Duevy — Collect dues. Track every kobo. No wahala.",
     description:
-      "Pay university dues, handouts, and departmental fees instantly with Duevy.",
+      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
     images: ["/ogimage.png"],
   },
 
@@ -95,8 +90,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full antialiased", dmSans.variable, bricolageGrotesque.variable)}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={cn("h-full antialiased", manrope.variable)}>
+      <body className="min-h-full flex flex-col">
+        <SmoothScroll />
+        {children}
+      </body>
     </html>
   );
 }

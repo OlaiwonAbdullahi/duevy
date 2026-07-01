@@ -1,8 +1,13 @@
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import Ticker from "./components/Ticker";
-import HowItWorks from "./components/HowItWorks";
+import TrustBar from "./components/TrustBar";
+import Problem from "./components/Problem";
+import Solution from "./components/Solution";
+import Personas from "./components/Personas";
 import Features from "./components/Features";
+import HowItWorks from "./components/HowItWorks";
+import Stats from "./components/Stats";
+import FAQ from "./components/FAQ";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 
@@ -12,7 +17,7 @@ const jsonLd = {
   name: "Duevy",
   url: "https://duevy.app",
   description:
-    "The digital payment layer for university students. Pay dues, handouts, and departmental fees instantly.",
+    "A wallet-based way for Nigerian campus reps to collect dues and levies transparently — every student sees where their money went.",
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
   offers: {
@@ -36,12 +41,17 @@ export default function Page() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="min-h-screen bg-[#faf9f5] overflow-x-hidden">
+      <main className="min-h-screen bg-[#fbfaf7]">
         <Navbar />
         <Hero />
-        <Ticker />
-        <HowItWorks />
+        <TrustBar />
+        <Problem />
+        {/* <Solution /> */}
+        <Personas />
         <Features />
+        <HowItWorks />
+        <Stats />
+        <FAQ />
         <CTA />
         <Footer />
       </main>

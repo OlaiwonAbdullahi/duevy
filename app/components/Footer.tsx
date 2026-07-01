@@ -1,48 +1,74 @@
-import { MailIcon, XIcon, InstagramIcon } from "./icons";
+const columns = [
+  {
+    title: "Product",
+    links: ["How it works", "Pricing", "Demo"],
+  },
+  {
+    title: "Audience",
+    links: ["For Reps", "For Students", "For Departments"],
+  },
+  {
+    title: "Company",
+    links: ["About", "Contact", "Career"],
+  },
+  {
+    title: "Legal",
+    links: ["Privacy", "Terms", "NDPR"],
+  },
+];
 
 export default function Footer() {
   return (
-    <footer className="bg-[#faf9f5] border-t border-[#e5e7eb] px-6 md:px-12 py-8">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 text-center md:text-left">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <h2 className="font-semibold text-[#030c0a] text-sm">Duevy</h2>
-          <span className="text-[#374151]/30 text-xs">·</span>
-          <span className="text-[#374151]/50 text-xs">duevy.app</span>
+    <footer className="bg-[#fbfaf7] border-t border-[#e6f2ec] px-6 md:px-12 pt-20 pb-10">
+      <div className="max-w-[1280px] mx-auto">
+        <div className="grid gap-12 lg:grid-cols-[1.5fr_2fr]">
+          {/* Brand */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-8 h-8 rounded-full bg-[#0b6e4f] text-white grid place-items-center font-bold text-lg">
+                D
+              </span>
+              <span className="text-[#1b2520] font-bold text-xl tracking-tight">
+                Duevy
+              </span>
+            </div>
+            <p className="text-[#7a847f] text-base leading-relaxed max-w-xs">
+              Campus dues, made transparent.
+            </p>
+          </div>
+
+          {/* Link columns */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
+            {columns.map((col) => (
+              <div key={col.title}>
+                <p className="text-[#1b2520] font-semibold text-sm mb-4">
+                  {col.title}
+                </p>
+                <ul className="flex flex-col gap-3">
+                  {col.links.map((link) => (
+                    <li key={link}>
+                      <a
+                        href="#"
+                        className="text-[#7a847f] text-[15px] font-medium hover:text-[#1b2520] transition-colors duration-300 cursor-pointer"
+                      >
+                        {link}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Links — navigation-item style */}
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-[#374151]">
-          <a
-            href="mailto:useduevy@gmail.com"
-            className="flex items-center gap-1.5 hover:text-[#10b981] transition-all cursor-pointer"
-          >
-            <MailIcon size={14} />
-            useduevy@gmail.com
-          </a>
-          <a
-            href="https://x.com/duevyapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-[#10b981] transition-all cursor-pointer"
-          >
-            <XIcon size={14} />
-            @duevyapp
-          </a>
-          <a
-            href="https://instagram.com/duevyapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-[#10b981] transition-all cursor-pointer"
-          >
-            <InstagramIcon size={14} />
-            @duevyapp
-          </a>
+        <div className="mt-16 pt-8 border-t border-[#e6f2ec] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-[#7a847f] text-sm text-center sm:text-left">
+            © 2026 Duevy · Built for Nigerian campuses
+          </p>
+          <span className="inline-flex items-center bg-[#e6f2ec] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1">
+            NDPR-compliant by design
+          </span>
         </div>
-
-        <p className="text-xs text-[#374151]/40">
-          © 2026 Duevy. Built for Nigerian students.
-        </p>
       </div>
     </footer>
   );

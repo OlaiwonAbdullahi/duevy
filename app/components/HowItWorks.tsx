@@ -1,57 +1,59 @@
-import { BuildingIcon, WalletIcon, ReceiptIcon } from "./icons";
-
 const steps = [
   {
     number: "01",
-    icon: BuildingIcon,
-    title: "Rep sets up department",
-    description:
-      "Course rep creates a department account, adds their team, and configures payment categories — dues, handouts, levies, and more.",
+    title: "Rep sets up their dept",
+    body: "Names it (e.g. “200L CSC Department”), sets the team and roles.",
   },
   {
     number: "02",
-    icon: WalletIcon,
-    title: "Students fund their wallet",
-    description:
-      "Students create an account, fund their Duevy wallet once, and access every active payment in their department from one dashboard.",
+    title: "Students get the link",
+    body: "Shared on WhatsApp or the class group. No app to install to pay.",
   },
   {
     number: "03",
-    icon: ReceiptIcon,
-    title: "Pay once, done forever",
-    description:
-      "One tap to pay. Instant receipt. Automatic confirmation to the rep. No WhatsApp, no forms, no bank transfers.",
+    title: "Students top up & pay",
+    body: "Fund the Duevy wallet, pay in seconds, get an instant receipt.",
+  },
+  {
+    number: "04",
+    title: "Payout needs approval",
+    body: "When the rep wants to spend, a quorum of students approves first.",
+  },
+  {
+    number: "05",
+    title: "Money moves, cleanly",
+    body: "Funds release to the verified destination. Full trail kept for handover.",
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section className="bg-[#f9fafb] px-6 md:px-12 py-20">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-12">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#10b981] mb-3">How it works</p>
-          {/* display-lg */}
-          <h2 className="text-[36px] md:text-[48px] font-bold leading-[1.2] text-[#030c0a]">
-            From chaos to clarity —<br className="hidden md:block" /> in three steps.
+    <section id="how-it-works" className="bg-[#fbfaf7] px-6 md:px-12 py-24">
+      <div className="max-w-[1280px] mx-auto">
+        <div className="max-w-2xl mb-16">
+          <span className="inline-flex items-center bg-[#e6f2ec] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
+            How it works
+          </span>
+          <h2 className="text-[#1b2520] font-semibold tracking-tight text-3xl md:text-4xl leading-tight">
+            One simple flow, from set-up to settled.
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5">
-          {steps.map(({ number, icon: Icon, title, description }) => (
+        <div className="grid gap-4">
+          {steps.map((step, i) => (
             <div
-              key={number}
-              className="bg-white border border-[#e5e7eb] rounded-2xl p-6 hover:border-[#10b981]/40 transition-all"
+              key={step.number}
+              className="bg-[#fbfaf7] rounded-3xl border border-[#e6f2ec] p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8"
             >
-              <div className="flex items-start justify-between mb-5">
-                <div className="w-10 h-10 bg-[#f0fdfa] border border-[#10b981]/20 rounded-xl flex items-center justify-center">
-                  <Icon size={20} className="text-[#10b981]" />
-                </div>
-                <span className="text-3xl font-bold text-[#030c0a]/[0.06]">{number}</span>
+              <div className="flex items-center gap-4 sm:w-72 shrink-0">
+                <span className="w-12 h-12 rounded-full bg-[#0b6e4f] text-white grid place-items-center font-semibold text-lg shrink-0">
+                  {i + 1}
+                </span>
+                <h3 className="text-[#1b2520] font-semibold text-lg leading-tight">
+                  {step.title}
+                </h3>
               </div>
-              {/* display-sm */}
-              <h3 className="text-[20px] font-semibold leading-[1.3] text-[#030c0a] mb-2">{title}</h3>
-              {/* body-md */}
-              <p className="text-base font-normal leading-[1.6] text-[#374151]">{description}</p>
+              <p className="text-[#7a847f] text-base leading-relaxed">{step.body}</p>
             </div>
           ))}
         </div>
