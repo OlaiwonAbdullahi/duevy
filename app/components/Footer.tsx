@@ -25,9 +25,6 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-8 h-8 rounded-full bg-[#0b6e4f] text-white grid place-items-center font-bold text-lg">
-                D
-              </span>
               <span className="text-[#1b2520] font-bold text-xl tracking-tight">
                 Duevy
               </span>
