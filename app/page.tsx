@@ -50,7 +50,9 @@ export default function Page() {
         <Personas />
         <Features />
         <HowItWorks />
+        {/*
         <Stats />
+        */}
         <FAQ />
         <CTA />
         <Footer />

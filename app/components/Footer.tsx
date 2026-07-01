@@ -13,7 +13,7 @@ const columns = [
   },
   {
     title: "Legal",
-    links: ["Privacy", "Terms", "NDPR"],
+    links: ["Privacy", "Terms"],
   },
 ];
 
@@ -65,9 +65,7 @@ export default function Footer() {
           <p className="text-[#7a847f] text-sm text-center sm:text-left">
             © 2026 Duevy · Built for Nigerian campuses
           </p>
-          <span className="inline-flex items-center bg-[#e6f2ec] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1">
-            NDPR-compliant by design
-          </span>
+          <div className=""></div>
         </div>
       </div>
     </footer>

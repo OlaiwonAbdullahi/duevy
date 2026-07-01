@@ -1,28 +1,35 @@
-import { WalletIcon, ShieldIcon, EyeIcon, ReceiptIcon, BuildingIcon } from "./icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Wallet01Icon,
+  SecurityCheckIcon,
+  Analytics01Icon,
+  Invoice01Icon,
+  Building03Icon,
+} from "@hugeicons/core-free-icons";
 
 const features = [
   {
-    icon: WalletIcon,
+    icon: Wallet01Icon,
     title: "Wallet top-up & spend",
     body: "Fund once, pay for anything on your department's list.",
   },
   {
-    icon: ShieldIcon,
+    icon: SecurityCheckIcon,
     title: "Approval-based payouts",
     body: "Funds release only after a quorum of students or execs approve.",
   },
   {
-    icon: EyeIcon,
+    icon: Analytics01Icon,
     title: "Live payment tracking",
     body: "See who has paid, who hasn't, and send reminders in one tap.",
   },
   {
-    icon: ReceiptIcon,
+    icon: Invoice01Icon,
     title: "Automatic receipts",
     body: "Every payment generates proof for both student and rep.",
   },
   {
-    icon: BuildingIcon,
+    icon: Building03Icon,
     title: "Multi-school ready",
     body: "Built to run across departments, faculties, and campuses.",
   },
@@ -48,7 +55,7 @@ export default function Features() {
               className="bg-[#fbfaf7] rounded-3xl border border-[#e6f2ec] p-6 flex flex-col"
             >
               <span className="w-12 h-12 rounded-full bg-[#e6f2ec] text-[#0b6e4f] grid place-items-center mb-6">
-                <Icon size={22} className="text-[#0b6e4f]" />
+                <HugeiconsIcon icon={Icon} size={22} className="text-[#0b6e4f]" />
               </span>
               <h3 className="text-[#1b2520] font-semibold text-lg mb-3">{title}</h3>
               <p className="text-[#7a847f] text-base leading-relaxed">{body}</p>

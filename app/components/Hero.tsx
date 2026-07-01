@@ -8,7 +8,7 @@ export default function Hero() {
       <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
         <span className="inline-flex items-center  text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
           <HugeiconsIcon icon={CheckCircle} size={16} className="mr-1" />
-          Built for Nigerian campus reps and students
+          Built for campus reps and students
         </span>
 
         <h1 className="text-[#1b2520] font-semibold tracking-tight text-[2.25rem] sm:text-5xl lg:text-[3.75rem] leading-[1.05] mb-6">
