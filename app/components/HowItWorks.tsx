@@ -67,7 +67,7 @@ export default function HowItWorks() {
       className="relative bg-[#fbfaf7]"
       style={{ height: `${steps.length * 100}vh` }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center py-20 md:py-24">
+      <div className="sticky top-0  overflow-hidden flex flex-col justify-center py-20 md:py-24">
         {/* Header */}
         <div className="px-6 md:px-12 mb-10 shrink-0">
           <span className="inline-flex items-center bg-[#e6f2ec] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-4">

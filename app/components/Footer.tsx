@@ -20,13 +20,13 @@ const columns = [
 export default function Footer() {
   return (
     <footer className="bg-[#fbfaf7] border-t border-[#e6f2ec] px-6 md:px-12 pt-20 pb-10">
-      <div className="max-w-[1280px] mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="grid gap-12 lg:grid-cols-[1.5fr_2fr]">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[#1b2520] font-bold text-xl tracking-tight">
-                Duevy
+              <span className="text-[#1b2520] text-xl tracking-tight">
+                Duevy.
               </span>
             </div>
             <p className="text-[#7a847f] text-base leading-relaxed max-w-xs">

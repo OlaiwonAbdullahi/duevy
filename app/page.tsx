@@ -8,8 +8,10 @@ import Features from "./components/Features";
 import HowItWorks from "./components/HowItWorks";
 import Stats from "./components/Stats";
 import FAQ from "./components/FAQ";
+import Pricing from "./components/Pricing";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
+import Reveal from "./components/Reveal";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -43,19 +45,40 @@ export default function Page() {
       />
       <main className="min-h-screen bg-[#fbfaf7]">
         <Navbar />
-        <Hero />
-        <TrustBar />
-        <Problem />
+        <Reveal>
+          <Hero />
+        </Reveal>
+        <Reveal>
+          <TrustBar />
+        </Reveal>
+        <Reveal>
+          <Problem />
+        </Reveal>
         {/* <Solution /> */}
-        <Personas />
-        <Features />
-        <HowItWorks />
+        <Reveal>
+          <Personas />
+        </Reveal>
+        <Reveal>
+          <Features />
+        </Reveal>
+        <Reveal>
+          <HowItWorks />
+        </Reveal>
         {/*
         <Stats />
         */}
-        <FAQ />
-        <CTA />
-        <Footer />
+        <Reveal>
+          <FAQ />
+        </Reveal>
+        <Reveal>
+          <Pricing />
+        </Reveal>
+        <Reveal>
+          <CTA />
+        </Reveal>
+        <Reveal>
+          <Footer />
+        </Reveal>
       </main>
     </>
   );
