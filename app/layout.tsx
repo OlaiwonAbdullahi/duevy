@@ -3,6 +3,8 @@ import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import SmoothScroll from "./components/SmoothScroll";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -90,10 +92,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full antialiased", manrope.variable)}>
+    <html
+      lang="en"
+      className={cn("h-full antialiased", manrope.variable)}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
-        <SmoothScroll />
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SmoothScroll />
+          {children}
+          <Toaster position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

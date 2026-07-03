@@ -1,0 +1,122 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Logout01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
+import type { NavGroup } from "./nav-config";
+
+function isActive(pathname: string, href: string) {
+  // Exact match for the section root, prefix match for its sub-routes.
+  if (href === "/dashboard" || href === "/admin") return pathname === href;
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+type SidebarProps = {
+  groups: NavGroup[];
+  /** Small label under the wordmark, e.g. the current area or role. */
+  subtitle?: string;
+  /** Mobile drawer state. */
+  open: boolean;
+  onClose: () => void;
+};
+
+export default function Sidebar({
+  groups,
+  subtitle,
+  open,
+  onClose,
+}: SidebarProps) {
+  const pathname = usePathname();
+
+  return (
+    <>
+      {/* Mobile backdrop */}
+      <div
+        onClick={onClose}
+        aria-hidden
+        className={cn(
+          "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
+          open ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-cloud bg-canvas transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        {/* Brand */}
+        <div className="flex items-center justify-between px-6 h-18">
+          <Link href="/dashboard" className="flex flex-col cursor-pointer">
+            <span className="text-ink text-lg tracking-tight leading-none">
+              Duevy.
+            </span>
+            {subtitle && (
+              <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-ink-soft">
+                {subtitle}
+              </span>
+            )}
+          </Link>
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="lg:hidden grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} size={18} />
+          </button>
+        </div>
+
+        {/* Nav groups */}
+        <nav className="flex-1 overflow-y-auto px-4 py-4">
+          {groups.map((group, i) => (
+            <div key={group.title ?? i} className={cn(i > 0 && "mt-8")}>
+              {group.title && (
+                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                  {group.title}
+                </p>
+              )}
+              <ul className="flex flex-col ">
+                {group.links.map((link) => {
+                  const active = isActive(pathname, link.href);
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        onClick={onClose}
+                        className={cn(
+                          "group flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-colors duration-300 cursor-pointer",
+                          active
+                            ? "bg-cloud text-brand"
+                            : "text-ink-soft hover:bg-paper hover:text-ink",
+                        )}
+                      >
+                        <HugeiconsIcon
+                          icon={link.icon}
+                          size={18}
+                          strokeWidth={active ? 2 : 1.5}
+                          className="shrink-0"
+                        />
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Sign out */}
+        <div className="border-t border-cloud p-4">
+          <button className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer">
+            <HugeiconsIcon icon={Logout01Icon} size={18} className="shrink-0" />
+            Sign out
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}

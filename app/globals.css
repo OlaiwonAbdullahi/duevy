@@ -85,6 +85,16 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+
+  /* Guild brand tokens as Tailwind colors (theme-aware, flip in dark) */
+  --color-canvas: var(--p-canvas);
+  --color-paper: var(--p-paper);
+  --color-cloud: var(--p-cloud);
+  --color-hairline: var(--p-hairline);
+  --color-ink: var(--p-ink);
+  --color-ink-soft: var(--p-ink-soft);
+  --color-brand: var(--p-primary);
+  --color-brand-bright: var(--p-primary-bright);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -136,6 +146,15 @@ h1, h2, h3, h4, h5, h6 {
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+/* Scrollable but with no visible scrollbar (used on modals). */
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @keyframes ticker {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -161,6 +180,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dark {
+  /* Guild brand tokens — dark scheme */
+  --p-primary: #0f996d;
+  --p-primary-bright: #14b581;
+  --p-primary-deep: #0b6e4f;
+  --p-on-primary: #ffffff;
+  --p-ink: #eef1ef;
+  --p-ink-soft: #97a29d;
+  --p-canvas: #0e1411;
+  --p-paper: #171f1b;
+  --p-cloud: #24312b;
+  --p-hairline: #24312b;
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
