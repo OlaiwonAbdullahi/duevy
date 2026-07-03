@@ -36,3 +36,6 @@ export type Due = {
 };
 
 export type EmblemHue = "emerald" | "indigo" | "amber" | "rose" | "slate";
+
+/** How a due gets settled from the pay modal. */
+export type PayMethod = "wallet" | "card" | "online";

@@ -3,6 +3,7 @@ import {
   CheckmarkCircle02Icon,
   Alert01Icon,
   Clock01Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import type { Due } from "./types";
 import {
@@ -16,17 +17,45 @@ export function DueRow({
   due,
   onPay,
   pending,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }: {
   due: Due;
-  onPay: (due: Due) => void;
+  onPay: (dues: Due[]) => void;
   pending?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (due: Due) => void;
 }) {
   const paid = due.status === "paid";
   const rel = relativeDue(due.dueDate);
   const overdue = due.status === "overdue" || (!paid && rel.past);
+  const canSelect = selectable && !paid;
+
+  const toggle = () => canSelect && onToggleSelect?.(due);
 
   return (
-    <li className="flex flex-col gap-4 border-t border-cloud py-4 first:border-t-0 sm:flex-row sm:items-center">
+    <li
+      onClick={toggle}
+      className={`flex flex-col gap-4 border-t border-cloud py-4 first:border-t-0 sm:flex-row sm:items-center ${
+        canSelect ? "cursor-pointer" : ""
+      } ${selected ? "sm:-mx-3 sm:rounded-2xl sm:bg-cloud/40 sm:px-3" : ""}`}
+    >
+      {/* Selection checkbox — only for open dues. */}
+      {canSelect && (
+        <span
+          aria-hidden
+          className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors ${
+            selected
+              ? "border-brand bg-brand text-white"
+              : "border-hairline-strong/40 bg-canvas text-transparent"
+          }`}
+        >
+          <HugeiconsIcon icon={Tick02Icon} size={13} />
+        </span>
+      )}
+
       <span
         className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${
           paid ? "bg-paper text-ink-soft" : "bg-cloud text-brand"
@@ -80,7 +109,10 @@ export function DueRow({
         ) : (
           <button
             type="button"
-            onClick={() => onPay(due)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPay([due]);
+            }}
             disabled={pending}
             className="inline-flex h-9 w-[92px] items-center justify-center rounded-full bg-brand text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
           >

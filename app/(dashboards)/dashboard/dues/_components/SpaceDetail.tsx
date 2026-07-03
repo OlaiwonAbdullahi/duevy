@@ -1,3 +1,5 @@
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
@@ -32,25 +34,49 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "br
 export function SpaceDetail({
   space,
   dues,
-  pendingId,
+  pendingIds,
   onBack,
   onPay,
 }: {
   space: Space;
   dues: Due[];
-  pendingId: string | null;
+  pendingIds: string[];
   onBack: () => void;
-  onPay: (due: Due) => void;
+  onPay: (dues: Due[]) => void;
 }) {
   const s = summarizeSpace(space.id, dues);
   const settled = s.openCount === 0;
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Open dues float to the top; overdue before merely upcoming; paid sink down.
-  const ordered = [...dues].sort((a, b) => {
-    const rank = (d: Due) =>
-      d.status === "overdue" ? 0 : d.status === "unpaid" ? 1 : 2;
-    return rank(a) - rank(b) || +new Date(a.dueDate) - +new Date(b.dueDate);
-  });
+  const ordered = useMemo(
+    () =>
+      [...dues].sort((a, b) => {
+        const rank = (d: Due) =>
+          d.status === "overdue" ? 0 : d.status === "unpaid" ? 1 : 2;
+        return rank(a) - rank(b) || +new Date(a.dueDate) - +new Date(b.dueDate);
+      }),
+    [dues],
+  );
+
+  const openDues = ordered.filter((d) => d.status !== "paid");
+  const selectedDues = openDues.filter((d) => selected.has(d.id));
+  const selectedTotal = selectedDues.reduce((sum, d) => sum + d.amount, 0);
+  const allSelected = openDues.length > 0 && selectedDues.length === openDues.length;
+
+  const toggle = (due: Due) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(due.id)) {
+        next.delete(due.id);
+      } else {
+        next.add(due.id);
+      }
+      return next;
+    });
+
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(openDues.map((d) => d.id)));
 
   return (
     <div>
@@ -106,10 +132,16 @@ export function SpaceDetail({
       {/* Dues list. */}
       <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="text-base font-semibold tracking-tight text-ink">
-            Dues
-          </h3>
-          {settled && (
+          <h3 className="text-base font-semibold tracking-tight text-ink">Dues</h3>
+          {openDues.length > 0 ? (
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="text-xs font-medium text-brand transition-colors hover:text-brand-bright cursor-pointer"
+            >
+              {allSelected ? "Clear selection" : "Select all open"}
+            </button>
+          ) : (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-brand">
               <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} />
               All settled
@@ -122,11 +154,46 @@ export function SpaceDetail({
               key={due.id}
               due={due}
               onPay={onPay}
-              pending={pendingId === due.id}
+              pending={pendingIds.includes(due.id)}
+              selectable
+              selected={selected.has(due.id)}
+              onToggleSelect={toggle}
             />
           ))}
         </ul>
       </div>
+
+      {/* Sticky action bar — appears once one or more dues are ticked. */}
+      <AnimatePresence>
+        {selectedDues.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="sticky bottom-4 z-10 mt-4"
+          >
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 rounded-full border border-cloud bg-canvas/95 p-2 pl-5 shadow-[0_18px_40px_-20px_rgba(11,110,79,0.5)] backdrop-blur">
+              <div className="min-w-0">
+                <p className="text-xs text-ink-soft">
+                  {selectedDues.length} due{selectedDues.length === 1 ? "" : "s"}{" "}
+                  selected
+                </p>
+                <p className="text-sm font-semibold tracking-tight text-ink">
+                  {naira(selectedTotal)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onPay(selectedDues)}
+                className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
+              >
+                Pay {naira(selectedTotal)}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

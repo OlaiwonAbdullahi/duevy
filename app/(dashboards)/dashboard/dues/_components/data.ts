@@ -10,6 +10,7 @@ import {
   StarIcon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
+import type { Card } from "../../wallet/_components/types";
 import type { DueCategory, EmblemHue, Space, Due, SpaceKind } from "./types";
 
 export const naira = (n: number) =>
@@ -102,6 +103,13 @@ export function relativeDue(iso: string): { text: string; past: boolean } {
 }
 
 /* ---- Mock data. Swapped for real queries once the API lands. ---- */
+
+/** Saved cards, seeded to match the wallet demo. */
+export const SAVED_CARDS: Card[] = [
+  { id: "c1", brand: "Visa", last4: "4242", expiry: "08/27", isDefault: true },
+  { id: "c2", brand: "Mastercard", last4: "5309", expiry: "11/26", isDefault: false },
+  { id: "c3", brand: "Verve", last4: "8821", expiry: "03/28", isDefault: false },
+];
 
 export const SPACES: Space[] = [
   {

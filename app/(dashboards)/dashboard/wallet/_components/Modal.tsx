@@ -32,7 +32,7 @@ export function Modal({
         aria-describedby={undefined}
         className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden rounded-3xl border border-cloud bg-canvas p-0 sm:max-w-md"
       >
-        <div className=" overflow-y-auto p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6">
           <DialogHeader className="mb-6 flex-row items-center gap-3 space-y-0">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
               <HugeiconsIcon icon={icon} size={18} />

@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
-import type { Due, Space } from "./_components/types";
-import { SPACES, DUES, naira } from "./_components/data";
+import type { Due, PayMethod, Space } from "./_components/types";
+import { SPACES, DUES, SAVED_CARDS, naira } from "./_components/data";
 import { SpaceCard } from "./_components/SpaceCard";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { PayDueModal } from "./_components/PayDueModal";
@@ -14,8 +14,8 @@ import { PayDueModal } from "./_components/PayDueModal";
 export default function DuesPage() {
   const [dues, setDues] = useState<Due[]>(DUES);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [payDue, setPayDue] = useState<Due | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [payDues, setPayDues] = useState<Due[]>([]);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [balance, setBalance] = useState(8500);
 
   const selected = SPACES.find((s) => s.id === selectedId) ?? null;
@@ -38,21 +38,30 @@ export default function DuesPage() {
 
   const openSpace = (space: Space) => setSelectedId(space.id);
 
-  const confirmPay = () => {
-    if (!payDue) return;
-    const due = payDue;
-    setPendingId(due.id);
-    // Simulate the wallet debit + collection posting. In production this hits
-    // the payments API and the row flips on the success response.
+  const confirmPay = (method: PayMethod) => {
+    if (payDues.length === 0) return;
+    const targetDues = payDues;
+    const targetIds = targetDues.map((d) => d.id);
+    const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
+    setPendingIds(targetIds);
+    // Simulate collection posting. In production this hits the payments API,
+    // and the selected rows flip on the success response.
     setTimeout(() => {
       setDues((list) =>
-        list.map((d) => (d.id === due.id ? { ...d, status: "paid" } : d)),
+        list.map((d) =>
+          targetIds.includes(d.id) ? { ...d, status: "paid" } : d,
+        ),
       );
-      setBalance((b) => b - due.amount);
-      setPendingId(null);
-      setPayDue(null);
-      toast.success(`${naira(due.amount)} paid`, {
-        description: due.title,
+      if (method === "wallet") {
+        setBalance((b) => b - total);
+      }
+      setPendingIds([]);
+      setPayDues([]);
+      toast.success(`${naira(total)} paid`, {
+        description:
+          targetDues.length === 1
+            ? targetDues[0].title
+            : `${targetDues.length} dues settled`,
       });
     }, 900);
   };
@@ -71,9 +80,9 @@ export default function DuesPage() {
             <SpaceDetail
               space={selected}
               dues={selectedDues}
-              pendingId={pendingId}
+              pendingIds={pendingIds}
               onBack={() => setSelectedId(null)}
-              onPay={(due) => setPayDue(due)}
+              onPay={setPayDues}
             />
           </motion.div>
         ) : (
@@ -154,13 +163,14 @@ export default function DuesPage() {
         )}
       </AnimatePresence>
 
-      {payDue && selected && (
+      {payDues.length > 0 && selected && (
         <PayDueModal
-          due={payDue}
+          dues={payDues}
           space={selected}
           balance={balance}
-          pending={pendingId === payDue.id}
-          onClose={() => (pendingId ? null : setPayDue(null))}
+          cards={SAVED_CARDS}
+          pending={pendingIds.length > 0}
+          onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}
         />
       )}
