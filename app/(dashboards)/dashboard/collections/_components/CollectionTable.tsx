@@ -26,18 +26,18 @@ export function CollectionTable({
   onQueryChange: (query: string) => void;
 }) {
   return (
-    <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-base font-semibold tracking-tight text-ink">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">
             {due.title}
           </h2>
           <p className="mt-1 text-xs text-ink-soft">
-            {naira(due.amount)} per student
+            {naira(due.amount)} per student. Review payment status and receipts.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="flex items-center rounded-full border border-cloud bg-paper p-1">
             {COLLECTION_TABS.map((tab) => (
               <button
@@ -55,7 +55,7 @@ export function CollectionTable({
             ))}
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-cloud bg-paper px-4 focus-within:border-brand sm:w-64">
+          <div className="flex items-center gap-2 rounded-full border border-cloud bg-paper px-4 focus-within:border-brand md:w-72">
             <HugeiconsIcon
               icon={Search01Icon}
               size={16}
@@ -71,7 +71,7 @@ export function CollectionTable({
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-cloud">
+      <div className="mt-5 overflow-hidden rounded-3xl border border-cloud">
         <div className="hidden grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] gap-4 bg-paper px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:grid">
           <span>Student</span>
           <span>Matric no</span>
@@ -84,7 +84,7 @@ export function CollectionTable({
           {students.map((student) => (
             <li
               key={student.id}
-              className="grid gap-3 px-4 py-4 md:grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] md:items-center md:gap-4"
+              className="grid gap-3 px-4 py-4 transition-colors duration-300 hover:bg-paper/70 md:grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] md:items-center md:gap-4"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <Initials name={student.name} />

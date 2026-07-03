@@ -103,28 +103,26 @@ export default function CollectionsPage() {
         onDownload={() => handleDownload(filteredStudents, filter)}
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.5fr]">
-        <aside className="flex flex-col gap-6">
-          <DueSelector
-            dues={ACTIVE_DUES}
-            selectedDue={selectedDue}
-            onSelect={setSelectedDueId}
-          />
-          <ExportOptions students={students} onDownload={handleDownload} />
-        </aside>
+      <DueSelector
+        dues={ACTIVE_DUES}
+        selectedDue={selectedDue}
+        onSelect={setSelectedDueId}
+      />
 
-        <main>
-          <CollectionSummary totals={totals} trackedCount={students.length} />
-          <CollectionTable
-            due={selectedDue}
-            students={filteredStudents}
-            filter={filter}
-            query={query}
-            onFilterChange={setFilter}
-            onQueryChange={setQuery}
-          />
-        </main>
+      <div className="mt-6">
+        <CollectionSummary totals={totals} trackedCount={students.length} />
       </div>
+
+      <ExportOptions students={students} onDownload={handleDownload} />
+
+      <CollectionTable
+        due={selectedDue}
+        students={filteredStudents}
+        filter={filter}
+        query={query}
+        onFilterChange={setFilter}
+        onQueryChange={setQuery}
+      />
     </div>
   );
 }
