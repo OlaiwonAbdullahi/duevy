@@ -2,6 +2,7 @@ import {
   Home01Icon,
   Wallet01Icon,
   Invoice01Icon,
+  AddInvoiceIcon,
   ReceiptDollarIcon,
   Settings02Icon,
   Building03Icon,
@@ -11,6 +12,7 @@ import {
   Analytics01Icon,
   Shield01Icon,
   GiftIcon,
+  UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
 
 /** The icon-data shape exported by @hugeicons/core-free-icons. */
@@ -26,6 +28,8 @@ export type NavGroup = {
   /** Section label shown above the group. Omit for the top group. */
   title?: string;
   links: NavLink[];
+  /** When true, the group header gets a chevron that collapses its links. */
+  collapsible?: boolean;
 };
 
 /**
@@ -50,7 +54,13 @@ export const STUDENT_LINKS: NavLink[] = [
  * rep — a rep runs the department's collections on top of their own wallet.
  */
 export const REP_LINKS: NavLink[] = [
-  { label: "Manage dept", href: "/dashboard/manage", icon: Building03Icon },
+  { label: "Overview", href: "/dashboard", icon: Home01Icon },
+  {
+    label: "Create dues",
+    href: "/dashboard/create-dues",
+    icon: AddInvoiceIcon,
+  },
+  { label: "Circle", href: "/dashboard/circle", icon: UserGroup03Icon }, // members etc.
   {
     label: "Collections",
     href: "/dashboard/collections",
@@ -62,13 +72,19 @@ export const REP_LINKS: NavLink[] = [
     icon: Megaphone01Icon,
   },
   { label: "Payout", href: "/dashboard/payout", icon: MoneySend01Icon },
+  { label: "Manage dept", href: "/dashboard/manage", icon: Building03Icon },
 ];
 
-/** Build the sidebar groups for a given role. A rep gets both sets. */
+/**
+ * Build the sidebar groups for a given role. A rep gets both sets; the student
+ * links then gain a header so they can be collapsed away to focus on rep tools.
+ */
 export function getDashboardGroups(isRep: boolean): NavGroup[] {
-  const groups: NavGroup[] = [{ links: STUDENT_LINKS }];
-  if (isRep) groups.push({ title: "Rep tools", links: REP_LINKS });
-  return groups;
+  if (!isRep) return [{ links: STUDENT_LINKS }];
+  return [
+    { title: "Student", links: STUDENT_LINKS, collapsible: true },
+    { title: "Rep tools", links: REP_LINKS, collapsible: true },
+  ];
 }
 
 /** Admin is its own area with its own sidebar — no student/rep mixing. */

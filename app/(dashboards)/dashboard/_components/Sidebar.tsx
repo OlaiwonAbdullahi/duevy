@@ -1,9 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Logout01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import {
+  Logout01Icon,
+  Cancel01Icon,
+  ArrowDown01Icon,
+} from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import type { NavGroup } from "./nav-config";
 
@@ -29,6 +35,10 @@ export default function Sidebar({
   onClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  // Which collapsible groups are folded away, keyed by title.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggle = (title: string) =>
+    setCollapsed((c) => ({ ...c, [title]: !c[title] }));
 
   return (
     <>
@@ -71,14 +81,10 @@ export default function Sidebar({
 
         {/* Nav groups */}
         <nav className="flex-1 overflow-y-auto px-4 py-4">
-          {groups.map((group, i) => (
-            <div key={group.title ?? i} className={cn(i > 0 && "mt-8")}>
-              {group.title && (
-                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
-                  {group.title}
-                </p>
-              )}
-              <ul className="flex flex-col ">
+          {groups.map((group, i) => {
+            const isCollapsed = group.title ? collapsed[group.title] : false;
+            const links = (
+              <ul className="flex flex-col">
                 {group.links.map((link) => {
                   const active = isActive(pathname, link.href);
                   return (
@@ -105,8 +111,54 @@ export default function Sidebar({
                   );
                 })}
               </ul>
-            </div>
-          ))}
+            );
+
+            return (
+              <div key={group.title ?? i} className={cn(i > 0 && "mt-8")}>
+                {group.title &&
+                  (group.collapsible ? (
+                    <button
+                      type="button"
+                      onClick={() => toggle(group.title as string)}
+                      aria-expanded={!isCollapsed}
+                      className="flex w-full items-center justify-between rounded-lg px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-wide text-ink-soft transition-colors duration-300 hover:text-ink cursor-pointer"
+                    >
+                      {group.title}
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        size={14}
+                        className={cn(
+                          "shrink-0 transition-transform duration-300",
+                          isCollapsed && "-rotate-90",
+                        )}
+                      />
+                    </button>
+                  ) : (
+                    <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                      {group.title}
+                    </p>
+                  ))}
+
+                {group.collapsible ? (
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        {links}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                ) : (
+                  links
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Sign out */}
