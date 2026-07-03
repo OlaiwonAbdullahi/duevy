@@ -17,6 +17,15 @@ export const naira = (n: number) =>
   `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
 
 /**
+ * The signed-in student receipts are issued to. Seeded to match the dashboard
+ * greeting ("Amara"); swap for the session user once auth lands.
+ */
+export const PAYER = {
+  name: "Amara Okafor",
+  detail: "Computer Science · 300 level",
+};
+
+/**
  * Emblem palettes. Each space paints its crest from one of these — a deep base
  * for the plate, a brighter tint for the monogram sheen, and a soft ring color.
  * Tuned to sit calmly on the canvas rather than shout, so the wall of spaces

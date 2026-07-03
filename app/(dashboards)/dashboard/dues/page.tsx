@@ -6,10 +6,13 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 import type { Due, PayMethod, Space } from "./_components/types";
+import type { Card } from "../wallet/_components/types";
 import { SPACES, DUES, SAVED_CARDS, naira } from "./_components/data";
 import { SpaceCard } from "./_components/SpaceCard";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { PayDueModal } from "./_components/PayDueModal";
+import { ReceiptModal } from "./_components/ReceiptModal";
+import { buildReceipts, type Receipt } from "./_components/receipt";
 
 export default function DuesPage() {
   const [dues, setDues] = useState<Due[]>(DUES);
@@ -17,6 +20,7 @@ export default function DuesPage() {
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [balance, setBalance] = useState(8500);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
 
   const selected = SPACES.find((s) => s.id === selectedId) ?? null;
   const selectedDues = useMemo(
@@ -38,11 +42,12 @@ export default function DuesPage() {
 
   const openSpace = (space: Space) => setSelectedId(space.id);
 
-  const confirmPay = (method: PayMethod) => {
-    if (payDues.length === 0) return;
+  const confirmPay = (method: PayMethod, card?: Card) => {
+    if (payDues.length === 0 || !selected) return;
     const targetDues = payDues;
     const targetIds = targetDues.map((d) => d.id);
     const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
+    const space = selected;
     setPendingIds(targetIds);
     // Simulate collection posting. In production this hits the payments API,
     // and the selected rows flip on the success response.
@@ -57,6 +62,8 @@ export default function DuesPage() {
       }
       setPendingIds([]);
       setPayDues([]);
+      // One receipt per due settled — surfaced together for download.
+      setReceipts(buildReceipts(targetDues, space, method, card));
       toast.success(`${naira(total)} paid`, {
         description:
           targetDues.length === 1
@@ -173,6 +180,10 @@ export default function DuesPage() {
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}
         />
+      )}
+
+      {receipts.length > 0 && (
+        <ReceiptModal receipts={receipts} onClose={() => setReceipts([])} />
       )}
     </div>
   );

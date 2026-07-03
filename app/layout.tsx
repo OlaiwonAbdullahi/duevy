@@ -1,10 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import SmoothScroll from "./components/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { PwaRegister } from "./components/pwa/PwaRegister";
+import { InstallBanner } from "./components/pwa/InstallBanner";
+import { NetworkIndicator } from "./components/pwa/NetworkIndicator";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -79,11 +82,25 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
+  },
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Duevy",
   },
 
   alternates: {
     canonical: BASE_URL,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0b6e4f" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1411" },
+  ],
 };
 
 export default function RootLayout({
@@ -106,7 +123,10 @@ export default function RootLayout({
         >
           <SmoothScroll />
           {children}
+          <NetworkIndicator />
+          <InstallBanner />
           <Toaster position="top-center" />
+          <PwaRegister />
         </ThemeProvider>
       </body>
     </html>
