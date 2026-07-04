@@ -72,7 +72,7 @@ export const REP_LINKS: NavLink[] = [
     icon: CheckmarkSquare01Icon,
   },
   { label: "Payout", href: "/dashboard/payout", icon: MoneySend01Icon },
-  { label: "Manage dept", href: "/dashboard/manage", icon: Building03Icon },
+  { label: "Manage dept.", href: "/dashboard/manage", icon: Building03Icon },
 ];
 
 /**

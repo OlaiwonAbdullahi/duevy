@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Analytics01Icon,
   Award01Icon,
   Clock01Icon,
   Delete02Icon,
@@ -13,11 +14,13 @@ import type { Poll } from "./types";
 
 export function PollListRow({
   poll,
+  onAnalytics,
   onEdit,
   onShare,
   onDelete,
 }: {
   poll: Poll;
+  onAnalytics: (poll: Poll) => void;
   onEdit: (poll: Poll) => void;
   onShare: (poll: Poll) => void;
   onDelete: (poll: Poll) => void;
@@ -80,6 +83,14 @@ export function PollListRow({
       </div>
 
       <div className="flex items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={() => onAnalytics(poll)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-cloud bg-paper px-3.5 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        >
+          <HugeiconsIcon icon={Analytics01Icon} size={14} className="text-brand" />
+          Analytics
+        </button>
         <button
           type="button"
           onClick={() => onShare(poll)}

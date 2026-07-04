@@ -17,6 +17,7 @@ import { INITIAL_POLLS, naira, pollRevenue, slugify, totalVotes } from "./_compo
 import type { Poll, PollDraft } from "./_components/types";
 import { PollListRow } from "./_components/PollListRow";
 import { PollForm } from "./_components/PollForm";
+import { PollAnalytics } from "./_components/PollAnalytics";
 import { ShareLinkModal } from "./_components/ShareLinkModal";
 
 function Stat({
@@ -49,8 +50,9 @@ function Stat({
 
 export default function PollsPage() {
   const [polls, setPolls] = useState<Poll[]>(INITIAL_POLLS);
-  const [mode, setMode] = useState<"list" | "form">("list");
+  const [mode, setMode] = useState<"list" | "form" | "analytics">("list");
   const [editing, setEditing] = useState<Poll | null>(null);
+  const [viewing, setViewing] = useState<Poll | null>(null);
   const [sharePoll, setSharePoll] = useState<Poll | null>(null);
 
   const totals = useMemo(() => {
@@ -67,6 +69,10 @@ export default function PollsPage() {
   const openEdit = (poll: Poll) => {
     setEditing(poll);
     setMode("form");
+  };
+  const openAnalytics = (poll: Poll) => {
+    setViewing(poll);
+    setMode("analytics");
   };
 
   const save = (draft: PollDraft) => {
@@ -119,6 +125,20 @@ export default function PollsPage() {
               initial={editing}
               onCancel={() => setMode("list")}
               onSave={save}
+            />
+          </motion.div>
+        ) : mode === "analytics" && viewing ? (
+          <motion.div
+            key="analytics"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            <PollAnalytics
+              poll={viewing}
+              onBack={() => setMode("list")}
+              onShare={setSharePoll}
             />
           </motion.div>
         ) : (
@@ -190,6 +210,7 @@ export default function PollsPage() {
                     <PollListRow
                       key={poll.id}
                       poll={poll}
+                      onAnalytics={openAnalytics}
                       onEdit={openEdit}
                       onShare={setSharePoll}
                       onDelete={remove}

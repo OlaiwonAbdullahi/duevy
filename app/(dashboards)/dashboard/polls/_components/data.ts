@@ -41,6 +41,32 @@ export function pollRevenue(poll: Poll) {
   return poll.paid ? totalVotes(poll) * poll.amountPerVote : 0;
 }
 
+export type LeaderboardEntry = {
+  name: string;
+  votes: number;
+  /** How many award categories this person is nominated in. */
+  awards: number;
+};
+
+/**
+ * Overall ranking across the whole poll: total votes each nominee has pulled in,
+ * summed across every award they appear in. Highest first.
+ */
+export function pollLeaderboard(poll: Poll): LeaderboardEntry[] {
+  const tally = new Map<string, LeaderboardEntry>();
+  for (const category of poll.categories) {
+    for (const nominee of category.nominees) {
+      const key = nominee.name.trim();
+      if (!key) continue;
+      const entry = tally.get(key) ?? { name: key, votes: 0, awards: 0 };
+      entry.votes += nominee.votes;
+      entry.awards += 1;
+      tally.set(key, entry);
+    }
+  }
+  return [...tally.values()].sort((a, b) => b.votes - a.votes);
+}
+
 /* ---- Builder factories: fresh rows for the form's dynamic sections. ---- */
 
 export function newNominee(name = ""): Nominee {
