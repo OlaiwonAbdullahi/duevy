@@ -9,6 +9,7 @@ import {
   Logout01Icon,
   Cancel01Icon,
   ArrowDown01Icon,
+  NewTwitterIcon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import type { NavGroup } from "./nav-config";
@@ -164,12 +165,23 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Sign out */}
+        {/* Footer: follow + sign out */}
         <div className="border-t border-cloud p-4">
-          <button className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer">
+          <button className="mt-1 flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer">
             <HugeiconsIcon icon={Logout01Icon} size={18} className="shrink-0" />
             Sign out
           </button>
+          <a
+            href="https://x.com/duevyapp"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer"
+          >
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-ink text-canvas transition-colors duration-300 group-hover:bg-brand">
+              <HugeiconsIcon icon={NewTwitterIcon} size={13} />
+            </span>
+            <span className="min-w-0 flex-1 truncate">Follow Duevy on X</span>
+          </a>
         </div>
       </aside>
     </>
