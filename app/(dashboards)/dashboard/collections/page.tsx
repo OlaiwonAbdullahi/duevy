@@ -50,18 +50,35 @@ export default function CollectionsPage() {
     return buildStudentsForDue(selectedIndex);
   }, [selectedDue?.id]);
 
-  const filteredStudents = useMemo(() => {
+  // Students matching the search box, before the status tab is applied — used
+  // both for the visible rows and to keep the tab counts in sync with search.
+  const queryMatched = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return students
-      .filter((student) => (filter === "all" ? true : student.status === filter))
-      .filter(
-        (student) =>
-          q === "" ||
-          student.name.toLowerCase().includes(q) ||
-          student.matricNo.toLowerCase().includes(q) ||
-          student.email.toLowerCase().includes(q),
-      );
-  }, [filter, query, students]);
+    if (q === "") return students;
+    return students.filter(
+      (student) =>
+        student.name.toLowerCase().includes(q) ||
+        student.matricNo.toLowerCase().includes(q) ||
+        student.email.toLowerCase().includes(q),
+    );
+  }, [query, students]);
+
+  const tabCounts = useMemo(
+    () => ({
+      all: queryMatched.length,
+      paid: queryMatched.filter((student) => student.status === "paid").length,
+      unpaid: queryMatched.filter((student) => student.status === "unpaid").length,
+    }),
+    [queryMatched],
+  );
+
+  const filteredStudents = useMemo(
+    () =>
+      filter === "all"
+        ? queryMatched
+        : queryMatched.filter((student) => student.status === filter),
+    [filter, queryMatched],
+  );
 
   const totals = useMemo(() => {
     const paid = students.filter((student) => student.status === "paid").length;
@@ -84,6 +101,20 @@ export default function CollectionsPage() {
     });
   };
 
+  const handleSendReminders = () => {
+    if (!selectedDue) return;
+    const unpaid = students.filter((student) => student.status === "unpaid").length;
+    if (unpaid === 0) {
+      toast.info("Everyone has paid", {
+        description: `No reminders needed for ${selectedDue.title}.`,
+      });
+      return;
+    }
+    toast.success("Reminders sent", {
+      description: `${unpaid} unpaid student${unpaid === 1 ? "" : "s"} notified about ${selectedDue.title}.`,
+    });
+  };
+
   if (!selectedDue) {
     return (
       <div className="mx-auto max-w-4xl rounded-3xl border border-cloud bg-canvas p-8 text-center">
@@ -101,6 +132,7 @@ export default function CollectionsPage() {
     <div className="mx-auto max-w-6xl">
       <CollectionsHeader
         onDownload={() => handleDownload(filteredStudents, filter)}
+        onSendReminders={handleSendReminders}
       />
 
       <DueSelector
@@ -118,6 +150,8 @@ export default function CollectionsPage() {
       <CollectionTable
         due={selectedDue}
         students={filteredStudents}
+        totalCount={students.length}
+        tabCounts={tabCounts}
         filter={filter}
         query={query}
         onFilterChange={setFilter}

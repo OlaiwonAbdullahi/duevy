@@ -51,7 +51,7 @@ export function UploadApprovalCard({
       <button
         type="button"
         onClick={onUploadClick}
-        className="mt-5 flex w-full flex-col items-center justify-center rounded-3xl border border-dashed border-brand/40 bg-cloud/45 px-5 py-8 text-center transition-colors duration-300 hover:bg-cloud cursor-pointer"
+        className="mt-5 flex w-full flex-col items-center justify-center rounded-3xl border border-dashed border-brand/40 bg-cloud/45 px-5 py-8 text-center transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         <span className="grid h-12 w-12 place-items-center rounded-full bg-canvas text-brand">
           <HugeiconsIcon icon={CloudUploadIcon} size={22} />
@@ -80,7 +80,7 @@ export function UploadApprovalCard({
             type="button"
             onClick={onApproveMatched}
             disabled={matchedCount === 0}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-ink-soft/30 cursor-pointer"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-ink-soft/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             <HugeiconsIcon icon={CheckmarkCircle02Icon} size={15} />
             Approve

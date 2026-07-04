@@ -103,30 +103,31 @@ export default function CirclePage() {
         uploadMatched={uploadMatched}
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.45fr]">
-        <div className="flex flex-col gap-6">
-          <UploadApprovalCard
-            fileInputRef={fileInputRef}
-            uploadName={uploadName}
-            uploadMatched={uploadMatched}
-            matchedCount={matchedRequests.length}
-            onUpload={handleUpload}
-            onUploadClick={openUploadPicker}
-            onApproveMatched={approveMatched}
-          />
-          <PendingRequestsCard
-            requests={requests}
-            onApprove={approveRequest}
-            onDecline={declineRequest}
-          />
-        </div>
-
-        <StudentsTable
-          students={filteredStudents}
-          query={query}
-          onQueryChange={setQuery}
+      {/* Approval workflow — upload check and pending requests side by side */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <UploadApprovalCard
+          fileInputRef={fileInputRef}
+          uploadName={uploadName}
+          uploadMatched={uploadMatched}
+          matchedCount={matchedRequests.length}
+          onUpload={handleUpload}
+          onUploadClick={openUploadPicker}
+          onApproveMatched={approveMatched}
+        />
+        <PendingRequestsCard
+          requests={requests}
+          onApprove={approveRequest}
+          onDecline={declineRequest}
         />
       </div>
+
+      {/* Approved students — full width so the table can breathe */}
+      <StudentsTable
+        students={filteredStudents}
+        totalCount={students.length}
+        query={query}
+        onQueryChange={setQuery}
+      />
     </div>
   );
 }

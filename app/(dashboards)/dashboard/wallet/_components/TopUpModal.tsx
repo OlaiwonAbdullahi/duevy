@@ -18,6 +18,7 @@ import { CardBrand } from "./CardBrand";
 import type { Card, TopUpMethod, TopUpSource } from "./types";
 import { BARE_INPUT, PRIMARY_BUTTON, TOP_UP_PRESETS, naira } from "./utils";
 import type { HugeIcon } from "../../_components/nav-config";
+import { EmptyState } from "../../_components/EmptyState";
 
 export function TopUpModal({
   cards,
@@ -118,9 +119,14 @@ export function TopUpModal({
       {method === "card" ? (
         <div className="mt-3 flex flex-col gap-2">
           {cards.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-cloud p-4 text-center text-xs text-ink-soft">
-              No saved cards. Use “Pay online” instead.
-            </p>
+            <div className="rounded-2xl border border-dashed border-cloud">
+              <EmptyState
+                size="sm"
+                icon={CreditCardIcon}
+                title="No saved cards"
+                description="Add a card in your wallet, or use “Pay online” instead."
+              />
+            </div>
           )}
           {cards.map((c) => {
             const on = c.id === cardId;

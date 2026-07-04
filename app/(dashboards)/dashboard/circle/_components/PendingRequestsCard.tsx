@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { JoinRequest } from "./types";
 import { Initials } from "./Initials";
+import { EmptyState } from "../../_components/EmptyState";
 
 export function PendingRequestsCard({
   requests,
@@ -26,8 +27,12 @@ export function PendingRequestsCard({
 
       <ul className="mt-4 flex flex-col">
         {requests.length === 0 ? (
-          <li className="py-8 text-center text-sm text-ink-soft">
-            No pending requests.
+          <li>
+            <EmptyState
+              icon={CheckmarkCircle02Icon}
+              title="You're all caught up"
+              description="New requests to join your department space will appear here for review."
+            />
           </li>
         ) : (
           requests.map((request) => (
@@ -60,7 +65,8 @@ export function PendingRequestsCard({
                 <button
                   type="button"
                   onClick={() => onApprove(request)}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
+                  aria-label={`Approve ${request.name}`}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} />
                   Approve
@@ -68,7 +74,8 @@ export function PendingRequestsCard({
                 <button
                   type="button"
                   onClick={() => onDecline(request)}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-cloud px-4 text-xs font-semibold text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer"
+                  aria-label={`Decline ${request.name}`}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-cloud px-4 text-xs font-semibold text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   <HugeiconsIcon icon={Cancel01Icon} size={14} />
                   Decline

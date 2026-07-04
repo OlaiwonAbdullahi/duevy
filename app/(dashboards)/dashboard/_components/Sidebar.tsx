@@ -84,7 +84,7 @@ export default function Sidebar({
           {groups.map((group, i) => {
             const isCollapsed = group.title ? collapsed[group.title] : false;
             const links = (
-              <ul className="flex flex-col">
+              <ul className="flex flex-col gap-1">
                 {group.links.map((link) => {
                   const active = isActive(pathname, link.href);
                   return (
@@ -146,7 +146,10 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{
+                          duration: 0.24,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
                         className="overflow-hidden"
                       >
                         {links}

@@ -7,7 +7,7 @@ import {
   Settings02Icon,
   Building03Icon,
   UserMultipleIcon,
-  Megaphone01Icon,
+  CheckmarkSquare01Icon,
   MoneySend01Icon,
   Analytics01Icon,
   Shield01Icon,
@@ -67,9 +67,9 @@ export const REP_LINKS: NavLink[] = [
     icon: UserMultipleIcon,
   }, // who's paid / unpaid
   {
-    label: "Send reminders",
-    href: "/dashboard/reminders",
-    icon: Megaphone01Icon,
+    label: "Create Vote Poll",
+    href: "/dashboard/polls",
+    icon: CheckmarkSquare01Icon,
   },
   { label: "Payout", href: "/dashboard/payout", icon: MoneySend01Icon },
   { label: "Manage dept", href: "/dashboard/manage", icon: Building03Icon },

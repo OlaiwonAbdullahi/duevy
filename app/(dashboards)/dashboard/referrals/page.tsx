@@ -24,6 +24,7 @@ import {
   summarizeReferrals,
   formatDate,
 } from "./_components/data";
+import { EmptyState } from "../_components/EmptyState";
 
 function Stat({
   icon,
@@ -230,9 +231,11 @@ export default function ReferralsPage() {
         </div>
 
         {REFERRALS.length === 0 ? (
-          <p className="py-8 text-center text-sm text-ink-soft">
-            No referrals yet. Share your code to get started.
-          </p>
+          <EmptyState
+            icon={UserAdd01Icon}
+            title="No referrals yet"
+            description="Share your code with friends. Once they sign up and pay a due, they'll show up here."
+          />
         ) : (
           <ul className="mt-3 flex flex-col">
             {REFERRALS.map((r) => {

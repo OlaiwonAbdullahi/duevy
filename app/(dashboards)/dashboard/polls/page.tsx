@@ -5,17 +5,19 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Add01Icon,
-  Wallet01Icon,
-  UserMultipleIcon,
-  Invoice01Icon,
+  MoneyBag02Icon,
+  Megaphone01Icon,
+  PlusSignIcon,
+  UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../_components/nav-config";
-import { REP_SPACE, INITIAL_REP_DUES, naira } from "./_components/data";
-import type { DueDraft, RepDue } from "./_components/types";
-import { DueListRow } from "./_components/DueListRow";
-import { DueForm } from "./_components/DueForm";
 import { EmptyState } from "../_components/EmptyState";
+import { REP_SPACE } from "../create-dues/_components/data";
+import { INITIAL_POLLS, naira, pollRevenue, slugify, totalVotes } from "./_components/data";
+import type { Poll, PollDraft } from "./_components/types";
+import { PollListRow } from "./_components/PollListRow";
+import { PollForm } from "./_components/PollForm";
+import { ShareLinkModal } from "./_components/ShareLinkModal";
 
 function Stat({
   icon,
@@ -45,56 +47,61 @@ function Stat({
   );
 }
 
-export default function CreateDuesPage() {
-  const [dues, setDues] = useState<RepDue[]>(INITIAL_REP_DUES);
+export default function PollsPage() {
+  const [polls, setPolls] = useState<Poll[]>(INITIAL_POLLS);
   const [mode, setMode] = useState<"list" | "form">("list");
-  const [editing, setEditing] = useState<RepDue | null>(null);
+  const [editing, setEditing] = useState<Poll | null>(null);
+  const [sharePoll, setSharePoll] = useState<Poll | null>(null);
 
   const totals = useMemo(() => {
-    const active = dues.filter((d) => d.status === "active");
-    const collected = active.reduce((s, d) => s + d.paidCount * d.amount, 0);
-    const outstanding = active.reduce(
-      (s, d) => s + (d.memberCount - d.paidCount) * d.amount,
-      0,
-    );
-    return { activeCount: active.length, collected, outstanding };
-  }, [dues]);
+    const live = polls.filter((p) => p.status === "active").length;
+    const votes = polls.reduce((sum, p) => sum + totalVotes(p), 0);
+    const raised = polls.reduce((sum, p) => sum + pollRevenue(p), 0);
+    return { live, votes, raised };
+  }, [polls]);
 
   const openCreate = () => {
     setEditing(null);
     setMode("form");
   };
-  const openEdit = (due: RepDue) => {
-    setEditing(due);
+  const openEdit = (poll: Poll) => {
+    setEditing(poll);
     setMode("form");
   };
 
-  const save = (draft: DueDraft) => {
+  const save = (draft: PollDraft) => {
     if (editing) {
-      setDues((list) =>
-        list.map((d) => (d.id === editing.id ? { ...d, ...draft } : d)),
+      setPolls((list) =>
+        list.map((p) =>
+          p.id === editing.id
+            ? { ...p, ...draft, slug: slugify(draft.title) }
+            : p,
+        ),
       );
-      toast.success("Due updated", { description: draft.title });
+      toast.success("Poll updated", { description: draft.title });
     } else {
-      const created: RepDue = {
+      const created: Poll = {
         id: crypto.randomUUID(),
         ...draft,
         status: "active",
-        paidCount: 0,
-        memberCount: REP_SPACE.memberCount,
+        slug: slugify(draft.title),
       };
-      setDues((list) => [created, ...list]);
-      toast.success("Due published", {
-        description: `${draft.title} · ${naira(draft.amount)}`,
+      setPolls((list) => [created, ...list]);
+      toast.success("Poll published", {
+        description: `${draft.title} · voting link ready to share`,
       });
+      setEditing(null);
+      setMode("list");
+      setSharePoll(created);
+      return;
     }
     setEditing(null);
     setMode("list");
   };
 
-  const remove = (due: RepDue) => {
-    setDues((list) => list.filter((d) => d.id !== due.id));
-    toast.success("Due deleted", { description: due.title });
+  const remove = (poll: Poll) => {
+    setPolls((list) => list.filter((p) => p.id !== poll.id));
+    toast.success("Poll deleted", { description: poll.title });
   };
 
   return (
@@ -108,7 +115,7 @@ export default function CreateDuesPage() {
             exit={{ opacity: 0, x: 16 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            <DueForm
+            <PollForm
               initial={editing}
               onCancel={() => setMode("list")}
               onSave={save}
@@ -128,65 +135,63 @@ export default function CreateDuesPage() {
                   Rep tools
                 </span>
                 <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-                  Dues
+                  Vote polls
                 </h1>
                 <p className="mt-1 text-[13px] text-ink-soft">
-                  Dues you&apos;ve raised for {REP_SPACE.name}.
+                  Set up award votes for {REP_SPACE.name} — dinner nights,
+                  awardees and more.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={openCreate}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
-                <HugeiconsIcon icon={Add01Icon} size={16} />
-                New due
+                <HugeiconsIcon icon={PlusSignIcon} size={16} />
+                New poll
               </button>
             </header>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <Stat icon={Megaphone01Icon} label="Live polls" value={String(totals.live)} />
               <Stat
-                icon={Invoice01Icon}
-                label="Active dues"
-                value={String(totals.activeCount)}
+                icon={UserGroup03Icon}
+                label="Total votes"
+                value={totals.votes.toLocaleString("en-NG")}
               />
               <Stat
-                icon={Wallet01Icon}
-                label="Collected"
-                value={naira(totals.collected)}
+                icon={MoneyBag02Icon}
+                label="Money raised"
+                value={naira(totals.raised)}
                 tone="brand"
-              />
-              <Stat
-                icon={UserMultipleIcon}
-                label="Outstanding"
-                value={naira(totals.outstanding)}
               />
             </div>
 
-            <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
-              {dues.length === 0 ? (
+            <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
+              {polls.length === 0 ? (
                 <EmptyState
-                  icon={Invoice01Icon}
-                  title="No dues yet"
-                  description="Raise your first due for the department and start tracking payments."
+                  icon={Megaphone01Icon}
+                  title="No polls yet"
+                  description="Create your first vote poll for the dinner and awards night, then share the link with students."
                   action={
                     <button
                       type="button"
                       onClick={openCreate}
                       className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                     >
-                      <HugeiconsIcon icon={Add01Icon} size={15} />
-                      Create due
+                      <HugeiconsIcon icon={PlusSignIcon} size={15} />
+                      Create poll
                     </button>
                   }
                 />
               ) : (
                 <ul className="flex flex-col">
-                  {dues.map((due) => (
-                    <DueListRow
-                      key={due.id}
-                      due={due}
+                  {polls.map((poll) => (
+                    <PollListRow
+                      key={poll.id}
+                      poll={poll}
                       onEdit={openEdit}
+                      onShare={setSharePoll}
                       onDelete={remove}
                     />
                   ))}
@@ -196,6 +201,10 @@ export default function CreateDuesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {sharePoll && (
+        <ShareLinkModal poll={sharePoll} onClose={() => setSharePoll(null)} />
+      )}
     </div>
   );
 }

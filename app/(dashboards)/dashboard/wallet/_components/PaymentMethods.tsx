@@ -1,7 +1,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  CreditCardIcon,
+  Delete02Icon,
+} from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { CardBrand } from "./CardBrand";
+import { EmptyState } from "../../_components/EmptyState";
 import type { Card } from "./types";
 
 export function PaymentMethods({
@@ -33,9 +38,13 @@ export function PaymentMethods({
 
       <div className="mt-4 flex flex-col gap-3">
         {cards.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-cloud p-6 text-center text-[13px] text-ink-soft">
-            No cards yet. Add one to top up your wallet.
-          </p>
+          <div className="rounded-2xl border border-dashed border-cloud">
+            <EmptyState
+              icon={CreditCardIcon}
+              title="No cards yet"
+              description="Add a debit card to top up your wallet and pay dues in one tap."
+            />
+          </div>
         )}
 
         {cards.map((card) => (

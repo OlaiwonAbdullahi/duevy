@@ -13,8 +13,10 @@ import {
   Invoice01Icon,
   ArrowUpRight01Icon,
   ArrowRight01Icon,
+  CheckmarkCircle02Icon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "./_components/nav-config";
+import { EmptyState } from "./_components/EmptyState";
 import { useRole } from "./_components/role-context";
 import {
   DUES,
@@ -199,9 +201,11 @@ export default function DashboardPage() {
             </div>
 
             {openDues.length === 0 ? (
-              <p className="py-8 text-center text-sm text-ink-soft">
-                You&apos;re all settled. Nice one.
-              </p>
+              <EmptyState
+                icon={CheckmarkCircle02Icon}
+                title="You're all settled"
+                description="No outstanding dues right now. New dues from your spaces will show up here."
+              />
             ) : (
               <ul className="mt-3 flex flex-col">
                 {openDues.slice(0, 4).map((due) => {

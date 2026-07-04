@@ -35,7 +35,8 @@ export function DueSelector({
               key={due.id}
               type="button"
               onClick={() => onSelect(due.id)}
-              className={`rounded-3xl border p-4 text-left transition-colors duration-300 cursor-pointer ${
+              aria-pressed={active}
+              className={`rounded-3xl border p-4 text-left transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                 active
                   ? "border-brand bg-cloud/75"
                   : "border-cloud bg-canvas hover:bg-paper"

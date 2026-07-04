@@ -59,7 +59,8 @@ function ExportButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer"
+      aria-label={`Download ${title} as CSV`}
+      className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
       <HugeiconsIcon icon={Download01Icon} size={15} className="text-brand" />
       {title}

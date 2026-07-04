@@ -12,6 +12,7 @@ import type { HugeIcon } from "../_components/nav-config";
 import type { TxnFilter } from "./_components/types";
 import { TRANSACTIONS, naira, groupByDay } from "./_components/data";
 import { TransactionRow } from "./_components/TransactionRow";
+import { EmptyState } from "../_components/EmptyState";
 
 const TABS: { value: TxnFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -150,9 +151,25 @@ export default function TransactionsPage() {
       {/* Ledger. */}
       <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
         {groups.length === 0 ? (
-          <p className="py-10 text-center text-sm text-ink-soft">
-            No transactions match your filters.
-          </p>
+          <EmptyState
+            icon={ReceiptDollarIcon}
+            title="No transactions found"
+            description="Nothing matches the current filters. Try a different tab or clear your search."
+            action={
+              (filter !== "all" || query.trim() !== "") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilter("all");
+                    setQuery("");
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                >
+                  Clear filters
+                </button>
+              )
+            }
+          />
         ) : (
           <div className="flex flex-col gap-6">
             {groups.map(([label, txns]) => (

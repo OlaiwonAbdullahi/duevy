@@ -17,6 +17,7 @@ import { Modal } from "../../wallet/_components/Modal";
 import type { Due, PayMethod, Space } from "./types";
 import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
 import type { HugeIcon } from "../../_components/nav-config";
+import { EmptyState } from "../../_components/EmptyState";
 
 export function PayDueModal({
   dues,
@@ -166,9 +167,14 @@ export function PayDueModal({
       {method === "card" && (
         <div className="mt-3 flex flex-col gap-2">
           {cards.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-cloud p-4 text-center text-xs text-ink-soft">
-              No saved cards. Use “Online” instead.
-            </p>
+            <div className="rounded-2xl border border-dashed border-cloud">
+              <EmptyState
+                size="sm"
+                icon={CreditCardIcon}
+                title="No saved cards"
+                description="Add a card in your wallet, or pay with “Online” instead."
+              />
+            </div>
           )}
           {cards.map((c) => {
             const on = c.id === cardId;

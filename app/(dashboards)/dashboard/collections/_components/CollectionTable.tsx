@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  CancelCircleIcon,
   CheckmarkCircle02Icon,
   Clock01Icon,
   Search01Icon,
@@ -9,10 +10,13 @@ import { naira } from "../../create-dues/_components/data";
 import { COLLECTION_TABS } from "./data";
 import type { CollectionStudent, StatusFilter } from "./types";
 import { Initials } from "./Initials";
+import { EmptyState } from "../../_components/EmptyState";
 
 export function CollectionTable({
   due,
   students,
+  totalCount,
+  tabCounts,
   filter,
   query,
   onFilterChange,
@@ -20,11 +24,16 @@ export function CollectionTable({
 }: {
   due: RepDue;
   students: CollectionStudent[];
+  totalCount: number;
+  tabCounts: Record<StatusFilter, number>;
   filter: StatusFilter;
   query: string;
   onFilterChange: (filter: StatusFilter) => void;
   onQueryChange: (query: string) => void;
 }) {
+  const hasQuery = query.trim() !== "";
+  const isFiltered = hasQuery || filter !== "all";
+
   return (
     <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -38,24 +47,40 @@ export function CollectionTable({
         </div>
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="flex items-center rounded-full border border-cloud bg-paper p-1">
-            {COLLECTION_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => onFilterChange(tab.value)}
-                className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors duration-300 cursor-pointer ${
-                  filter === tab.value
-                    ? "bg-brand text-white"
-                    : "text-ink-soft hover:text-ink"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div
+            role="tablist"
+            aria-label="Filter by payment status"
+            className="flex items-center rounded-full border border-cloud bg-paper p-1"
+          >
+            {COLLECTION_TABS.map((tab) => {
+              const active = filter === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => onFilterChange(tab.value)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                    active
+                      ? "bg-brand text-white"
+                      : "text-ink-soft hover:text-ink"
+                  }`}
+                >
+                  {tab.label}
+                  <span
+                    className={`rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
+                      active ? "bg-white/25 text-white" : "bg-cloud text-ink-soft"
+                    }`}
+                  >
+                    {tabCounts[tab.value]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-cloud bg-paper px-4 focus-within:border-brand md:w-72">
+          <div className="flex items-center gap-2 rounded-full border border-cloud bg-paper px-4 transition-colors focus-within:border-brand md:w-72">
             <HugeiconsIcon
               icon={Search01Icon}
               size={16}
@@ -64,14 +89,34 @@ export function CollectionTable({
             <input
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search list"
+              placeholder="Search name, matric no, or email"
+              aria-label="Search students"
               className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
             />
+            {hasQuery && (
+              <button
+                type="button"
+                onClick={() => onQueryChange("")}
+                aria-label="Clear search"
+                className="shrink-0 text-ink-soft transition-colors hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-full"
+              >
+                <HugeiconsIcon icon={CancelCircleIcon} size={16} />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-3xl border border-cloud">
+      <p className="mt-4 text-xs text-ink-soft" aria-live="polite">
+        Showing{" "}
+        <span className="font-semibold text-ink tabular-nums">
+          {students.length}
+        </span>{" "}
+        of <span className="tabular-nums">{totalCount}</span> students
+        {isFiltered ? " matching your filters" : ""}.
+      </p>
+
+      <div className="mt-3 overflow-hidden rounded-3xl border border-cloud">
         <div className="hidden grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] gap-4 bg-paper px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:grid">
           <span>Student</span>
           <span>Matric no</span>
@@ -98,6 +143,9 @@ export function CollectionTable({
                 </div>
               </div>
               <p className="text-sm font-medium text-ink">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:hidden">
+                  Matric:{" "}
+                </span>
                 {student.matricNo}
               </p>
               <p className="text-sm text-ink-soft">{student.level}</p>
@@ -120,30 +168,36 @@ export function CollectionTable({
                   {student.status === "paid" ? "Paid" : "Unpaid"}
                 </span>
                 {student.paidAt && (
-                  <p className="mt-1 text-xs text-ink-soft">
-                    {student.paidAt}
-                  </p>
+                  <p className="mt-1 text-xs text-ink-soft">{student.paidAt}</p>
                 )}
               </div>
               <p className="text-sm font-medium text-ink-soft">
-                {student.reference ?? "-"}
+                {student.reference ?? "—"}
               </p>
             </li>
           ))}
         </ul>
 
         {students.length === 0 && (
-          <div className="py-10 text-center">
-            <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-cloud text-brand">
-              <HugeiconsIcon icon={Search01Icon} size={20} />
-            </span>
-            <p className="mt-3 text-sm font-semibold text-ink">
-              No student found
-            </p>
-            <p className="mt-1 text-xs text-ink-soft">
-              Try another status, name, matric number, or email.
-            </p>
-          </div>
+          <EmptyState
+            icon={Search01Icon}
+            title="No student found"
+            description="No students match the current filters. Try a different status or search term."
+            action={
+              isFiltered && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onQueryChange("");
+                    onFilterChange("all");
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                >
+                  Clear filters
+                </button>
+              )
+            }
+          />
         )}
       </div>
     </section>
