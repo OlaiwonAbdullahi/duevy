@@ -19,6 +19,7 @@ import { PollListRow } from "./_components/PollListRow";
 import { PollForm } from "./_components/PollForm";
 import { PollAnalytics } from "./_components/PollAnalytics";
 import { ShareLinkModal } from "./_components/ShareLinkModal";
+import { ConfirmDialog } from "../_components/ConfirmDialog";
 
 function Stat({
   icon,
@@ -54,6 +55,7 @@ export default function PollsPage() {
   const [editing, setEditing] = useState<Poll | null>(null);
   const [viewing, setViewing] = useState<Poll | null>(null);
   const [sharePoll, setSharePoll] = useState<Poll | null>(null);
+  const [toDelete, setToDelete] = useState<Poll | null>(null);
 
   const totals = useMemo(() => {
     const live = polls.filter((p) => p.status === "active").length;
@@ -108,6 +110,7 @@ export default function PollsPage() {
   const remove = (poll: Poll) => {
     setPolls((list) => list.filter((p) => p.id !== poll.id));
     toast.success("Poll deleted", { description: poll.title });
+    setToDelete(null);
   };
 
   return (
@@ -213,7 +216,7 @@ export default function PollsPage() {
                       onAnalytics={openAnalytics}
                       onEdit={openEdit}
                       onShare={setSharePoll}
-                      onDelete={remove}
+                      onDelete={setToDelete}
                     />
                   ))}
                 </ul>
@@ -226,6 +229,19 @@ export default function PollsPage() {
       {sharePoll && (
         <ShareLinkModal poll={sharePoll} onClose={() => setSharePoll(null)} />
       )}
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete this poll?"
+        description={
+          toDelete
+            ? `"${toDelete.title}", its nominees and all votes will be removed. This can't be undone.`
+            : ""
+        }
+        confirmLabel="Delete poll"
+        onConfirm={() => toDelete && remove(toDelete)}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }

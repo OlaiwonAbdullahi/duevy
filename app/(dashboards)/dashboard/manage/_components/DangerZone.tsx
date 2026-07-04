@@ -1,14 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
+import { ConfirmDialog } from "../../_components/ConfirmDialog";
+
+type PendingAction = "transfer" | "archive" | null;
 
 /**
  * Irreversible department actions, walled off in a rose-tinted card so they
- * read as separate from everyday settings.
+ * read as separate from everyday settings. Each routes through a confirm step.
  */
 export function DangerZone() {
+  const [pending, setPending] = useState<PendingAction>(null);
+
+  const confirmText =
+    pending === "transfer"
+      ? {
+          title: "Transfer lead role?",
+          description:
+            "The new lead takes over department ownership and you become a co-rep. This can't be undone by you.",
+          confirmLabel: "Transfer role",
+          done: "Lead role transfer started",
+        }
+      : {
+          title: "Archive department?",
+          description:
+            "New dues, join requests and votes stop immediately. Existing records stay available to view.",
+          confirmLabel: "Archive department",
+          done: "Department archived",
+        };
+
   return (
     <section className="rounded-3xl border border-rose-200 bg-rose-50/50 p-5 sm:p-6">
       <div className="flex items-start gap-3">
@@ -30,23 +53,27 @@ export function DangerZone() {
           title="Transfer lead role"
           description="Hand over department ownership to another rep. You'll become a co-rep."
           action="Transfer"
-          onClick={() =>
-            toast("Transfer lead role?", {
-              description: "This would open a confirmation step in production.",
-            })
-          }
+          onClick={() => setPending("transfer")}
         />
         <Row
           title="Archive department"
           description="Stop new dues and join requests. Existing records stay available."
           action="Archive"
-          onClick={() =>
-            toast("Archive department?", {
-              description: "This would open a confirmation step in production.",
-            })
-          }
+          onClick={() => setPending("archive")}
         />
       </div>
+
+      <ConfirmDialog
+        open={pending !== null}
+        title={confirmText.title}
+        description={confirmText.description}
+        confirmLabel={confirmText.confirmLabel}
+        onConfirm={() => {
+          toast.success(confirmText.done);
+          setPending(null);
+        }}
+        onClose={() => setPending(null)}
+      />
     </section>
   );
 }

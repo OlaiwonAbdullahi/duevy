@@ -38,9 +38,25 @@ export function DueRow({
   return (
     <li
       onClick={toggle}
+      onKeyDown={
+        canSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toggle();
+              }
+            }
+          : undefined
+      }
+      role={canSelect ? "checkbox" : undefined}
+      aria-checked={canSelect ? selected : undefined}
+      aria-label={canSelect ? `Select ${due.title}` : undefined}
+      tabIndex={canSelect ? 0 : undefined}
       className={`flex flex-col gap-4 border-t border-cloud py-4 first:border-t-0 sm:flex-row sm:items-center ${
-        canSelect ? "cursor-pointer" : ""
-      } ${selected ? "sm:-mx-3 sm:rounded-2xl sm:bg-cloud/40 sm:px-3" : ""}`}
+        canSelect
+          ? "cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:-mx-3 sm:px-3"
+          : ""
+      } ${selected ? "sm:rounded-2xl sm:bg-cloud/40" : ""}`}
     >
       {/* Selection checkbox — only for open dues. */}
       {canSelect && (
@@ -114,7 +130,8 @@ export function DueRow({
               onPay([due]);
             }}
             disabled={pending}
-            className="inline-flex h-9 w-[92px] items-center justify-center rounded-full bg-brand text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
+            aria-label={`Pay ${due.title}, ${naira(due.amount)}`}
+            className="inline-flex h-9 w-[92px] items-center justify-center rounded-full bg-brand text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             {pending ? "…" : "Pay now"}
           </button>

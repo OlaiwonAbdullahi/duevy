@@ -83,7 +83,7 @@ export function SpaceDetail({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-full text-sm font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
         All spaces
@@ -137,7 +137,7 @@ export function SpaceDetail({
             <button
               type="button"
               onClick={toggleAll}
-              className="text-xs font-medium text-brand transition-colors hover:text-brand-bright cursor-pointer"
+              className="rounded-full px-1 text-xs font-medium text-brand transition-colors hover:text-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               {allSelected ? "Clear selection" : "Select all open"}
             </button>
@@ -186,7 +186,7 @@ export function SpaceDetail({
               <button
                 type="button"
                 onClick={() => onPay(selectedDues)}
-                className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
+                className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
                 Pay {naira(selectedTotal)}
               </button>

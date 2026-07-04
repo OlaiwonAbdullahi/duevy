@@ -17,7 +17,7 @@ export function PaymentMethods({
 }: {
   cards: Card[];
   onAdd: () => void;
-  onRemove: (id: string) => void;
+  onRemove: (card: Card) => void;
   onMakeDefault: (id: string) => void;
 }) {
   return (
@@ -66,18 +66,20 @@ export function PaymentMethods({
             </div>
             {!card.isDefault && (
               <button
+                type="button"
                 onClick={() => onMakeDefault(card.id)}
-                className="hidden text-xs font-semibold text-brand hover:underline sm:block cursor-pointer"
+                aria-label={`Make ${card.brand} ending ${card.last4} the default card`}
+                className="hidden rounded-full px-1 text-xs font-semibold text-brand hover:underline sm:block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 Make default
               </button>
             )}
             <Button
-              onClick={() => onRemove(card.id)}
+              onClick={() => onRemove(card)}
               variant="ghost"
               size="icon-sm"
               className="rounded-full text-ink-soft hover:bg-canvas hover:text-ink"
-              aria-label="Remove card"
+              aria-label={`Remove ${card.brand} ending ${card.last4}`}
             >
               <HugeiconsIcon icon={Delete02Icon} size={16} />
             </Button>

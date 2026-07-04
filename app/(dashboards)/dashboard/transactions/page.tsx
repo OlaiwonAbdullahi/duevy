@@ -11,7 +11,9 @@ import {
 import type { HugeIcon } from "../_components/nav-config";
 import type { TxnFilter } from "./_components/types";
 import { TRANSACTIONS, naira, groupByDay } from "./_components/data";
+import type { Transaction } from "./_components/types";
 import { TransactionRow } from "./_components/TransactionRow";
+import { ReceiptModal } from "./_components/ReceiptModal";
 import { EmptyState } from "../_components/EmptyState";
 
 const TABS: { value: TxnFilter; label: string }[] = [
@@ -51,6 +53,7 @@ function StatCard({
 export default function TransactionsPage() {
   const [filter, setFilter] = useState<TxnFilter>("all");
   const [query, setQuery] = useState("");
+  const [receiptTxn, setReceiptTxn] = useState<Transaction | null>(null);
 
   // Newest first, then apply the direction tab and search box.
   const filtered = useMemo(() => {
@@ -116,13 +119,19 @@ export default function TransactionsPage() {
 
       {/* Controls. */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center rounded-full border border-cloud bg-paper p-1">
+        <div
+          role="tablist"
+          aria-label="Filter transactions"
+          className="flex items-center rounded-full border border-cloud bg-paper p-1"
+        >
           {TABS.map((tab) => (
             <button
               key={tab.value}
               type="button"
+              role="tab"
+              aria-selected={filter === tab.value}
               onClick={() => setFilter(tab.value)}
-              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors duration-300 cursor-pointer ${
+              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                 filter === tab.value
                   ? "bg-brand text-white"
                   : "text-ink-soft hover:text-ink"
@@ -133,7 +142,7 @@ export default function TransactionsPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 rounded-full border border-cloud bg-canvas px-4 focus-within:border-brand sm:w-64">
+        <div className="flex items-center gap-2 rounded-full border border-cloud bg-canvas px-4 transition-colors focus-within:border-brand sm:w-64">
           <HugeiconsIcon
             icon={Search01Icon}
             size={16}
@@ -143,6 +152,7 @@ export default function TransactionsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search transactions"
+            aria-label="Search transactions"
             className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
           />
         </div>
@@ -179,7 +189,11 @@ export default function TransactionsPage() {
                 </p>
                 <ul className="flex flex-col">
                   {txns.map((txn) => (
-                    <TransactionRow key={txn.id} txn={txn} />
+                    <TransactionRow
+                      key={txn.id}
+                      txn={txn}
+                      onSelect={setReceiptTxn}
+                    />
                   ))}
                 </ul>
               </div>
@@ -187,6 +201,10 @@ export default function TransactionsPage() {
           </div>
         )}
       </div>
+
+      {receiptTxn && (
+        <ReceiptModal txn={receiptTxn} onClose={() => setReceiptTxn(null)} />
+      )}
     </div>
   );
 }

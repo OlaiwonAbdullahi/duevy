@@ -3,6 +3,7 @@
 import { DepartmentProfileCard } from "./_components/DepartmentProfileCard";
 import { MembershipCard } from "./_components/MembershipCard";
 import { RepsCard } from "./_components/RepsCard";
+import { AuditTrailCard } from "./_components/AuditTrailCard";
 import { DangerZone } from "./_components/DangerZone";
 
 export default function ManageDeptPage() {
@@ -24,6 +25,7 @@ export default function ManageDeptPage() {
         <DepartmentProfileCard />
         <MembershipCard />
         <RepsCard />
+        <AuditTrailCard />
         <DangerZone />
       </div>
     </div>

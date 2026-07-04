@@ -36,8 +36,11 @@ export default function Sidebar({
   onClose,
 }: SidebarProps) {
   const pathname = usePathname();
-  // Which collapsible groups are folded away, keyed by title.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Which collapsible groups are folded away, keyed by title. A rep lands with
+  // the Student group folded so the rep tools are front and centre.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    Student: true,
+  });
   const toggle = (title: string) =>
     setCollapsed((c) => ({ ...c, [title]: !c[title] }));
 
@@ -159,6 +162,17 @@ export default function Sidebar({
                   </AnimatePresence>
                 ) : (
                   links
+                )}
+
+                {/* Hint shown while a collapsible group is folded away. */}
+                {group.title && group.collapsible && isCollapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggle(group.title as string)}
+                    className="w-full px-3 pt-0.5 text-left text-[11px] italic text-ink-soft transition-colors duration-300 hover:text-ink cursor-pointer"
+                  >
+                    Click to open your {group.title.toLowerCase()} menu
+                  </button>
                 )}
               </div>
             );

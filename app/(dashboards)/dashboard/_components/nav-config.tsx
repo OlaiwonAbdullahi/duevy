@@ -76,6 +76,20 @@ export const REP_LINKS: NavLink[] = [
 ];
 
 /**
+ * Rep-only route prefixes — every REP_LINK except the shared Overview root.
+ * Used to gate these routes for students who reach them by URL.
+ */
+export const REP_ONLY_PREFIXES = REP_LINKS.map((link) => link.href).filter(
+  (href) => href !== "/dashboard",
+);
+
+export function isRepOnlyPath(pathname: string) {
+  return REP_ONLY_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
+/**
  * Build the sidebar groups for a given role. A rep gets both sets; the student
  * links then gain a header so they can be collapsed away to focus on rep tools.
  */

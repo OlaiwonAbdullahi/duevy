@@ -9,6 +9,7 @@ import { TopUpModal } from "./_components/TopUpModal";
 import { AddCardModal } from "./_components/AddCardModal";
 import type { Activity, Card, TopUpSource } from "./_components/types";
 import { naira } from "./_components/utils";
+import { ConfirmDialog } from "../_components/ConfirmDialog";
 
 export default function WalletPage() {
   const [balance, setBalance] = useState(8500);
@@ -25,6 +26,7 @@ export default function WalletPage() {
 
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [addCardOpen, setAddCardOpen] = useState(false);
+  const [cardToRemove, setCardToRemove] = useState<Card | null>(null);
 
   const handleTopUp = (amount: number, via: TopUpSource) => {
     // NOTE: the "online" path would, in production, create a transaction and
@@ -63,9 +65,10 @@ export default function WalletPage() {
     });
   };
 
-  const removeCard = (id: string) => {
-    setCards((list) => list.filter((c) => c.id !== id));
-    toast.success("Card removed");
+  const removeCard = (card: Card) => {
+    setCards((list) => list.filter((c) => c.id !== card.id));
+    toast.success("Card removed", { description: `${card.brand} •••• ${card.last4}` });
+    setCardToRemove(null);
   };
 
   const makeDefault = (id: string) => {
@@ -95,10 +98,23 @@ export default function WalletPage() {
         <PaymentMethods
           cards={cards}
           onAdd={() => setAddCardOpen(true)}
-          onRemove={removeCard}
+          onRemove={setCardToRemove}
           onMakeDefault={makeDefault}
         />
       </div>
+
+      <ConfirmDialog
+        open={!!cardToRemove}
+        title="Remove this card?"
+        description={
+          cardToRemove
+            ? `${cardToRemove.brand} •••• ${cardToRemove.last4} will be removed from your wallet. You can add it again later.`
+            : ""
+        }
+        confirmLabel="Remove card"
+        onConfirm={() => cardToRemove && removeCard(cardToRemove)}
+        onClose={() => setCardToRemove(null)}
+      />
 
       {topUpOpen && (
         <TopUpModal

@@ -16,6 +16,7 @@ import type { DueDraft, RepDue } from "./_components/types";
 import { DueListRow } from "./_components/DueListRow";
 import { DueForm } from "./_components/DueForm";
 import { EmptyState } from "../_components/EmptyState";
+import { ConfirmDialog } from "../_components/ConfirmDialog";
 
 function Stat({
   icon,
@@ -49,6 +50,7 @@ export default function CreateDuesPage() {
   const [dues, setDues] = useState<RepDue[]>(INITIAL_REP_DUES);
   const [mode, setMode] = useState<"list" | "form">("list");
   const [editing, setEditing] = useState<RepDue | null>(null);
+  const [toDelete, setToDelete] = useState<RepDue | null>(null);
 
   const totals = useMemo(() => {
     const active = dues.filter((d) => d.status === "active");
@@ -95,6 +97,7 @@ export default function CreateDuesPage() {
   const remove = (due: RepDue) => {
     setDues((list) => list.filter((d) => d.id !== due.id));
     toast.success("Due deleted", { description: due.title });
+    setToDelete(null);
   };
 
   return (
@@ -187,7 +190,7 @@ export default function CreateDuesPage() {
                       key={due.id}
                       due={due}
                       onEdit={openEdit}
-                      onDelete={remove}
+                      onDelete={setToDelete}
                     />
                   ))}
                 </ul>
@@ -196,6 +199,19 @@ export default function CreateDuesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete this due?"
+        description={
+          toDelete
+            ? `"${toDelete.title}" and its collection records will be removed. This can't be undone.`
+            : ""
+        }
+        confirmLabel="Delete due"
+        onConfirm={() => toDelete && remove(toDelete)}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }
