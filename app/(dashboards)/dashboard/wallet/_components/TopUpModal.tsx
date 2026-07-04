@@ -65,9 +65,11 @@ export function TopUpModal({
         {TOP_UP_PRESETS.map((preset) => (
           <button
             key={preset}
+            type="button"
+            aria-pressed={amount === preset}
             onClick={() => setAmount(preset)}
             className={cn(
-              "rounded-2xl border py-2.5 text-sm font-semibold transition-colors duration-300 cursor-pointer",
+              "rounded-2xl border py-2.5 text-sm font-semibold transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
               amount === preset
                 ? "border-brand bg-cloud text-brand"
                 : "border-cloud bg-paper text-ink hover:bg-cloud",
@@ -133,9 +135,12 @@ export function TopUpModal({
             return (
               <button
                 key={c.id}
+                type="button"
+                aria-pressed={on}
+                aria-label={`Top up with ${c.brand} ending ${c.last4}`}
                 onClick={() => setCardId(c.id)}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer",
+                  "flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
                   on ? "border-brand bg-cloud" : "border-cloud bg-paper",
                 )}
               >
@@ -197,9 +202,11 @@ function MethodTile({
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "flex flex-col gap-1 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer",
+        "flex flex-col gap-1 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
         active
           ? "border-brand bg-cloud"
           : "border-cloud bg-paper hover:bg-cloud",

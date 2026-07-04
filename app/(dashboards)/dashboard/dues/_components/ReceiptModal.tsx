@@ -64,7 +64,7 @@ export function ReceiptModal({
               type="button"
               onClick={() => void downloadReceipt(r)}
               aria-label={`Download receipt for ${r.dueTitle}`}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-cloud bg-canvas text-brand transition-colors duration-300 hover:bg-cloud cursor-pointer"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-cloud bg-canvas text-brand transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               <HugeiconsIcon icon={Download04Icon} size={16} />
             </button>
@@ -76,7 +76,7 @@ export function ReceiptModal({
       <button
         type="button"
         onClick={() => void downloadAllReceipts(receipts)}
-        className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
+        className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         <HugeiconsIcon icon={Download04Icon} size={16} />
         {multi ? "Download all receipts" : "Download receipt"}
@@ -84,7 +84,7 @@ export function ReceiptModal({
       <button
         type="button"
         onClick={onClose}
-        className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-medium text-ink-soft transition-colors duration-300 hover:text-ink cursor-pointer"
+        className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-medium text-ink-soft transition-colors duration-300 hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         Done
       </button>

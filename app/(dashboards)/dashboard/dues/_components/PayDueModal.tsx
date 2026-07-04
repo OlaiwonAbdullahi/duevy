@@ -183,7 +183,9 @@ export function PayDueModal({
                 key={c.id}
                 type="button"
                 onClick={() => setCardId(c.id)}
-                className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer ${
+                aria-pressed={on}
+                aria-label={`Pay with ${c.brand} ending ${c.last4}`}
+                className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                   on ? "border-brand bg-cloud" : "border-cloud bg-paper"
                 }`}
               >
@@ -222,7 +224,7 @@ export function PayDueModal({
       {method === "wallet" && walletShort ? (
         <Link
           href="/dashboard/wallet"
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
+          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           Top up wallet
           <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
@@ -232,7 +234,7 @@ export function PayDueModal({
           type="button"
           disabled={!valid}
           onClick={() => onConfirm(method, method === "card" ? selectedCard : undefined)}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
+          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           {pending
             ? "Processing…"
@@ -265,7 +267,8 @@ function MethodTile({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col gap-1 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer ${
+      aria-pressed={active}
+      className={`flex flex-col gap-1 rounded-2xl border p-3 text-left transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
         active ? "border-brand bg-cloud" : "border-cloud bg-paper hover:bg-cloud"
       }`}
     >

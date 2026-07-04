@@ -127,8 +127,11 @@ export function AddCardModal({
       </div>
 
       <button
+        type="button"
+        role="checkbox"
+        aria-checked={makeDefault}
         onClick={() => setMakeDefault((v) => !v)}
-        className="mt-4 flex w-full items-center gap-2 text-left text-[13px] text-ink cursor-pointer"
+        className="mt-4 flex w-full items-center gap-2 rounded-lg text-left text-[13px] text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         <HugeiconsIcon
           icon={CheckmarkCircle02Icon}
