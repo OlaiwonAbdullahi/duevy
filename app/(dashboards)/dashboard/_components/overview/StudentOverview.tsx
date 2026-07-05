@@ -11,6 +11,7 @@ import {
   Invoice01Icon,
   ArrowRight01Icon,
   CheckmarkCircle02Icon,
+  UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../EmptyState";
 import {
@@ -94,12 +95,18 @@ export function StudentOverview({ name = "Amara" }: { name?: string }) {
         />
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <QuickAction
           href="/dashboard/dues"
           icon={Invoice01Icon}
           label="Pay dues"
           hint="Settle what you owe"
+        />
+        <QuickAction
+          href="/dashboard/dues#join"
+          icon={UserAdd01Icon}
+          label="Join a department"
+          hint="Enter a code to join"
         />
         <QuickAction
           href="/dashboard/wallet"

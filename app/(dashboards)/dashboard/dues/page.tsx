@@ -156,7 +156,7 @@ export default function DuesPage() {
             </header>
 
             {/* Join a new department by code. */}
-            <div className="mt-6">
+            <div id="join" className="mt-6 scroll-mt-24">
               <JoinDepartmentCard
                 joinedIds={spaces.map((s) => s.id)}
                 onJoin={joinDepartment}
