@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { BRAND_INPUT } from "../../wallet/_components/utils";
+import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "./SettingsCard";
 
 function Field({
@@ -72,9 +73,7 @@ export function ProfileCard() {
     >
       {/* Avatar + identity. */}
       <div className="flex items-center gap-4 border-b border-cloud pb-5">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-brand text-lg font-semibold text-white">
-          AO
-        </span>
+        <UserAvatar name={name} size={56} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
           <p className="truncate text-xs text-ink-soft">

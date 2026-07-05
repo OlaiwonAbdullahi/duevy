@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils";
 import { useRole, type Role } from "./role-context";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationsMenu } from "./NotificationsMenu";
+import { UserAvatar } from "./UserAvatar";
+
+/** The signed-in user. Swap for the session user once auth lands. */
+const USER_NAME = "Amara Okafor";
 
 const ROLES: { value: Role; label: string }[] = [
   { value: "student", label: "Student" },
@@ -81,9 +85,13 @@ export default function Topbar({
 
         <NotificationsMenu />
 
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-brand text-[13px] font-semibold text-white">
-          AO
-        </div>
+        {role === "student" ? (
+          <UserAvatar name={USER_NAME} size={36} />
+        ) : (
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-brand text-[13px] font-semibold text-white">
+            AO
+          </div>
+        )}
       </div>
     </header>
   );
