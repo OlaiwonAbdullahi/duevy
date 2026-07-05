@@ -22,7 +22,7 @@ export default function Topbar({
   const { role, setRole } = useRole();
 
   return (
-    <header className="sticky top-0 z-30 flex h-18 items-center gap-4 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-18 items-center gap-2.5 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:gap-4 sm:px-6 lg:px-8">
       {/* Mobile menu */}
       <button
         onClick={onMenu}
@@ -54,7 +54,7 @@ export default function Topbar({
         <HugeiconsIcon icon={Search01Icon} size={20} />
       </button>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         {/* Role switch — demo only. Lets you see how one route renders per role.
             Replace with the real signed-in role once auth is wired up. */}
         <div className="flex items-center rounded-full border border-cloud bg-paper p-1">
@@ -66,7 +66,7 @@ export default function Topbar({
               key={r.value}
               onClick={() => setRole(r.value)}
               className={cn(
-                "rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors duration-300 cursor-pointer",
+                "rounded-full px-2.5 py-1.5 text-[12px] font-semibold transition-colors duration-300 cursor-pointer sm:px-3",
                 role === r.value
                   ? "bg-brand text-white"
                   : "text-ink-soft hover:text-ink"

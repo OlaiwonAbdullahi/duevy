@@ -7,7 +7,7 @@ import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { ToggleRow } from "../../settings/_components/Toggle";
 
 type Prefs = {
-  acceptRequests: boolean;
+  codeOpen: boolean;
   requireMatric: boolean;
   allowGuests: boolean;
   listInDirectory: boolean;
@@ -16,8 +16,8 @@ type Prefs = {
 /** How students get into the department space and pay. Applies instantly. */
 export function MembershipCard() {
   const [prefs, setPrefs] = useState<Prefs>({
-    acceptRequests: true,
-    requireMatric: true,
+    codeOpen: true,
+    requireMatric: false,
     allowGuests: false,
     listInDirectory: true,
   });
@@ -35,16 +35,16 @@ export function MembershipCard() {
     >
       <div className="flex flex-col">
         <ToggleRow
-          title="Accept join requests"
-          description="Students can request to join this department space."
-          checked={prefs.acceptRequests}
-          onChange={set("acceptRequests", "Join requests")}
+          title="Allow joining with code"
+          description="Students who enter your join code become members instantly. Manage the code from Circle."
+          checked={prefs.codeOpen}
+          onChange={set("codeOpen", "Code joining")}
         />
         <ToggleRow
-          title="Require matric verification"
-          description="Only students on your uploaded class list are auto-approved."
+          title="Require matric to join"
+          description="Ask for a matric number when joining, and only accept ones on your class list."
           checked={prefs.requireMatric}
-          onChange={set("requireMatric", "Matric verification")}
+          onChange={set("requireMatric", "Matric check")}
         />
         <ToggleRow
           title="Allow guest payments"

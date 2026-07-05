@@ -1,42 +1,34 @@
-import {
-  CheckmarkCircle02Icon,
-  Clock01Icon,
-  UserMultipleIcon,
-} from "@hugeicons/core-free-icons";
+import { UserMultipleIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { StatCard } from "./StatCard";
+import { JoinCodeStat } from "./JoinCodeStat";
 
 export function CircleStats({
   studentCount,
-  requestCount,
-  matchedCount,
-  uploadMatched,
+  recentCount,
+  code,
+  onRegenerate,
 }: {
   studentCount: number;
-  requestCount: number;
-  matchedCount: number;
-  uploadMatched: boolean;
+  recentCount: number;
+  code: string;
+  onRegenerate: () => void;
 }) {
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-3">
       <StatCard
         icon={UserMultipleIcon}
-        label="Approved students"
+        label="Members"
         value={String(studentCount)}
         hint="Currently in this department"
         tone="brand"
       />
       <StatCard
-        icon={Clock01Icon}
-        label="Join requests"
-        value={String(requestCount)}
-        hint="Waiting for rep review"
+        icon={UserAdd01Icon}
+        label="Recent joins"
+        value={String(recentCount)}
+        hint="Joined with the code"
       />
-      <StatCard
-        icon={CheckmarkCircle02Icon}
-        label="Upload matches"
-        value={String(matchedCount)}
-        hint={uploadMatched ? "Ready for bulk approval" : "Upload a sheet to check"}
-      />
+      <JoinCodeStat code={code} onRegenerate={onRegenerate} />
     </div>
   );
 }

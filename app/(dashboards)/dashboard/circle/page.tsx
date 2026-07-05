@@ -1,22 +1,16 @@
 "use client";
 
-import { ChangeEvent, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { INITIAL_REQUESTS, INITIAL_STUDENTS } from "./_components/data";
-import type { JoinRequest, Student } from "./_components/types";
+import { useMemo, useState } from "react";
+import { INITIAL_STUDENTS, REP_JOIN_CODE, generateJoinCode } from "./_components/data";
+import type { Student } from "./_components/types";
 import { CircleHeader } from "./_components/CircleHeader";
 import { CircleStats } from "./_components/CircleStats";
-import { PendingRequestsCard } from "./_components/PendingRequestsCard";
 import { StudentsTable } from "./_components/StudentsTable";
-import { UploadApprovalCard } from "./_components/UploadApprovalCard";
 
 export default function CirclePage() {
-  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
-  const [requests, setRequests] = useState<JoinRequest[]>(INITIAL_REQUESTS);
+  const [students] = useState<Student[]>(INITIAL_STUDENTS);
+  const [code, setCode] = useState(REP_JOIN_CODE);
   const [query, setQuery] = useState("");
-  const [uploadName, setUploadName] = useState<string | null>(null);
-  const [uploadMatched, setUploadMatched] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredStudents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -29,99 +23,23 @@ export default function CirclePage() {
     );
   }, [query, students]);
 
-  const matchedRequests = requests.filter((request) => request.matchedByUpload);
-  const openUploadPicker = () => fileInputRef.current?.click();
+  // Students who joined this week — a light signal that the code is circulating.
+  const recentJoins = students.filter((s) => /Jun|Jul|Just now/.test(s.joinedAt));
 
-  const approveRequest = (request: JoinRequest) => {
-    setStudents((list) => [
-      {
-        id: `std-${request.id}`,
-        name: request.name,
-        matricNo: request.matricNo,
-        level: request.level,
-        email: request.email,
-        status: "approved",
-        joinedAt: "Just now",
-      },
-      ...list,
-    ]);
-    setRequests((list) => list.filter((item) => item.id !== request.id));
-    toast.success("Student approved", { description: request.name });
-  };
-
-  const declineRequest = (request: JoinRequest) => {
-    setRequests((list) => list.filter((item) => item.id !== request.id));
-    toast.success("Request declined", { description: request.name });
-  };
-
-  const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadName(file.name);
-    setUploadMatched(true);
-    setRequests((list) =>
-      list.map((request, index) => ({
-        ...request,
-        matchedByUpload: index < 2,
-      })),
-    );
-    toast.success("List checked", {
-      description: "2 pending requests matched the uploaded sheet.",
-    });
-  };
-
-  const approveMatched = () => {
-    if (matchedRequests.length === 0) return;
-
-    setStudents((list) => [
-      ...matchedRequests.map((request) => ({
-        id: `std-${request.id}`,
-        name: request.name,
-        matricNo: request.matricNo,
-        level: request.level,
-        email: request.email,
-        status: "approved" as const,
-        joinedAt: "Just now",
-      })),
-      ...list,
-    ]);
-    setRequests((list) => list.filter((request) => !request.matchedByUpload));
-    toast.success(`${matchedRequests.length} students approved`, {
-      description: "Matched requests moved into the department circle.",
-    });
-  };
+  const regenerateCode = () => setCode(generateJoinCode());
 
   return (
     <div className="mx-auto max-w-6xl">
-      <CircleHeader onUploadClick={openUploadPicker} />
+      <CircleHeader />
 
       <CircleStats
         studentCount={students.length}
-        requestCount={requests.length}
-        matchedCount={matchedRequests.length}
-        uploadMatched={uploadMatched}
+        recentCount={recentJoins.length}
+        code={code}
+        onRegenerate={regenerateCode}
       />
 
-      {/* Approval workflow — upload check and pending requests side by side */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <UploadApprovalCard
-          fileInputRef={fileInputRef}
-          uploadName={uploadName}
-          uploadMatched={uploadMatched}
-          matchedCount={matchedRequests.length}
-          onUpload={handleUpload}
-          onUploadClick={openUploadPicker}
-          onApproveMatched={approveMatched}
-        />
-        <PendingRequestsCard
-          requests={requests}
-          onApprove={approveRequest}
-          onDecline={declineRequest}
-        />
-      </div>
-
-      {/* Approved students — full width so the table can breathe */}
+      {/* Members who joined with the code. */}
       <StudentsTable
         students={filteredStudents}
         totalCount={students.length}

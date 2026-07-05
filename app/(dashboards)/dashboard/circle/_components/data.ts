@@ -1,4 +1,26 @@
-import type { JoinRequest, Student } from "./types";
+import type { Student } from "./types";
+
+/**
+ * Characters used to build department join codes. Ambiguous glyphs (0/O, 1/I,
+ * etc.) are left out so a code read aloud or off a slide can't be mistyped.
+ */
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+/** A fresh 5-character department join code. */
+export function generateJoinCode(length = 5): string {
+  let code = "";
+  for (let i = 0; i < length; i += 1) {
+    code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+/**
+ * The department's current join code. Students enter this to find and join the
+ * space — no approval step. Regenerating it (see JoinCodeStat) retires the old
+ * one. Fixed here so the demo is stable; the API would persist it per space.
+ */
+export const REP_JOIN_CODE = "CS7K9";
 
 export const INITIAL_STUDENTS: Student[] = [
   {
@@ -7,7 +29,6 @@ export const INITIAL_STUDENTS: Student[] = [
     matricNo: "CSC/21/1042",
     level: "400L",
     email: "amina.bello@student.edu",
-    status: "approved",
     joinedAt: "12 Jun",
   },
   {
@@ -16,7 +37,6 @@ export const INITIAL_STUDENTS: Student[] = [
     matricNo: "CSC/22/1176",
     level: "300L",
     email: "daniel.okafor@student.edu",
-    status: "approved",
     joinedAt: "18 Jun",
   },
   {
@@ -25,7 +45,6 @@ export const INITIAL_STUDENTS: Student[] = [
     matricNo: "CSC/23/1288",
     level: "200L",
     email: "rukayat.yusuf@student.edu",
-    status: "approved",
     joinedAt: "24 Jun",
   },
   {
@@ -34,34 +53,6 @@ export const INITIAL_STUDENTS: Student[] = [
     matricNo: "CSC/24/1431",
     level: "100L",
     email: "samuel.udo@student.edu",
-    status: "approved",
     joinedAt: "28 Jun",
-  },
-];
-
-export const INITIAL_REQUESTS: JoinRequest[] = [
-  {
-    id: "req-1",
-    name: "Ifeoma Nwosu",
-    matricNo: "CSC/22/1190",
-    level: "300L",
-    email: "ifeoma.nwosu@student.edu",
-    requestedAt: "Today, 9:42 AM",
-  },
-  {
-    id: "req-2",
-    name: "Tobi Adebayo",
-    matricNo: "CSC/23/1315",
-    level: "200L",
-    email: "tobi.adebayo@student.edu",
-    requestedAt: "Today, 8:17 AM",
-  },
-  {
-    id: "req-3",
-    name: "Grace Etim",
-    matricNo: "CSC/24/1408",
-    level: "100L",
-    email: "grace.etim@student.edu",
-    requestedAt: "Yesterday",
   },
 ];

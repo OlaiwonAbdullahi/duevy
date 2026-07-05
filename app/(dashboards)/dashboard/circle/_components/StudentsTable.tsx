@@ -30,7 +30,7 @@ export function StudentsTable({
             Department students
           </h2>
           <p className="mt-1 text-xs text-ink-soft">
-            Approved members listed for the department.
+            Everyone who joined with your department code.
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export function StudentsTable({
               <div className="flex items-center justify-between gap-3 md:block">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand">
                   <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} />
-                  Approved
+                  Member
                 </span>
                 <p className="mt-0 text-xs text-ink-soft md:mt-1">
                   {student.joinedAt}
@@ -118,7 +118,7 @@ export function StudentsTable({
           <EmptyState
             icon={UserAdd01Icon}
             title="No student found"
-            description="No approved students match your search. Try another name, matric number, or email."
+            description="No members match your search. Try another name, matric number, or email."
             action={
               hasQuery && (
                 <button

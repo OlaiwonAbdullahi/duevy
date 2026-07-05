@@ -5,16 +5,23 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
-import type { Due, PayMethod, Space } from "./_components/types";
+import type {
+  Due,
+  JoinableDepartment,
+  PayMethod,
+  Space,
+} from "./_components/types";
 import type { Card } from "../wallet/_components/types";
 import { SPACES, DUES, SAVED_CARDS, naira } from "./_components/data";
 import { SpaceCard } from "./_components/SpaceCard";
 import { SpaceDetail } from "./_components/SpaceDetail";
+import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
 import { PayDueModal } from "./_components/PayDueModal";
 import { ReceiptModal } from "./_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "./_components/receipt";
 
 export default function DuesPage() {
+  const [spaces, setSpaces] = useState<Space[]>(SPACES);
   const [dues, setDues] = useState<Due[]>(DUES);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
@@ -22,7 +29,7 @@ export default function DuesPage() {
   const [balance, setBalance] = useState(8500);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
 
-  const selected = SPACES.find((s) => s.id === selectedId) ?? null;
+  const selected = spaces.find((s) => s.id === selectedId) ?? null;
   const selectedDues = useMemo(
     () => dues.filter((d) => d.spaceId === selectedId),
     [dues, selectedId],
@@ -37,10 +44,30 @@ export default function DuesPage() {
     };
   }, [dues]);
 
-  const members = SPACES.filter((s) => s.membership === "member");
-  const guests = SPACES.filter((s) => s.membership === "guest");
+  const members = spaces.filter((s) => s.membership === "member");
+  const guests = spaces.filter((s) => s.membership === "guest");
 
   const openSpace = (space: Space) => setSelectedId(space.id);
+
+  // Joining by code is instant — the department drops straight into "Your
+  // spaces" with its starter dues, no approval to wait on.
+  const joinDepartment = (dept: JoinableDepartment) => {
+    if (spaces.some((s) => s.id === dept.id)) return;
+    const space: Space = {
+      id: dept.id,
+      name: dept.name,
+      short: dept.short,
+      kind: dept.kind,
+      membership: dept.membership,
+      hue: dept.hue,
+      memberCount: dept.memberCount,
+    };
+    setSpaces((list) => [space, ...list]);
+    setDues((list) => [...dept.dues, ...list]);
+    toast.success(`Joined ${dept.short}`, {
+      description: "It's now under Your spaces.",
+    });
+  };
 
   const confirmPay = (method: PayMethod, card?: Card) => {
     if (payDues.length === 0 || !selected) return;
@@ -127,6 +154,14 @@ export default function DuesPage() {
                 )}
               </div>
             </header>
+
+            {/* Join a new department by code. */}
+            <div className="mt-6">
+              <JoinDepartmentCard
+                joinedIds={spaces.map((s) => s.id)}
+                onJoin={joinDepartment}
+              />
+            </div>
 
             {/* Spaces you're a member of. */}
             <section className="mt-8">

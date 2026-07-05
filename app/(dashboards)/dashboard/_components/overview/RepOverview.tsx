@@ -13,6 +13,7 @@ import {
   Notification03Icon,
   UserAdd01Icon,
   UserMultipleIcon,
+  SquareLock01Icon,
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../EmptyState";
@@ -21,7 +22,7 @@ import {
   REP_SPACE,
   naira,
 } from "../../create-dues/_components/data";
-import { INITIAL_REQUESTS } from "../../circle/_components/data";
+import { INITIAL_STUDENTS, REP_JOIN_CODE } from "../../circle/_components/data";
 import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
 
 export function RepOverview({ name = "Amara" }: { name?: string }) {
@@ -41,7 +42,7 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
     };
   }, []);
 
-  const requests = INITIAL_REQUESTS;
+  const members = INITIAL_STUDENTS;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -79,10 +80,10 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
           hint={`${REP_SPACE.memberCount} members`}
         />
         <StatCard
-          icon={UserAdd01Icon}
-          label="Join requests"
-          value={String(requests.length)}
-          hint="Waiting for review"
+          icon={SquareLock01Icon}
+          label="Join code"
+          value={REP_JOIN_CODE}
+          hint="Share to add students"
         />
       </div>
 
@@ -189,30 +190,30 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
             </Link>
           </section>
 
-          {/* Pending join requests. */}
+          {/* Newest members — students who just joined with the code. */}
           <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
             <PanelHeader
-              title="Join requests"
+              title="New members"
               href="/dashboard/circle"
-              cta="Review"
+              cta="Circle"
             />
 
-            {requests.length === 0 ? (
+            {members.length === 0 ? (
               <EmptyState
                 size="sm"
                 icon={UserAdd01Icon}
-                title="No pending requests"
-                description="New requests to join will show up here."
+                title="No members yet"
+                description="Share your join code and students will show up here."
               />
             ) : (
               <ul className="mt-3 flex flex-col">
-                {requests.slice(0, 3).map((req) => (
+                {members.slice(0, 3).map((member) => (
                   <li
-                    key={req.id}
+                    key={member.id}
                     className="flex items-center gap-3 border-t border-cloud py-3 first:border-t-0"
                   >
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cloud text-[11px] font-bold text-brand">
-                      {req.name
+                      {member.name
                         .split(" ")
                         .map((p) => p[0])
                         .slice(0, 2)
@@ -220,12 +221,15 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">
-                        {req.name}
+                        {member.name}
                       </p>
                       <p className="truncate text-xs text-ink-soft">
-                        {req.matricNo} · {req.level}
+                        {member.matricNo} · {member.level}
                       </p>
                     </div>
+                    <span className="shrink-0 text-[11px] text-ink-soft">
+                      {member.joinedAt}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -1,7 +1,4 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CloudUploadIcon } from "@hugeicons/core-free-icons";
-
-export function CircleHeader({ onUploadClick }: { onUploadClick: () => void }) {
+export function CircleHeader() {
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -12,18 +9,10 @@ export function CircleHeader({ onUploadClick }: { onUploadClick: () => void }) {
           Circle
         </h1>
         <p className="mt-1 text-[13px] text-ink-soft">
-          Manage department students and approve requests to join your space.
+          Share your join code and see everyone who&apos;s in your department
+          space.
         </p>
       </div>
-
-      <button
-        type="button"
-        onClick={onUploadClick}
-        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-      >
-        <HugeiconsIcon icon={CloudUploadIcon} size={16} />
-        Upload Excel
-      </button>
     </header>
   );
 }

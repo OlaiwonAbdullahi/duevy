@@ -11,7 +11,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
 import type { Card } from "../../wallet/_components/types";
-import type { DueCategory, EmblemHue, Space, Due, SpaceKind } from "./types";
+import type {
+  DueCategory,
+  EmblemHue,
+  Space,
+  Due,
+  SpaceKind,
+  JoinableDepartment,
+} from "./types";
 
 export const naira = (n: number) =>
   `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
@@ -265,3 +272,95 @@ export const DUES: Due[] = [
     category: "handout",
   },
 ];
+
+/**
+ * Departments a student can join by code. In production this is a lookup against
+ * every space with an active join code; seeded here so the search-by-code flow
+ * on "My dues" has something to find. Codes are matched case-insensitively.
+ */
+export const JOINABLE_DEPARTMENTS: JoinableDepartment[] = [
+  {
+    id: "mee",
+    name: "Mechanical Engineering Students' Association",
+    short: "MESA",
+    kind: "department",
+    membership: "member",
+    hue: "amber",
+    memberCount: 384,
+    code: "MEE24",
+    faculty: "Faculty of Engineering",
+    about:
+      "Official space for Mechanical Engineering students to settle departmental levies, buy handouts and pay for events.",
+    dues: [
+      {
+        id: "mee-1",
+        spaceId: "mee",
+        title: "First Semester Departmental Levy",
+        note: "Workshop consumables and the resource portal.",
+        amount: 6000,
+        dueDate: "2026-07-22",
+        status: "unpaid",
+        category: "levy",
+      },
+    ],
+  },
+  {
+    id: "polsa",
+    name: "Political Science Students' Association",
+    short: "POLSA",
+    kind: "department",
+    membership: "member",
+    hue: "indigo",
+    memberCount: 540,
+    code: "POL07",
+    faculty: "Faculty of Social Sciences",
+    about:
+      "Departmental hub for Political Science — dues, handouts and congress levies in one place.",
+    dues: [
+      {
+        id: "polsa-1",
+        spaceId: "polsa",
+        title: "POL 201 Handout",
+        note: "Compiled lecture notes for the semester.",
+        amount: 2500,
+        dueDate: "2026-07-16",
+        status: "unpaid",
+        category: "handout",
+      },
+    ],
+  },
+  {
+    id: "macosa",
+    name: "Mass Communication Students' Association",
+    short: "MACOSA",
+    kind: "association",
+    membership: "member",
+    hue: "rose",
+    memberCount: 612,
+    code: "MAC19",
+    faculty: "Faculty of Communication",
+    about:
+      "Pay your Press Week levy, association dues and event tickets for Mass Comm.",
+    dues: [
+      {
+        id: "macosa-1",
+        spaceId: "macosa",
+        title: "Press Week Levy",
+        note: "Covers the annual Press Week programme.",
+        amount: 3000,
+        dueDate: "2026-08-02",
+        status: "unpaid",
+        category: "levy",
+      },
+    ],
+  },
+];
+
+/** Find a joinable department by its code, ignoring case and surrounding space. */
+export function findDepartmentByCode(
+  code: string,
+): JoinableDepartment | undefined {
+  const normalized = code.trim().toUpperCase();
+  if (!normalized) return undefined;
+  return JOINABLE_DEPARTMENTS.find((dept) => dept.code === normalized);
+}
