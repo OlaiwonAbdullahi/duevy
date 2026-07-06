@@ -225,6 +225,77 @@ h1, h2, h3, h4, h5, h6 {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/*
+ * Space colour themes. A rep picks one on Manage → Space theme; the provider
+ * stamps `data-space-theme` on <html> and these blocks re-tint the brand
+ * tokens, so bg-brand / text-brand / bg-cloud etc. follow along everywhere.
+ * Emerald is the default (:root / .dark above) and needs no block. Each theme
+ * has a light and a dark scheme, mirroring the emerald pairs.
+ */
+html[data-space-theme="ocean"] {
+  --p-primary: #0a5c8c;
+  --p-primary-bright: #0e7fb8;
+  --p-primary-deep: #084a70;
+  --p-cloud: #e3eef7;
+  --p-hairline: #e3eef7;
+  --p-link-pressed: #0a5c8c;
+}
+html.dark[data-space-theme="ocean"] {
+  --p-primary: #0e7fb8;
+  --p-primary-bright: #1a9bd8;
+  --p-primary-deep: #0a5c8c;
+  --p-cloud: #1c2933;
+  --p-hairline: #1c2933;
+}
+
+html[data-space-theme="royal"] {
+  --p-primary: #5b2d9e;
+  --p-primary-bright: #7a3fd1;
+  --p-primary-deep: #48237e;
+  --p-cloud: #eee8f9;
+  --p-hairline: #eee8f9;
+  --p-link-pressed: #5b2d9e;
+}
+html.dark[data-space-theme="royal"] {
+  --p-primary: #7a3fd1;
+  --p-primary-bright: #9257e8;
+  --p-primary-deep: #5b2d9e;
+  --p-cloud: #292336;
+  --p-hairline: #292336;
+}
+
+html[data-space-theme="crimson"] {
+  --p-primary: #b01e4e;
+  --p-primary-bright: #d63868;
+  --p-primary-deep: #8c1840;
+  --p-cloud: #fae6ed;
+  --p-hairline: #fae6ed;
+  --p-link-pressed: #b01e4e;
+}
+html.dark[data-space-theme="crimson"] {
+  --p-primary: #d63868;
+  --p-primary-bright: #ef5582;
+  --p-primary-deep: #b01e4e;
+  --p-cloud: #33212a;
+  --p-hairline: #33212a;
+}
+
+html[data-space-theme="tangerine"] {
+  --p-primary: #b45309;
+  --p-primary-bright: #d97016;
+  --p-primary-deep: #92400e;
+  --p-cloud: #faeddd;
+  --p-hairline: #faeddd;
+  --p-link-pressed: #b45309;
+}
+html.dark[data-space-theme="tangerine"] {
+  --p-primary: #d97016;
+  --p-primary-bright: #f08a2f;
+  --p-primary-deep: #b45309;
+  --p-cloud: #33271d;
+  --p-hairline: #33271d;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

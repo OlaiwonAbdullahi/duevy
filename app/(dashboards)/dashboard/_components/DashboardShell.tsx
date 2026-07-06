@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { RoleProvider, useRole } from "./role-context";
+import { SpaceThemeProvider } from "./space-theme";
 import { getDashboardGroups, isRepOnlyPath } from "./nav-config";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
@@ -42,7 +43,9 @@ function ShellInner({ children }: { children: ReactNode }) {
 export default function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <RoleProvider initialRole="student">
-      <ShellInner>{children}</ShellInner>
+      <SpaceThemeProvider>
+        <ShellInner>{children}</ShellInner>
+      </SpaceThemeProvider>
     </RoleProvider>
   );
 }

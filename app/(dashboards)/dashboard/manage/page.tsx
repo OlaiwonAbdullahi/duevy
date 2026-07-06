@@ -1,6 +1,7 @@
 "use client";
 
 import { DepartmentProfileCard } from "./_components/DepartmentProfileCard";
+import { SpaceThemeCard } from "./_components/SpaceThemeCard";
 import { MembershipCard } from "./_components/MembershipCard";
 import { RepsCard } from "./_components/RepsCard";
 import { AuditTrailCard } from "./_components/AuditTrailCard";
@@ -23,6 +24,7 @@ export default function ManageDeptPage() {
 
       <div className="mt-6 flex flex-col gap-5">
         <DepartmentProfileCard />
+        <SpaceThemeCard />
         <MembershipCard />
         <RepsCard />
         <AuditTrailCard />
