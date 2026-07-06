@@ -11,7 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BRAND_INPUT } from "../../wallet/_components/utils";
+import { BRAND_INPUT } from "../../_components/form-styles";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { ToggleRow } from "../../settings/_components/Toggle";
 import { REP_SPACE } from "./data";

@@ -1,37 +1,14 @@
 import Link from "next/link";
+import type { ComponentProps } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../nav-config";
+import { StatCard as BaseStatCard } from "../StatCard";
+import { IconChip } from "../IconChip";
 
-export function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  icon: HugeIcon;
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "brand";
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-6">
-      <div className="mb-4 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          tone === "brand" ? "text-brand" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-      {hint && <p className="mt-1 text-xs text-ink-soft">{hint}</p>}
-    </div>
-  );
+/** Overview stats are the shared StatCard with a touch more padding. */
+export function StatCard(props: ComponentProps<typeof BaseStatCard>) {
+  return <BaseStatCard {...props} className="p-6" />;
 }
 
 export function QuickAction({
@@ -50,9 +27,7 @@ export function QuickAction({
       href={href}
       className="group flex items-center gap-3 rounded-2xl border border-cloud bg-canvas p-4 transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </span>
+      <IconChip icon={icon} className="h-10 w-10" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">{label}</p>
         <p className="truncate text-xs text-ink-soft">{hint}</p>

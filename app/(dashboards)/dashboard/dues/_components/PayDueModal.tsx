@@ -13,7 +13,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { CardBrand } from "../../wallet/_components/CardBrand";
 import type { Card } from "../../wallet/_components/types";
-import { Modal } from "../../wallet/_components/Modal";
+import { Modal } from "../../_components/Modal";
+import { IconChip } from "../../_components/IconChip";
 import type { Due, PayMethod, Space } from "./types";
 import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
 import type { HugeIcon } from "../../_components/nav-config";
@@ -149,9 +150,7 @@ export function PayDueModal({
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-2xl border border-cloud p-4">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-                <HugeiconsIcon icon={Wallet01Icon} size={18} />
-              </span>
+              <IconChip icon={Wallet01Icon} />
               <div className="flex-1">
                 <p className="text-sm font-medium text-ink">Duevy wallet</p>
                 <p className="text-xs text-ink-soft">Balance {naira(balance)}</p>

@@ -1,6 +1,5 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 import {
   Dialog,
@@ -9,7 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { HugeIcon } from "./nav-config";
+import { IconChip } from "./IconChip";
 
 /**
  * A single confirm step for actions that are hard to undo. Controlled by `open`;
@@ -46,13 +47,7 @@ export function ConfirmDialog({
         className="gap-0 rounded-3xl border border-cloud bg-canvas p-6 sm:max-w-sm"
       >
         <DialogHeader className="items-center gap-3 text-center sm:text-center">
-          <span
-            className={`grid h-11 w-11 place-items-center rounded-full ${
-              danger ? "bg-rose-100 text-rose-600" : "bg-cloud text-brand"
-            }`}
-          >
-            <HugeiconsIcon icon={icon} size={20} />
-          </span>
+          <IconChip icon={icon} size="md" tone={danger ? "danger" : "brand"} />
           <DialogTitle className="text-base font-semibold tracking-tight text-ink">
             {title}
           </DialogTitle>
@@ -62,24 +57,22 @@ export function ConfirmDialog({
         </DialogHeader>
 
         <div className="mt-6 flex gap-3">
-          <button
-            type="button"
+          <Button
+            variant="brand-outline"
+            size="pill-lg"
             onClick={onClose}
-            className="h-11 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="flex-1 bg-canvas"
           >
             {cancelLabel}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={danger ? "danger" : "brand"}
+            size="pill-lg"
             onClick={onConfirm}
-            className={`h-11 flex-1 rounded-full text-sm font-semibold text-white transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 ${
-              danger
-                ? "bg-rose-600 hover:bg-rose-700 focus-visible:ring-rose-300"
-                : "bg-brand hover:bg-brand-bright focus-visible:ring-brand/40"
-            }`}
+            className="flex-1"
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

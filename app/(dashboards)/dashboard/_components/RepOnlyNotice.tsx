@@ -4,6 +4,7 @@ import {
   ArrowRight01Icon,
   SquareLock02Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 
 /**
  * Shown when a student lands on a rep-only route. Explains why and points back
@@ -28,13 +29,12 @@ export function RepOnlyNotice() {
         <span className="font-semibold text-ink">View as → Rep</span> in the top
         bar.
       </p>
-      <Link
-        href="/dashboard"
-        className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-      >
-        Back to overview
-        <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
-      </Link>
+      <Button asChild variant="brand" size="pill-lg" className="mt-6">
+        <Link href="/dashboard">
+          Back to overview
+          <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+        </Link>
+      </Button>
     </div>
   );
 }

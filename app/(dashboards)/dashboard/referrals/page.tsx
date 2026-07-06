@@ -13,6 +13,8 @@ import {
   Coins01Icon,
   CheckmarkCircle02Icon,
 } from "@hugeicons/core-free-icons";
+import { StatCard } from "../_components/StatCard";
+import { IconChip } from "../_components/IconChip";
 import type { HugeIcon } from "../_components/nav-config";
 import {
   REFERRAL_CODE,
@@ -25,34 +27,6 @@ import {
   formatDate,
 } from "./_components/data";
 import { EmptyState } from "../_components/EmptyState";
-
-function Stat({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: HugeIcon;
-  label: string;
-  value: string;
-  tone?: "brand";
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-5">
-      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          tone === "brand" ? "text-brand" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 const STEPS: { icon: HugeIcon; title: string; body: string }[] = [
   {
@@ -186,9 +160,9 @@ export default function ReferralsPage() {
 
       {/* Stats. */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <Stat icon={AddTeamIcon} label="Friends invited" value={String(stats.invited)} />
-        <Stat icon={UserAdd01Icon} label="Signed up" value={String(stats.joined)} />
-        <Stat
+        <StatCard icon={AddTeamIcon} label="Friends invited" value={String(stats.invited)} />
+        <StatCard icon={UserAdd01Icon} label="Signed up" value={String(stats.joined)} />
+        <StatCard
           icon={Coins01Icon}
           label="Total earned"
           value={naira(stats.earned)}
@@ -205,9 +179,7 @@ export default function ReferralsPage() {
           {STEPS.map((step, i) => (
             <div key={step.title} className="rounded-2xl border border-cloud bg-paper/50 p-4">
               <div className="flex items-center gap-2">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-                  <HugeiconsIcon icon={step.icon} size={18} />
-                </span>
+                <IconChip icon={step.icon} />
                 <span className="text-xs font-semibold text-ink-soft">
                   Step {i + 1}
                 </span>

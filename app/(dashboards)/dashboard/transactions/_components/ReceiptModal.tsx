@@ -9,7 +9,7 @@ import {
   ReceiptDollarIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
-import { Modal } from "../../wallet/_components/Modal";
+import { Modal } from "../../_components/Modal";
 import { STATUS_META, TXN_META, formatDateTime } from "./data";
 import { printReceipt, signedAmount } from "./receipt";
 import type { Transaction } from "./types";

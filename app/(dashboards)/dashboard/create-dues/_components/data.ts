@@ -1,7 +1,6 @@
 import type { RepDueStatus, RepDue } from "./types";
 
-export const naira = (n: number) =>
-  `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
+export { naira } from "../../_components/format";
 
 /** The body this rep runs collections for — dues are raised against it. */
 export const REP_SPACE = {

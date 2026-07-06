@@ -19,6 +19,18 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        /* Guild pills — the dashboard's house button styles. Pair with the
+           pill sizes below. */
+        brand:
+          "cursor-pointer rounded-full bg-brand text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:border-transparent focus-visible:ring-brand/40",
+        "brand-outline":
+          "cursor-pointer rounded-full border-cloud bg-transparent text-ink transition-colors duration-300 hover:bg-paper focus-visible:border-transparent focus-visible:ring-brand/40",
+        "brand-ghost":
+          "cursor-pointer rounded-full text-ink-soft transition-colors duration-300 hover:text-ink focus-visible:border-transparent focus-visible:ring-brand/40",
+        danger:
+          "cursor-pointer rounded-full bg-rose-600 text-white transition-colors duration-300 hover:bg-rose-700 focus-visible:border-transparent focus-visible:ring-rose-300",
+        "danger-outline":
+          "cursor-pointer rounded-full border-rose-300 bg-white text-rose-600 transition-colors duration-300 hover:bg-rose-100 focus-visible:border-transparent focus-visible:ring-rose-300",
       },
       size: {
         default:
@@ -30,6 +42,10 @@ const buttonVariants = cva(
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",
         "icon-lg": "size-10",
+        /* Guild pill sizes (compact chip, standard, full-height modal CTA). */
+        pill: "h-auto gap-1.5 px-4 py-2 text-xs font-semibold",
+        "pill-lg": "h-11 gap-2 px-6 text-sm font-semibold",
+        "pill-xl": "h-12 gap-2 px-6 text-sm font-semibold",
       },
     },
     defaultVariants: {

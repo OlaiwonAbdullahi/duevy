@@ -6,7 +6,7 @@ import { UserIcon } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { BRAND_INPUT } from "../../wallet/_components/utils";
+import { BRAND_INPUT } from "../../_components/form-styles";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "./SettingsCard";
 

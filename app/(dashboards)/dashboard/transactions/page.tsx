@@ -8,6 +8,7 @@ import {
   MoneySend01Icon,
   ReceiptDollarIcon,
 } from "@hugeicons/core-free-icons";
+import { StatCard } from "../_components/StatCard";
 import type { HugeIcon } from "../_components/nav-config";
 import type { TxnFilter } from "./_components/types";
 import { TRANSACTIONS, naira, groupByDay } from "./_components/data";
@@ -21,34 +22,6 @@ const TABS: { value: TxnFilter; label: string }[] = [
   { value: "in", label: "Money in" },
   { value: "out", label: "Money out" },
 ];
-
-function StatCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: HugeIcon;
-  label: string;
-  value: string;
-  tone?: "brand";
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-5">
-      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          tone === "brand" ? "text-brand" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 export default function TransactionsPage() {
   const [filter, setFilter] = useState<TxnFilter>("all");

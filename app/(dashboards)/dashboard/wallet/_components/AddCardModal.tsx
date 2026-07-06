@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Modal } from "./Modal";
+import { Modal } from "../../_components/Modal";
+import { BARE_INPUT, BRAND_INPUT } from "../../_components/form-styles";
 import type { Card } from "./types";
-import { BARE_INPUT, BRAND_INPUT, CARD_LOGOS, PRIMARY_BUTTON, brandFromNumber } from "./utils";
+import { CARD_LOGOS, brandFromNumber } from "./utils";
 
 export function AddCardModal({
   onClose,
@@ -141,7 +142,13 @@ export function AddCardModal({
         Set as default payment method
       </button>
 
-      <Button disabled={!valid} onClick={submit} className={cn(PRIMARY_BUTTON, "mt-6")}>
+      <Button
+        variant="brand"
+        size="pill-xl"
+        disabled={!valid}
+        onClick={submit}
+        className="mt-6 w-full"
+      >
         Add card
       </Button>
 

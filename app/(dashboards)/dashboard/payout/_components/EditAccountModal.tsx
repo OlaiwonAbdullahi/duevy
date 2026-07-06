@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { BankIcon } from "@hugeicons/core-free-icons";
-import { Modal } from "../../wallet/_components/Modal";
-import { BRAND_INPUT } from "../../wallet/_components/utils";
+import { Modal } from "../../_components/Modal";
+import { BRAND_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { BANK_OPTIONS } from "./data";

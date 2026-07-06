@@ -20,8 +20,7 @@ import type {
   JoinableDepartment,
 } from "./types";
 
-export const naira = (n: number) =>
-  `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
+export { naira } from "../../_components/format";
 
 /**
  * The signed-in student receipts are issued to. Seeded to match the dashboard

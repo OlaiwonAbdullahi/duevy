@@ -4,7 +4,7 @@ import {
   Download04Icon,
   InvoiceIcon,
 } from "@hugeicons/core-free-icons";
-import { Modal } from "../../wallet/_components/Modal";
+import { Modal } from "../../_components/Modal";
 import { naira, CATEGORY_LABEL } from "./data";
 import { downloadReceipt, downloadAllReceipts, type Receipt } from "./receipt";
 

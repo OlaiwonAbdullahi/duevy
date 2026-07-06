@@ -13,10 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Modal } from "./Modal";
+import { Modal } from "../../_components/Modal";
+import { BARE_INPUT } from "../../_components/form-styles";
 import { CardBrand } from "./CardBrand";
 import type { Card, TopUpMethod, TopUpSource } from "./types";
-import { BARE_INPUT, PRIMARY_BUTTON, TOP_UP_PRESETS, naira } from "./utils";
+import { TOP_UP_PRESETS, naira } from "./utils";
 import type { HugeIcon } from "../../_components/nav-config";
 import { EmptyState } from "../../_components/EmptyState";
 
@@ -174,9 +175,11 @@ export function TopUpModal({
       )}
 
       <Button
+        variant="brand"
+        size="pill-xl"
         disabled={!valid}
         onClick={confirm}
-        className={cn(PRIMARY_BUTTON, "mt-6")}
+        className="mt-6 w-full"
       >
         {ctaLabel}
         {method === "online" && valid && (

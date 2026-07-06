@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -313,58 +314,53 @@ function TourOverlay({
           <div className="mt-4 flex items-center gap-2">
             {isFirst && (
               <>
-                <button
-                  type="button"
-                  onClick={onFinish}
-                  className="rounded-full px-3.5 py-2 text-xs font-semibold text-ink-soft transition-colors duration-300 hover:text-ink cursor-pointer"
-                >
+                <Button variant="brand-ghost" size="pill" onClick={onFinish} className="px-3.5">
                   Skip for now
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="brand"
+                  size="pill"
                   autoFocus
                   onClick={() => onIndex(index + 1)}
-                  className="ml-auto rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                  className="ml-auto"
                 >
                   Show me around
-                </button>
+                </Button>
               </>
             )}
             {!isFirst && !isLast && (
               <>
-                <button
-                  type="button"
-                  onClick={onFinish}
-                  className="rounded-full px-3.5 py-2 text-xs font-semibold text-ink-soft transition-colors duration-300 hover:text-ink cursor-pointer"
-                >
+                <Button variant="brand-ghost" size="pill" onClick={onFinish} className="px-3.5">
                   Skip tour
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="brand-outline"
+                  size="pill"
                   onClick={() => onIndex(index - 1)}
-                  className="ml-auto rounded-full border border-cloud px-3.5 py-2 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
+                  className="ml-auto px-3.5"
                 >
                   Back
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="brand"
+                  size="pill"
                   autoFocus
                   onClick={() => onIndex(index + 1)}
-                  className="rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   Next
-                </button>
+                </Button>
               </>
             )}
             {isLast && (
-              <button
-                type="button"
+              <Button
+                variant="brand"
+                size="pill"
                 autoFocus
                 onClick={onFinish}
-                className="ml-auto rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                className="ml-auto"
               >
                 Finish
-              </button>
+              </Button>
             )}
           </div>
           </motion.div>

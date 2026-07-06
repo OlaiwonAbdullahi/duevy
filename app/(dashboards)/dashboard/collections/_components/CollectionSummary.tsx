@@ -4,7 +4,8 @@ import {
   UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { naira } from "../../create-dues/_components/data";
+import { naira } from "../../_components/format";
+import { StatCard } from "../../_components/StatCard";
 import type { CollectionTotals } from "./types";
 
 export function CollectionSummary({
@@ -39,43 +40,18 @@ export function CollectionSummary({
         </div>
       </div>
 
-      <SummaryCard
+      <StatCard
         icon={Clock01Icon}
         label="Outstanding"
         value={naira(totals.expected - totals.collected)}
         hint={`${totals.unpaid} unpaid students`}
       />
-      <SummaryCard
+      <StatCard
         icon={UserMultipleIcon}
         label="Collection rate"
         value={`${totals.rate}%`}
         hint={`${trackedCount} students tracked`}
       />
-    </div>
-  );
-}
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: typeof Clock01Icon;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-5">
-      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p className="mt-1 text-xl font-semibold tracking-tight text-ink">
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-ink-soft">{hint}</p>
     </div>
   );
 }

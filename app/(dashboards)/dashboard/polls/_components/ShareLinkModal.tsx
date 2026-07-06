@@ -8,7 +8,7 @@ import {
   Copy01Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
-import { Modal } from "../../wallet/_components/Modal";
+import { Modal } from "../../_components/Modal";
 import { naira, voteLink } from "./data";
 import type { Poll } from "./types";
 

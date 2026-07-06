@@ -10,6 +10,7 @@ import {
   UserMultipleIcon,
   Invoice01Icon,
 } from "@hugeicons/core-free-icons";
+import { StatCard } from "../_components/StatCard";
 import type { HugeIcon } from "../_components/nav-config";
 import { REP_SPACE, INITIAL_REP_DUES, naira } from "./_components/data";
 import type { DueDraft, RepDue } from "./_components/types";
@@ -17,34 +18,6 @@ import { DueListRow } from "./_components/DueListRow";
 import { DueForm } from "./_components/DueForm";
 import { EmptyState } from "../_components/EmptyState";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
-
-function Stat({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: HugeIcon;
-  label: string;
-  value: string;
-  tone?: "brand";
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-5">
-      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          tone === "brand" ? "text-brand" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 export default function CreateDuesPage() {
   const [dues, setDues] = useState<RepDue[]>(INITIAL_REP_DUES);
@@ -148,18 +121,18 @@ export default function CreateDuesPage() {
             </header>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <Stat
+              <StatCard
                 icon={Invoice01Icon}
                 label="Active dues"
                 value={String(totals.activeCount)}
               />
-              <Stat
+              <StatCard
                 icon={Wallet01Icon}
                 label="Collected"
                 value={naira(totals.collected)}
                 tone="brand"
               />
-              <Stat
+              <StatCard
                 icon={UserMultipleIcon}
                 label="Outstanding"
                 value={naira(totals.outstanding)}

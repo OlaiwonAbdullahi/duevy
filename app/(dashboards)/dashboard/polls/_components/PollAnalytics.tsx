@@ -10,6 +10,7 @@ import {
   MoneyBag02Icon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
+import { StatCard } from "../../_components/StatCard";
 import type { HugeIcon } from "../../_components/nav-config";
 import { relativeDue } from "../../dues/_components/data";
 import {
@@ -87,14 +88,14 @@ export function PollAnalytics({
 
       {/* Topline — stat tiles, not charts. */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={UserGroup03Icon} label="Total votes" value={votes.toLocaleString("en-NG")} tone="brand" />
+        <StatCard icon={UserGroup03Icon} label="Total votes" value={votes.toLocaleString("en-NG")} tone="brand" />
         {poll.paid ? (
-          <Stat icon={MoneyBag02Icon} label="Money raised" value={naira(revenue)} />
+          <StatCard icon={MoneyBag02Icon} label="Money raised" value={naira(revenue)} />
         ) : (
-          <Stat icon={UserGroup03Icon} label="Voting" value="Free" />
+          <StatCard icon={UserGroup03Icon} label="Voting" value="Free" />
         )}
-        <Stat icon={Award01Icon} label="Award categories" value={String(poll.categories.length)} />
-        <Stat icon={Medal01Icon} label="Nominees" value={String(nomineeCount)} />
+        <StatCard icon={Award01Icon} label="Award categories" value={String(poll.categories.length)} />
+        <StatCard icon={Medal01Icon} label="Nominees" value={String(nomineeCount)} />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.35fr] lg:items-start">
@@ -197,34 +198,6 @@ function LeaderboardRow({
         </div>
       </div>
     </li>
-  );
-}
-
-function Stat({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: HugeIcon;
-  label: string;
-  value: string;
-  tone?: "brand";
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-5">
-      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          tone === "brand" ? "text-brand" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
   );
 }
 

@@ -12,8 +12,7 @@ export type Referral = {
   date: string;
 };
 
-export const naira = (n: number) =>
-  `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
+export { naira } from "../../_components/format";
 
 export const REFERRAL_CODE = "AMARA500";
 export const REWARD_PER_REFERRAL = 500;

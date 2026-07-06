@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../_components/EmptyState";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
@@ -36,18 +37,18 @@ export function RepsCard() {
       title="Reps & roles"
       description="People who can manage dues and approvals for this department."
       action={
-        <button
-          type="button"
+        <Button
+          variant="brand"
+          size="pill"
           onClick={() =>
             toast("Invite a co-rep", {
               description: "This would send an invite by email in production.",
             })
           }
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          <HugeiconsIcon icon={Add01Icon} size={14} />
+          <HugeiconsIcon icon={Add01Icon} size={14} className="size-3.5" />
           Invite
-        </button>
+        </Button>
       }
     >
       {reps.length === 0 ? (

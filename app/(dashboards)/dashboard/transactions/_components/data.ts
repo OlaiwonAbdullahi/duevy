@@ -8,8 +8,7 @@ import {
 import type { HugeIcon } from "../../_components/nav-config";
 import type { Transaction, TxnStatus, TxnType } from "./types";
 
-export const naira = (n: number) =>
-  `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
+export { naira } from "../../_components/format";
 
 /** Icon + human label per transaction type. */
 export const TXN_META: Record<TxnType, { icon: HugeIcon; label: string }> = {

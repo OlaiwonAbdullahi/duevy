@@ -9,7 +9,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { BRAND_INPUT } from "../../wallet/_components/utils";
+import { BRAND_INPUT } from "../../_components/form-styles";
 import { newCategory, newNominee } from "./data";
 import type { Nominee, PollCategory } from "./types";
 

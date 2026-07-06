@@ -10,6 +10,7 @@ import {
   PlusSignIcon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
+import { StatCard } from "../_components/StatCard";
 import type { HugeIcon } from "../_components/nav-config";
 import { EmptyState } from "../_components/EmptyState";
 import { REP_SPACE } from "../create-dues/_components/data";
@@ -20,34 +21,6 @@ import { PollForm } from "./_components/PollForm";
 import { PollAnalytics } from "./_components/PollAnalytics";
 import { ShareLinkModal } from "./_components/ShareLinkModal";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
-
-function Stat({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: HugeIcon;
-  label: string;
-  value: string;
-  tone?: "brand";
-}) {
-  return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-5">
-      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
-        <HugeiconsIcon icon={icon} size={18} />
-      </div>
-      <p className="text-xs font-medium text-ink-soft">{label}</p>
-      <p
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          tone === "brand" ? "text-brand" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 export default function PollsPage() {
   const [polls, setPolls] = useState<Poll[]>(INITIAL_POLLS);
@@ -176,13 +149,13 @@ export default function PollsPage() {
             </header>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <Stat icon={Megaphone01Icon} label="Live polls" value={String(totals.live)} />
-              <Stat
+              <StatCard icon={Megaphone01Icon} label="Live polls" value={String(totals.live)} />
+              <StatCard
                 icon={UserGroup03Icon}
                 label="Total votes"
                 value={totals.votes.toLocaleString("en-NG")}
               />
-              <Stat
+              <StatCard
                 icon={MoneyBag02Icon}
                 label="Money raised"
                 value={naira(totals.raised)}

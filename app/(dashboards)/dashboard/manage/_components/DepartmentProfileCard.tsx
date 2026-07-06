@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Building03Icon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { BRAND_INPUT } from "../../wallet/_components/utils";
+import { BRAND_INPUT } from "../../_components/form-styles";
 import { REP_SPACE } from "../../create-dues/_components/data";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 
@@ -60,14 +61,9 @@ export function DepartmentProfileCard() {
       title="Department profile"
       description="The name and details students see across Duevy."
       action={
-        <button
-          type="button"
-          onClick={save}
-          disabled={!dirty}
-          className="shrink-0 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
+        <Button variant="brand" size="pill" onClick={save} disabled={!dirty}>
           Save
-        </button>
+        </Button>
       }
     >
       {/* Identity strip */}

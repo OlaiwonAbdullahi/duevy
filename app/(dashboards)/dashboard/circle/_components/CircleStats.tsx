@@ -1,5 +1,5 @@
 import { UserMultipleIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { StatCard } from "./StatCard";
+import { StatCard } from "../../_components/StatCard";
 import { JoinCodeStat } from "./JoinCodeStat";
 
 export function CircleStats({
