@@ -17,6 +17,7 @@ import {
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../EmptyState";
+import { UserAvatar } from "../UserAvatar";
 import {
   INITIAL_REP_DUES,
   REP_SPACE,
@@ -212,13 +213,7 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
                     key={member.id}
                     className="flex items-center gap-3 border-t border-cloud py-3 first:border-t-0"
                   >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cloud text-[11px] font-bold text-brand">
-                      {member.name
-                        .split(" ")
-                        .map((p) => p[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </span>
+                    <UserAvatar name={member.name} size={36} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">
                         {member.name}

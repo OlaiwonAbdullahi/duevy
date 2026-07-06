@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../../_components/EmptyState";
+import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 
 type Rep = {
@@ -19,14 +20,6 @@ const INITIAL_REPS: Rep[] = [
   { id: "r2", name: "Tunde Balogun", email: "tunde.balogun@student.edu", role: "co" },
   { id: "r3", name: "Ngozi Eze", email: "ngozi.eze@student.edu", role: "co" },
 ];
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("");
-}
 
 /** Co-reps who help run collections. The lead rep can invite or remove them. */
 export function RepsCard() {
@@ -70,9 +63,7 @@ export function RepsCard() {
               key={rep.id}
               className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0 first:pt-0"
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cloud text-xs font-bold text-brand">
-                {initials(rep.name)}
-              </span>
+              <UserAvatar name={rep.name} size={40} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">
                   {rep.name}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Compass01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
@@ -7,8 +8,15 @@ export default function NotFound() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-canvas px-6 py-16 text-center">
       <Link
         href="/"
-        className="absolute left-6 top-6 text-xl tracking-tight text-ink cursor-pointer sm:left-10 sm:top-8"
+        className="absolute left-6 top-6 flex items-center gap-2 text-xl tracking-tight text-ink cursor-pointer sm:left-10 sm:top-8"
       >
+        <Image
+          src="/icons/logo2.svg"
+          alt=""
+          width={25}
+          height={32}
+          className="h-6 w-auto"
+        />
         Duevy.
       </Link>
 

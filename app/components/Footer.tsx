@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const columns = [
   {
     title: "Product",
@@ -25,6 +27,13 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
+              <Image
+                src="/icons/logo2.svg"
+                alt=""
+                width={25}
+                height={32}
+                className="h-6 w-auto"
+              />
               <span className="text-[#1b2520] text-xl tracking-tight">
                 Duevy.
               </span>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -64,15 +65,27 @@ export default function Sidebar({
       >
         {/* Brand */}
         <div className="flex items-center justify-between px-6 h-18">
-          <Link href="/dashboard" className="flex flex-col cursor-pointer">
-            <span className="text-ink text-lg tracking-tight leading-none">
-              Duevy.
-            </span>
-            {subtitle && (
-              <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-ink-soft">
-                {subtitle}
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 cursor-pointer"
+          >
+            <Image
+              src="/icons/logo2.svg"
+              alt=""
+              width={25}
+              height={32}
+              className="h-7 w-auto"
+            />
+            <span className="flex flex-col">
+              <span className="text-ink text-lg tracking-tight leading-none">
+                Duevy.
               </span>
-            )}
+              {subtitle && (
+                <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-ink-soft">
+                  {subtitle}
+                </span>
+              )}
+            </span>
           </Link>
           <button
             onClick={onClose}

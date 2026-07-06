@@ -9,7 +9,7 @@ import type { RepDue } from "../../create-dues/_components/types";
 import { naira } from "../../create-dues/_components/data";
 import { COLLECTION_TABS } from "./data";
 import type { CollectionStudent, StatusFilter } from "./types";
-import { Initials } from "./Initials";
+import { UserAvatar } from "../../_components/UserAvatar";
 import { EmptyState } from "../../_components/EmptyState";
 
 export function CollectionTable({
@@ -132,7 +132,7 @@ export function CollectionTable({
               className="grid gap-3 px-4 py-4 transition-colors duration-300 hover:bg-paper/70 md:grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] md:items-center md:gap-4"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <Initials name={student.name} />
+                <UserAvatar name={student.name} size={40} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">
                     {student.name}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ArrowRightIcon, CloseIcon } from "./icons";
+import Image from "next/image";
 
 const links = [
   { label: "How it works", href: "#how-it-works" },
@@ -37,6 +38,14 @@ export default function Navbar() {
         }`}
       >
         <a href="#" className="flex items-center gap-2 cursor-pointer">
+          <Image
+            src="/icons/logo2.svg"
+            alt="Duevy Logo"
+            width={25}
+            height={32}
+            className="h-7 w-auto"
+            priority
+          />
           <span className="text-[#1b2520]  text-xl tracking-tight">Duevy.</span>
         </a>
 

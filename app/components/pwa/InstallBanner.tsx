@@ -23,7 +23,8 @@ function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     // iOS Safari exposes this instead of the display-mode media query.
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true
   );
 }
 
@@ -38,9 +39,8 @@ function isIos() {
  * Add-to-Home-Screen steps instead. Dismissal is remembered.
  */
 export function InstallBanner() {
-  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(
-    null,
-  );
+  const [promptEvent, setPromptEvent] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [iosHint, setIosHint] = useState(false);
   // Starts hidden so the first client render matches the server (nothing), then
   // reveals after paint once we've checked the browser-only signals.
@@ -106,9 +106,9 @@ export function InstallBanner() {
           role="dialog"
           aria-label="Install Duevy"
         >
-          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl">
+          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-brand">
             <Image
-              src="/icons/icon-192.png"
+              src="/icons/logo.svg"
               alt="Duevy"
               fill
               sizes="48px"
@@ -121,13 +121,17 @@ export function InstallBanner() {
             {iosHint && !promptEvent ? (
               <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-soft">
                 Tap
-                <HugeiconsIcon icon={ArrowUp01Icon} size={13} className="text-brand" />
+                <HugeiconsIcon
+                  icon={ArrowUp01Icon}
+                  size={13}
+                  className="text-brand"
+                />
                 Share, then{" "}
                 <span className="font-medium text-ink">Add to Home Screen</span>
               </p>
             ) : (
               <p className="mt-0.5 text-xs text-ink-soft">
-                Add it to your home screen — pay dues in a tap, even offline.
+                Add it to your home screen — pay dues in a tap.
               </p>
             )}
           </div>

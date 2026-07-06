@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { CheckIcon, ShieldIcon } from "../components/icons";
 
@@ -21,6 +22,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           href="/"
           className="relative inline-flex items-center gap-2 text-white text-xl tracking-tight cursor-pointer w-fit"
         >
+          <Image
+            src="/icons/logo.svg"
+            alt=""
+            width={28}
+            height={28}
+            className="h-7 w-7 rounded-lg"
+          />
           Duevy.
         </Link>
 
@@ -57,8 +65,15 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between px-6 pt-6 lg:hidden">
           <Link
             href="/"
-            className="text-[#1b2520] text-xl tracking-tight cursor-pointer"
+            className="flex items-center gap-2 text-[#1b2520] text-xl tracking-tight cursor-pointer"
           >
+            <Image
+              src="/icons/logo2.svg"
+              alt=""
+              width={25}
+              height={32}
+              className="h-6 w-auto"
+            />
             Duevy.
           </Link>
         </div>
