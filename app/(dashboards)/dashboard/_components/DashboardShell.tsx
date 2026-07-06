@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
+import { TourProvider } from "./DashboardTour";
 import { getDashboardGroups, isRepOnlyPath } from "./nav-config";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
@@ -44,7 +45,9 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <RoleProvider initialRole="student">
       <SpaceThemeProvider>
-        <ShellInner>{children}</ShellInner>
+        <TourProvider>
+          <ShellInner>{children}</ShellInner>
+        </TourProvider>
       </SpaceThemeProvider>
     </RoleProvider>
   );

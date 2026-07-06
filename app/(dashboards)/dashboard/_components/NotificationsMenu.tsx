@@ -29,6 +29,7 @@ export function NotificationsMenu() {
     <Popover>
       <PopoverTrigger asChild>
         <button
+          data-tour="notifications"
           aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
           className="relative grid h-10 w-10 place-items-center rounded-full text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >

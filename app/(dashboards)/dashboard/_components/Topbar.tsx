@@ -30,6 +30,7 @@ export default function Topbar({
       {/* Mobile menu */}
       <button
         onClick={onMenu}
+        data-tour="menu"
         aria-label="Open menu"
         className="lg:hidden grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-paper transition-colors duration-300 cursor-pointer"
       >
@@ -40,6 +41,7 @@ export default function Topbar({
       <button
         type="button"
         onClick={onSearch}
+        data-tour="search"
         className="hidden items-center gap-2 rounded-full border border-cloud bg-paper py-2 pl-3 pr-2 text-ink-soft transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:flex sm:w-64 md:w-72"
       >
         <HugeiconsIcon icon={Search01Icon} size={16} className="shrink-0" />
@@ -52,6 +54,7 @@ export default function Topbar({
       <button
         type="button"
         onClick={onSearch}
+        data-tour="search"
         aria-label="Search"
         className="grid h-10 w-10 place-items-center rounded-full text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:hidden"
       >

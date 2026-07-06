@@ -97,7 +97,7 @@ export default function Sidebar({
         </div>
 
         {/* Nav groups */}
-        <nav className="flex-1 overflow-y-auto px-4 py-4">
+        <nav data-tour="nav" className="flex-1 overflow-y-auto px-4 py-4">
           {groups.map((group, i) => {
             const isCollapsed = group.title ? collapsed[group.title] : false;
             const links = (
