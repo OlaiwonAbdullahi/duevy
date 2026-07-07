@@ -1,45 +1,55 @@
 ---
-name: guild-design
-description: Use this skill when you need to design interfaces for Guild, a platform focused on providing real work opportunities and verified income proof for workers, emphasizing clarity and simplicity in its professional and trustworthy aesthetic.
+name: plud-design
+description: Use this skill when designing interfaces for Plud, an AI workspace for knowledge management. The design system features a calm, intellectual, and focused atmosphere with a light color scheme. Key colors include primary '#2c746e', ink '#030c0a', and canvas '#faf9f5'. Typography is based on 'DM Sans' with prominent display styles like 'display-xl' and accessible body text options.
 ---
 ```yaml
-brand: Guild
-mood: Professional, trustworthy, and organic, designed to empower workers with clarity and simplicity.
+brand: plud
+mood: A calm, intellectual, and focused atmosphere for deep work and knowledge retention.
 scheme: light
 colors:
-  primary: "#0b6e4f"
-  primary-bright: "#0f996d"
-  primary-deep: "#08583f"
+  primary: "#2c746e"
+  primary-bright: "#378881"
+  primary-deep: "#235d58"
   on-primary: "#ffffff"
-  ink: "#1b2520"
-  ink-soft: "#7a847f"
+  ink: "#030c0a"
+  ink-soft: "#374151"
   on-ink: "#ffffff"
-  canvas: "#fbfaf7"
-  paper: "#f4f2ec"
-  cloud: "#e6f2ec"
-  hairline: "#e6f2ec"
-  hairline-strong: "#7a847f"
-  link: "#1b2520"
-  link-pressed: "#0b6e4f"
-  accent-gold: "#e8a33d"
+  canvas: "#faf9f5"
+  paper: "#ffffff"
+  cloud: "#f9fafb"
+  hairline: "#e5e7eb"
+  hairline-strong: "#d1d5db"
+  link: "#111827"
+  link-pressed: "#000000"
+  success: "#059669"
+  warning: "#d97706"
+  error: "#d92d20"
+  accent-lavender: "#f5f3ff"
+  accent-mint: "#f0fdfa"
+  accent-sky: "#eff6ff"
+  accent-rose: "#fef2f2"
+  accent-leaf: "#ecfdf5"
+  accent-sun: "#fffbeb"
 typography:
-  display-xl: { fontFamily: "Manrope", fontSize: 92px, fontWeight: 600, lineHeight: 1.1 }
-  display-lg: { fontFamily: "Manrope", fontSize: 48px, fontWeight: 600, lineHeight: 1.2 }
-  display-md: { fontFamily: "Manrope", fontSize: 44px, fontWeight: 600, lineHeight: 1.2 }
-  display-sm: { fontFamily: "Manrope", fontSize: 36px, fontWeight: 600, lineHeight: 1.3 }
-  body-lg: { fontFamily: "Manrope", fontSize: 20px, fontWeight: 400, lineHeight: 1.5 }
-  body-md: { fontFamily: "Manrope", fontSize: 16px, fontWeight: 400, lineHeight: 1.6 }
-  body-emphasis: { fontFamily: "Manrope", fontSize: 16px, fontWeight: 600, lineHeight: 1.6 }
-  caption-md: { fontFamily: "Manrope", fontSize: 14px, fontWeight: 400, lineHeight: 1.5 }
-  caption-sm: { fontFamily: "Manrope", fontSize: 13px, fontWeight: 500, lineHeight: 1.4 }
-  button-md: { fontFamily: "Manrope", fontSize: 16px, fontWeight: 600, lineHeight: 1 }
-  link-md: { fontFamily: "Manrope", fontSize: 15px, fontWeight: 500, lineHeight: 1 }
+  display-xl: { fontFamily: "DM Sans", fontSize: 72px, fontWeight: 700, lineHeight: 1.1 }
+  display-lg: { fontFamily: "DM Sans", fontSize: 48px, fontWeight: 700, lineHeight: 1.2 }
+  display-md: { fontFamily: "DM Sans", fontSize: 36px, fontWeight: 700, lineHeight: 1.2 }
+  display-sm: { fontFamily: "DM Sans", fontSize: 20px, fontWeight: 600, lineHeight: 1.3 }
+  body-lg: { fontFamily: "DM Sans", fontSize: 20px, fontWeight: 400, lineHeight: 1.5 }
+  body-md: { fontFamily: "DM Sans", fontSize: 16px, fontWeight: 400, lineHeight: 1.6 }
+  body-emphasis: { fontFamily: "DM Sans", fontSize: 16px, fontWeight: 600, lineHeight: 1.6 }
+  caption-md: { fontFamily: "DM Sans", fontSize: 14px, fontWeight: 400, lineHeight: 1.4 }
+  caption-sm: { fontFamily: "DM Sans", fontSize: 12px, fontWeight: 400, lineHeight: 1.3 }
+  button-md: { fontFamily: "DM Sans", fontSize: 12px, fontWeight: 600, lineHeight: 1.33 }
+  link-md: { fontFamily: "DM Sans", fontSize: 14px, fontWeight: 400, lineHeight: 1.42 }
 rounded:
   none: 0px
-  sm: 10px
-  md: 16px
-  lg: 24px
-  xl: 32px
+  xs: 6px
+  sm: 8px
+  md: 12px
+  lg: 16px
+  xl: 24px
+  xxl: 40px
   pill: 9999px
 spacing:
   xxs: 4px
@@ -49,8 +59,7 @@ spacing:
   lg: 24px
   xl: 32px
   xxl: 48px
-  xxxl: 64px
-  section: 96px
+  section: 80px
 shadows:
   none: "none"
   soft-lift: "none"
@@ -58,198 +67,226 @@ shadows:
   modal: "none"
 motion:
   duration-fast: 150ms
-  duration-base: 300ms
-  duration-slow: 500ms
-  ease-standard: cubic-bezier(0.4, 0, 0.2, 1)
-  ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1)
-  transition-default: "background-color {motion.duration-base} {motion.ease-standard}, color {motion.duration-base} {motion.ease-standard}"
-  transition-transform: "transform {motion.duration-slow} {motion.ease-emphasized}"
+  duration-base: 250ms
+  duration-slow: 300ms
+  ease-standard: "cubic-bezier(0.4, 0, 0.2, 1)"
+  ease-emphasized: "cubic-bezier(0, 0, 0.2, 1)"
+  transition-fast: "all {motion.duration-fast} {motion.ease-standard}"
+  transition-default: "all {motion.duration-base} {motion.ease-standard}"
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.on-primary}"
     typography: "{typography.button-md}"
     rounded: "{rounded.pill}"
-    padding: "16px 28px"
-    height: 52px
+    padding: "4px 12px"
+    height: "24px"
     border: "none"
     shadow: "{shadows.none}"
     cursor: pointer
   button-primary-hover:
     backgroundColor: "{colors.primary-bright}"
-  button-secondary:
+  button-outline:
     backgroundColor: "{colors.paper}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.primary}"
     typography: "{typography.button-md}"
     rounded: "{rounded.pill}"
-    padding: "16px 28px"
-    height: 52px
-    border: "none"
+    padding: "4px 12px"
+    height: "24px"
+    border: "1px solid {colors.primary}"
     shadow: "{shadows.none}"
     cursor: pointer
-  button-secondary-hover:
-    backgroundColor: "{colors.hairline}"
+  button-outline-hover:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+  link:
+    textColor: "{colors.link}"
+    typography: "{typography.link-md}"
+    textDecoration: "underline"
+    cursor: pointer
+  link-hover:
+    textColor: "{colors.primary}"
   card:
-    backgroundColor: "{colors.canvas}"
+    backgroundColor: "{colors.paper}"
     rounded: "{rounded.lg}"
-    padding: "{spacing.lg}"
     border: "1px solid {colors.hairline}"
+    padding: "{spacing.lg}"
     shadow: "{shadows.none}"
   input:
-    backgroundColor: "{colors.canvas}"
+    backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
     typography: "{typography.body-md}"
-    rounded: "{rounded.md}"
-    padding: "12px 16px"
+    rounded: "{rounded.sm}"
     border: "1px solid {colors.hairline}"
+    padding: "{spacing.sm} {spacing.md}"
     cursor: text
   input-focus:
-    borderColor: "{colors.primary}"
-    boxShadow: "0 0 0 2px rgba(11, 110, 79, 0.2)"
-  nav-link:
-    backgroundColor: "{colors.paper}"
+    border: "1px solid {colors.primary}"
+    shadow: "{shadows.none}"
+  navigation-item:
     textColor: "{colors.ink-soft}"
-    typography: "{typography.link-md}"
-    rounded: "{rounded.pill}"
-    padding: "8px 16px"
+    typography: "{typography.caption-md}"
     cursor: pointer
-  nav-link-hover:
-    backgroundColor: "{colors.cloud}"
-    textColor: "{colors.ink}"
+  navigation-item-hover:
+    textColor: "{colors.primary}"
   badge:
-    backgroundColor: "{colors.cloud}"
+    backgroundColor: "{colors.paper}"
     textColor: "{colors.primary}"
     typography: "{typography.caption-sm}"
     rounded: "{rounded.pill}"
-    padding: "4px 10px"
+    border: "1px solid {colors.hairline}"
+    padding: "2px {spacing.xs}"
+  tab:
+    textColor: "{colors.ink-soft}"
+    typography: "{typography.body-md}"
+    borderBottom: "2px solid transparent"
+    padding: "{spacing.xs} {spacing.md}"
+    cursor: pointer
+  tab-active:
+    textColor: "{colors.primary}"
+    borderBottom: "2px solid {colors.primary}"
 ```
 
 ## Visual Theme & Atmosphere
-The Guild design system projects an aura of professionalism, trustworthiness, and organic simplicity. It is meticulously crafted to empower everyday workers by presenting information with utmost clarity and ease of use. The atmosphere is calm and focused, achieved through a minimal color palette inspired by nature, generous use of whitespace, and soft, approachable geometry. There is a tangible sense of quality and reliability, ensuring users feel secure and confident. The entire system is flat, rejecting drop shadows and gradients in favor of a clean, modern aesthetic where hierarchy is defined by typography, color, and space alone.
+The plud design system projects a calm, intellectual, and minimalist atmosphere. It is designed to feel like a modern, digital workspace for focused learning and knowledge management, avoiding distraction and promoting clarity. The visual language is clean and airy, using generous whitespace and a muted, organic color palette to create a serene user experience. This encourages deep engagement with content rather than fleeting interaction. The overall aesthetic is professional yet approachable, blending the rigor of academic tools with the simplicity of modern consumer software.
 
 Key Characteristics:
-*   **Organic & Trustworthy Palette**: The core palette combines a deep, forest-like `{colors.primary}` green with warm, earthy off-whites like `{colors.canvas}` and `{colors.paper}`, creating a natural and dependable feel.
-*   **Unified Typography**: The exclusive use of the Manrope typeface for all text roles, from `{typography.display-xl}` headlines to `{typography.caption-sm}` labels, ensures a consistent and cohesive voice.
-*   **Generous Whitespace**: A commitment to ample spacing, governed by the `{spacing}` scale, allows content to breathe, reduces cognitive load, and directs user focus effectively.
-*   **Completely Flat Aesthetic**: The system strictly adheres to a flat design philosophy. All elevation and emphasis are conveyed through color and scale, with all shadow tokens set to `{shadows.none}`.
-*   **Soft, Rounded Geometry**: Pervasive use of high-radius rounded corners, particularly `{rounded.pill}` for buttons and `{rounded.lg}` for containers, gives the interface a friendly and modern appearance.
-*   **Clear Visual Hierarchy**: A well-defined typography scale and disciplined use of color create an unambiguous hierarchy, guiding users through content flows intuitively.
-*   **High-Contrast Readability**: The primary text color `{colors.ink}` on the `{colors.canvas}` background provides excellent contrast, ensuring text is legible and accessible for all users.
+*   **Minimalist & Flat:** The interface is strictly flat, using `{shadows.none}` exclusively. Emphasis is achieved through color, typographic scale, and fine `{colors.hairline}` borders, not through shadows or gradients. This creates a clean, uncluttered, and contemporary feel.
+*   **Organic Palette:** The core palette is warm and natural, built around a creamy `{colors.canvas}` background, deep teal `{colors.primary}` for accents, and near-black `{colors.ink}` for text. This avoids the harshness of pure black and white.
+*   **Unified Typography:** A single, highly-legible sans-serif font, **DM Sans**, is used for all text roles, from `{typography.display-xl}` headlines to `{typography.button-md}` labels. This creates a cohesive and harmonious typographic system.
+*   **Generous Whitespace:** The layout breathes, using large `{spacing.section}` gaps between content blocks and ample internal padding within components. This prevents cognitive overload and improves readability.
+*   **Soft Corners & Pills:** Interactive elements like buttons are fully rounded into `{rounded.pill}` shapes. Containers like cards use a soft `{rounded.lg}` radius, creating a friendly and modern appearance that avoids sharp, severe edges.
+*   **Subtle Structure:** Page structure is defined by alternating background colors like `{colors.canvas}` and `{colors.cloud}`, and content is grouped within `{components.card}` containers that have a delicate `1px solid {colors.hairline}` border.
+*   **Purposeful Color Accents:** Beyond the primary teal, a family of soft pastel accents (`{colors.accent-mint}`, `{colors.accent-lavender}`, etc.) is used sparingly for categorical labeling, adding a touch of visual interest without overwhelming the user.
 
 ## Color Usage Rules
-The Guild color palette is intentionally minimal to maintain focus and brand consistency. An AI agent should almost exclusively compose interfaces using the following core tokens: `{colors.canvas}`, `{colors.paper}`, `{colors.cloud}`, `{colors.ink}`, `{colors.ink-soft}`, and the primary action color, `{colors.primary}`.
+The plud color system is intentionally constrained to foster consistency and a tranquil user experience. An agent should rely almost exclusively on the core palette: `{colors.primary}`, `{colors.ink}`, `{colors.ink-soft}`, `{colors.canvas}`, `{colors.paper}`, `{colors.cloud}`, and `{colors.hairline}`. These tokens cover nearly all UI needs, from text and backgrounds to borders and interactive states.
 
-*   **`{colors.primary}`**: This deep green is the brand's signature action color. It must be used for primary calls-to-action (CTAs), such as "Get started" buttons, and for the most important highlighted headlines. To preserve its impact, use `{colors.primary}` for at most one or two key interactive elements per viewport. Do not use it for body copy or decorative elements.
-*   **`{colors.ink}` & `{colors.ink-soft}`**: `{colors.ink}` is the default color for all primary text content, including headings and paragraphs, ensuring high readability. `{colors.ink-soft}` is reserved for secondary information like metadata, inactive navigation items, and helper text that should not compete with primary content.
-*   **`{colors.canvas}`**: This is the default background color for all pages. Its warm, off-white tone creates an inviting and clean foundation for all other elements.
-*   **`{colors.paper}`**: Use `{colors.paper}` for secondary surfaces that need to sit above the `{colors.canvas}` background without demanding significant attention. This includes secondary buttons and some subtle cards or navigation elements.
-*   **`{colors.cloud}`**: This light, muted green is the primary tool for creating visual rhythm. Use it for the background of alternating page sections. It can also be used for hover states on light elements or for the background of informational `{components.badge}` elements.
-*   **`{colors.accent-gold}`**: This color must be used with extreme scarcity. Its role is for small, non-interactive, celebratory moments or icons, such as the checkmarks in a feature list. It should never be used for text or interactive controls.
-*   **`{colors.hairline}`**: The only color to be used for borders and dividers. It is intentionally subtle to define component boundaries without creating harsh visual separation.
-*   **Rule**: Never introduce a new color that is not already a token. The existing palette is sufficient. If a new color seems necessary, re-evaluate the design to use an existing token. Reuse is a core principle.
-*   **Rule**: This is a flat design system. Emphasis and hierarchy must be achieved through typography (weight and size), strategic use of `{colors.primary}`, and layout. Never use box-shadows to imply elevation. All components must use `{shadows.none}`.
+*   **Primary Action Color:** `{colors.primary}` is the brand's signature deep teal. It must be used sparingly to draw attention to the most important actions on a page, such as the main "Get Started" call-to-action. A viewport should contain at most two `{components.button-primary}` instances. It is also used for hover states on links and other interactive elements to provide clear feedback.
+*   **Surface Colors:** The base background for all pages is `{colors.canvas}`, a warm, creamy off-white. For distinct content sections that need to be visually separated, use `{colors.cloud}`, a very light, neutral gray. For components that need to appear elevated or layered on top of the canvas, such as cards and modals, use `{colors.paper}` (pure white). Never use `{colors.paper}` as the main page background.
+*   **Text Colors:** The primary text color for all headings and dense body copy is `{colors.ink}`, a soft, near-black. For secondary information, sub-headings, or less important labels, use the lighter `{colors.ink-soft}`. Text on a `{colors.primary}` surface must always be `{colors.on-primary}`.
+*   **Borders and Dividers:** All borders and dividers should use `{colors.hairline}`. This subtle gray provides structure without creating harsh visual separation. For an emphasized border, such as on a focused input, `{colors.hairline-strong}` can be used, but `{colors.primary}` is preferred for interactive focus states.
+*   **Accent Palette:** The `{colors.accent-*}` family (e.g., `{colors.accent-lavender}`, `{colors.accent-mint}`) is reserved exclusively for categorical tagging and small, decorative background flourishes on feature lists. They should never be used for primary text, buttons, or large background surfaces.
+*   **No New Colors:** Never introduce a color that is not already defined as a token. The existing palette is sufficient. Reuse is paramount to maintaining brand consistency. If a new color seems necessary, re-evaluate the design to see if an existing token can serve the purpose.
+*   **Emphasis Through Contrast, Not Shadow:** As this is a flat design system (`{usesShadows: false}`), emphasis and depth must be created using other means. Use the contrast between `{colors.primary}` and `{colors.canvas}`, the scale difference between `{typography.display-lg}` and `{typography.body-md}`, or the containment of a `{components.card}` to draw attention and structure the page. Shadows are forbidden.
 
 ## Typography Hierarchy
-All typography within the Guild design system is set in the **Manrope** font family. This unified approach, using Manrope for both `fontRoles.heading` and `fontRoles.body`, creates a cohesive, modern, and exceptionally readable typographic landscape. Hierarchy is established through a clear and rhythmic scale of sizes and weights, not through changes in typeface.
+All text within the plud interface uses the **DM Sans** font family. This unified approach ensures consistency and a clean, modern aesthetic across all headings, body copy, and UI elements. The hierarchy is established through a clear scale of sizes and weights, allowing users to navigate the content intuitively.
 
-| Role           | Token                    | Use                                                        |
-|----------------|--------------------------|------------------------------------------------------------|
-| Display XL     | `{typography.display-xl}`| The primary, page-level headline, used exclusively in the hero section. |
-| Display LG     | `{typography.display-lg}`| Major section headings (H2) that introduce a core concept. |
-| Display MD     | `{typography.display-md}`| Sub-section headings (H3) or prominent callouts.           |
-| Display SM     | `{typography.display-sm}`| Smaller section headings (H4) or large introductory labels.  |
-| Body LG        | `{typography.body-lg}`   | Lead paragraphs directly following a major headline.         |
-| Body MD        | `{typography.body-md}`   | The default style for all standard body copy and paragraphs. |
-| Body Emphasis  | `{typography.body-emphasis}`| For bolding key words or phrases within `{typography.body-md}` text. |
-| Caption MD     | `{typography.caption-md}`| Metadata, subtitles on cards, or small helper text.        |
-| Caption SM     | `{typography.caption-sm}`| UI element labels, informational badges, and fine print.   |
-| Button MD      | `{typography.button-md}` | The standard text style for all primary and secondary buttons. |
-| Link MD        | `{typography.link-md}`   | The standard text style for all navigation links.          |
+| Role            | Token                  | Use                                                                 |
+|-----------------|------------------------|---------------------------------------------------------------------|
+| Display XL      | `{typography.display-xl}` | The main page hero headline. Use only once per page.                |
+| Display LG      | `{typography.display-lg}` | Major section titles.                                               |
+| Display MD      | `{typography.display-md}` | Sub-section titles or significant callouts.                         |
+| Display SM      | `{typography.display-sm}` | Card titles, feature headlines.                                     |
+| Body LG         | `{typography.body-lg}`   | Introductory paragraphs or sub-headlines directly below a hero.     |
+| Body MD         | `{typography.body-md}`   | The default style for all standard body copy and component text.    |
+| Body Emphasis   | `{typography.body-emphasis}` | For bolding text within a `{typography.body-md}` paragraph for emphasis. |
+| Caption MD      | `{typography.caption-md}`| Secondary text, navigation links, and descriptive labels.         |
+| Caption SM      | `{typography.caption-sm}`| Tertiary information, small UI labels, and helper text.             |
+| Button MD       | `{typography.button-md}` | The standard text style for all buttons.                            |
+| Link MD         | `{typography.link-md}`   | The standard text style for all standalone or inline links.         |
 
 **Typography Principles:**
 
-1.  **Consistency is Key**: Adhere strictly to the defined typographic roles. Do not manually override font sizes, weights, or line heights. The consistency of using Manrope everywhere is a core brand attribute.
-2.  **Optimize for Readability**: Headings use tighter line heights (e.g., 1.1-1.3) for visual impact, while body copy (`{typography.body-md}`) uses a more generous `{lineHeight: 1.6}` to ensure comfortable long-form reading.
-3.  **Use Sentence Case**: All headings, subheadings, and button labels should use sentence case for a more approachable and modern tone. Title case is forbidden.
-4.  **Hierarchy Through Scale**: Rely on the significant size differences between typographic roles to build hierarchy. Avoid using color as the primary means of differentiating heading levels.
-5.  **Natural Letter Spacing**: Do not adjust letter spacing. The default tracking of Manrope is optimized for readability across all sizes and should be maintained.
+1.  **Strict Hierarchy:** Always respect the defined typographic scale. Do not skip levels (e.g., jumping from a `{typography.display-lg}` to `{typography.body-md}` without an intermediary heading). This ensures a logical and scannable content flow.
+2.  **Readability is Paramount:** Body copy should be set in `{typography.body-md}` with its generous `{lineHeight: 1.6}`. Line lengths should be kept between 60-80 characters to ensure comfortable reading.
+3.  **Weight Over Style:** Use `{fontWeight}` variations for emphasis. Avoid using italics, as they are not part of this design system's core style. All-caps text should be used extremely sparingly, if at all, and is not a defined token.
+4.  **Consistency is Key:** Use DM Sans for everything. Do not introduce other fonts. The consistency of the single font family is a cornerstone of the brand's clean and focused identity.
+5.  **Color Defines Role:** Use `{colors.ink}` for primary text content and `{colors.ink-soft}` for secondary or supporting text. This color difference reinforces the typographic hierarchy.
 
 ## Component Patterns
-Guild's UI is constructed from a small set of reusable components. Each is designed to be simple, clear, and consistent with the overall brand aesthetic.
+Components are the reusable building blocks of the plud interface. They are designed to be simple, consistent, and strictly adhere to the defined tokens. All interactive components feature clear visual feedback and use a consistent `cursor: pointer`.
 
-*   **`button-primary`**: This is the most important interactive element, reserved for the primary call-to-action on any given screen. Its `{colors.primary}` background makes it stand out. On hover, the background color animates to `{colors.primary-bright}` over `{motion.duration-base}`. The button must always use `cursor: pointer`. An internal icon, if present, should animate horizontally using `{motion.transition-transform}`.
+**`button-primary`**
+This is the primary call-to-action component. It uses a solid `{colors.primary}` background to attract maximum attention. It should be reserved for the most important action on a screen, like "Get Started" or "Submit". On hover, its background color lightens to `{colors.primary-bright}` over `{motion.duration-fast}`. The `cursor` must be set to `pointer`.
 
-*   **`button-secondary`**: Used for secondary actions that are important but should not compete with the primary CTA. It uses a subdued `{colors.paper}` background. The hover state provides clear feedback by changing the background to `{colors.hairline}` with a `{motion.transition-default}`. This component must also use `cursor: pointer`.
+**`button-outline`**
+This is the secondary action button. It's used for actions that are important but less critical than the primary one, such as "View Plans" or "Free PDF Tools". It features a transparent background and a `1px solid {colors.primary}` border. On hover, it inverts its style, filling with `{colors.primary}` and changing text to `{colors.on-primary}`, providing strong feedback. This transition uses `{motion.transition-fast}`. The `cursor` must be set to `pointer`.
 
-*   **`card`**: The standard container for grouping related content. A `{components.card}` is defined by its `{rounded.lg}` radius and a subtle `1px` border of `{colors.hairline}`. It is always flat, with its `shadow` property set to `{shadows.none}`. This creates a clean, organized structure for complex information.
+**`link`**
+Used for inline navigation within text or for tertiary actions. It is styled with `{colors.link}` and a permanent `textDecoration: underline`. The underline ensures accessibility and clear affordance. On hover, the text color changes to `{colors.primary}` over `{motion.duration-fast}`. The `cursor` must be set to `pointer`.
 
-*   **`input`**: The base component for all text entry fields. It maintains a clean look with a `{colors.canvas}` background and `{colors.hairline}` border. The focus state is critical for usability and is indicated by changing the border color to `{colors.primary}` and adding the subtle outer glow defined in `{components.input-focus}`. All text inputs must use `cursor: text`.
+**`card`**
+The primary container for grouping related content, such as features or testimonials. A card is defined by its `{colors.paper}` background, `{rounded.lg}` corners, and a subtle `1px solid {colors.hairline}` border. It must always be flat, using `{shadows.none}`. Padding is generous, set to `{spacing.lg}`.
 
-*   **`nav-link`**: Specifically for site navigation elements. These links are styled as small, pill-shaped buttons with a `{colors.paper}` background to differentiate them from standard content. On hover, the background smoothly transitions to `{colors.cloud}` and the text color to `{colors.ink}` over `{motion.duration-base}`. A `cursor: pointer` is required.
+**`input`**
+A standard text input field. It has a `{colors.paper}` background and a `{colors.hairline}` border. When focused, the border color must change to `{colors.primary}` to provide clear visual feedback to the user. The `cursor` inside the input field must be `text`.
 
-*   **`badge`**: Small, non-interactive, pill-shaped labels used to tag or categorize items. With a `{colors.cloud}` background and `{colors.primary}` text, they draw a subtle connection to the brand's core palette while providing quick, scannable information. They use `{typography.caption-sm}` to keep their footprint minimal.
+**`navigation-item`**
+Represents a link in the main site navigation. It uses `{typography.caption-md}` and a `{colors.ink-soft}` color by default. On hover, the text color changes to `{colors.primary}`. The transition should be animated over `{motion.duration-fast}`. The `cursor` must be set to `pointer`.
+
+**`badge`**
+A small, pill-shaped label used for categorization or status indication, like the "AI Workspace" tag. It is not interactive. It uses a `{colors.paper}` background, a `{colors.hairline}` border, and `{colors.primary}` text color.
+
+**`tab`**
+Used to switch between different views within the same context. An inactive tab has `{colors.ink-soft}` text. The active tab is indicated with `{colors.primary}` text and a `2px solid {colors.primary}` border on the bottom. On hover, an inactive tab's text color changes to `{colors.ink}`. All tabs must use `cursor: pointer`.
 
 ## Layout & Spacing
-The layout of Guild is clean, open, and ordered, guided by a strict spacing system and a philosophy of "less is more." All dimensions, margins, and paddings are derived from a base unit of 4px, ensuring a consistent visual rhythm throughout the interface.
+The layout of plud is clean, ordered, and relies on a consistent spacing system to create a sense of rhythm and clarity. Generous whitespace is a fundamental principle, used to reduce cognitive load and improve focus.
 
-The core of the layout strategy is the use of generous whitespace to separate elements and guide the user's eye. The `{spacing}` scale is the single source of truth for all spatial values. For instance, `{spacing.md}` (16px) might be used for padding inside a component, while `{spacing.lg}` (24px) is used for the gap between items in a grid. Large-scale vertical rhythm between major content sections is managed by `{spacing.section}` (96px), creating clear separation and a calm reading pace.
+**Spacing Rhythm:**
+The entire system is built on a 4px base unit. All spacing and sizing values are multiples of this unit, defined in the `{spacing}` token scale. The default spacing for padding within components is `{spacing.md}` (16px). Margins between elements should use tokens from the scale, such as `{spacing.sm}` for tightly grouped items or `{spacing.lg}` for more separation. Adhering to this scale is mandatory for maintaining visual consistency.
 
-Most page layouts are centered with a maximum content width of around 1280px. This prevents uncomfortably long lines of text on wider screens and maintains a focused content area. For presenting lists of features or testimonials, a simple 2 or 3-column grid is standard on desktop, with gaps between columns set to `{spacing.xl}`.
+**Grid System:**
+The layout is a single-column, center-aligned grid with a maximum content width of approximately 1280px. All page content resides within this container, which is centered on the `{colors.canvas}` background. This creates a focused reading experience on larger screens. For multi-column layouts, like the feature grid, use simple flexbox or CSS grid properties with `{spacing.lg}` or `{spacing.xl}` as the gap value.
 
-A key layout pattern is the use of alternating section bands. A section with a `{colors.canvas}` background will be followed by a section with a `{colors.cloud}` background. This creates a pleasant visual cadence down the page, helping users to parse content into distinct thematic chunks. Each band should feel like a complete thought, with ample internal padding (`{spacing.section}` top and bottom).
+**Section Stacking:**
+Major thematic sections of a page are separated by significant vertical space, defined by `{spacing.section}` (80px). This clear separation helps users parse the page structure at a glance. To further enhance this separation, alternating background colors are used. The default is `{colors.canvas}`, with key sections using `{colors.cloud}` to create distinct visual bands. This pattern helps to break up long pages and group related content effectively. Every page should feel like a series of well-defined, digestible chapters.
 
 ## Do's and Don'ts
-**Do's**
 
-1.  Do compose all surfaces from `{colors.canvas}`, `{colors.paper}`, and `{colors.cloud}`. Do not introduce new background hues.
-2.  Do use `Manrope` for all text, assigning `{typography.display-*}` roles to headings and `{typography.body-*}` roles to body copy.
-3.  Do use `{colors.primary}` sparingly, reserving it for the single most important call-to-action on a page to maximize its impact.
-4.  Do ensure every single interactive element, without exception, uses `cursor: pointer`. Text inputs must use `cursor: text`.
-5.  Do use `{rounded.pill}` for all buttons, tags, and navigation links to maintain the brand's soft, approachable aesthetic.
-6.  Do separate major page sections by alternating `{colors.canvas}` and `{colors.cloud}` backgrounds to create a clear visual rhythm.
-7.  Do rely exclusively on the `{spacing}` scale for all margins, paddings, and layout gaps to maintain a consistent and harmonious rhythm.
-8.  Do achieve all visual emphasis through font weight, typographic scale, and the strategic use of `{colors.primary}`, never through shadows.
+**Do's:**
+1.  **Do** compose all UIs from the core color palette: `{colors.canvas}`, `{colors.paper}`, `{colors.ink}`, `{colors.ink-soft}`, and `{colors.primary}`.
+2.  **Do** use the **DM Sans** font for all text, adhering strictly to the roles defined in `{typography}`. Headings use the heading font, body copy uses the body font.
+3.  **Do** reserve `{colors.primary}` for primary CTAs and key interactive feedback like hover states.
+4.  **Do** use `{rounded.pill}` for all primary and secondary buttons to maintain a consistent, soft aesthetic for actions.
+5.  **Do** set `cursor: pointer` on every single clickable element, including buttons, links, tabs, and navigation items.
+6.  **Do** build structure with `{spacing.section}` between content blocks and use `{components.card}` with a `{colors.hairline}` border to group information.
+7.  **Do** use `{colors.cloud}` as an alternating background color for major page sections to create visual rhythm.
+8.  **Do** ensure all interactive components have a defined hover state that provides clear visual feedback, animated over `{motion.duration-fast}`.
 
-**Don'ts**
-
-1.  Don't add a box-shadow to any element. This system is strictly flat, and all shadow tokens must resolve to `{shadows.none}`.
-2.  Don't leave the browser-default arrow cursor on a button, link, or tab. Every clickable element must set `cursor: pointer`.
-3.  Don't use any font other than Manrope. The brand's typographic identity depends on its consistent use.
-4.  Don't use `{colors.primary}` or `{colors.accent-gold}` for paragraphs of body text. These are accent colors, not text colors.
-5.  Don't use sharp `0px` corners on containers like cards or content sections; adhere to the `{rounded}` scale, preferring `{rounded.lg}` or higher.
-6.  Don't invent new spacing values like `18px` or `30px`. If a value is not in the `{spacing}` scale, choose the next closest value from the scale.
-7.  Don't overuse large headlines. A page should have only one `{typography.display-xl}` element, and a limited number of `{typography.display-lg}` elements.
-8.  Don't underline links. Indicate interactivity through hover state changes in color, following the patterns in `{components.nav-link}`.
+**Don'ts:**
+1.  **Don't** ever add a box-shadow unless it maps to a real `{shadows.*}` token. Since all tokens are `"none"`, this system is always flat.
+2.  **Don't** introduce any new colors. The provided palette is complete and restrictive by design.
+3.  **Don't** use any font other than DM Sans. Consistency in typography is non-negotiable.
+4.  **Don't** ever leave the browser-default arrow cursor on a button, link, or tab. Every clickable element must set its own cursor property.
+5.  **Don't** use `{colors.primary}` for large background areas or for body text. It is an accent color only.
+6.  **Don't** mix corner radii on components. Buttons are pills (`{rounded.pill}`), cards are soft rectangles (`{rounded.lg}`).
+7.  **Don't** use arbitrary values for margins or padding. All spacing must come from the `{spacing}` scale.
+8.  **Don't** create "ghost" buttons (text-only buttons). Actions should be represented by either `{components.button-primary}`, `{components.button-outline}`, or `{components.link}`.
 
 ## Responsive Behavior
-The Guild design system is fluid and responsive, ensuring a seamless experience across all device sizes. The following table outlines the primary breakpoints.
+The plud design system is fluid and responsive, ensuring an optimal experience across all device sizes. The layout adapts gracefully from large desktops to small mobile screens by following a clear set of rules.
 
-| Breakpoint      | Viewport Width      | Key Characteristics                                         |
-|-----------------|---------------------|-------------------------------------------------------------|
-| Mobile          | <480px              | Single-column layout, reduced font sizes, collapsed navigation. |
-| Mobile-Large    | 480px – 767px       | Single-column, slightly larger margins, collapsed navigation. |
-| Tablet          | 768px – 1023px      | Two-column grids appear, full navigation may be visible.      |
-| Desktop         | 1024px – 1279px     | Full-width layout within a max-width container, multi-column grids. |
-| Desktop-Large   | ≥1280px             | Increased whitespace and margins around the max-width container. |
+| Breakpoint      | Viewport Width    | Strategy                                                                                                           |
+|-----------------|-------------------|--------------------------------------------------------------------------------------------------------------------|
+| Mobile          | <480px            | Single-column layout. Grids collapse entirely. Typography scales down. Navigation is in a hamburger menu.          |
+| Mobile-Large    | 480px – 767px     | Primarily single-column. Some simple two-column grids may appear. Spacing is slightly increased.                   |
+| Tablet          | 768px – 1023px    | Two- or three-column grids are common. Hero content may be side-by-side. Main navigation may become visible.       |
+| Desktop         | 1024px – 1279px   | The primary desktop experience. Full three-column grids are used. Content is constrained to a max-width container. |
+| Desktop-Large   | ≥1280px           | Layout remains the same as Desktop, with increased whitespace (margins) on the sides of the max-width container.   |
 
-A primary consideration on touch devices is target size. All interactive elements, including buttons and links, must have a minimum touch target area of 44x44px to be easily tappable.
+**Touch Targets:**
+All interactive elements must have a minimum touch target size of 44x44px to ensure usability on mobile devices. While a `{components.button-primary}` has a visual height of `24px`, its clickable area must be expanded with padding or a larger container to meet this requirement.
 
-**Breakpoint-specific behavior:**
-*   **Navigation**: On viewports below `1024px` (Tablet and smaller), the primary navigation defined by `{components.nav-link}` collapses into a hamburger menu icon. The full links are revealed in a modal or drawer upon interaction.
-*   **Hero Section**: The `{typography.display-xl}` hero headline scales down dramatically on smaller screens to prevent awkward text wrapping and preserve visual balance.
-*   **Grids**: Any multi-column grid layout (e.g., for features or testimonials) must stack into a single vertical column on viewports below `768px` (Mobile). The vertical gap between stacked items should be `{spacing.lg}`.
-*   **Images**: All images are fluid (`width: 100%`, `height: auto`) and will scale to fit their container while maintaining aspect ratio. For background images, ensure the most important content is centered to avoid being cropped on narrower screens.
+**Component Collapsing Strategy:**
+*   **Navigation:** The main header navigation collapses into a hamburger menu icon on Tablet and smaller breakpoints. The menu itself opens as a full-screen overlay or a slide-out panel.
+*   **Hero Section:** The `{typography.display-xl}` headline will scale down significantly on smaller screens. Any side-by-side imagery or content will stack vertically on mobile.
+*   **Grids:** Multi-column feature and pricing grids will collapse. A three-column desktop grid becomes a two-column grid on tablet, and a single-column stack on mobile.
+*   **Footer:** The multi-column footer layout will stack into a single column on mobile, with link groups appearing sequentially.
+*   **Images:** All images should be fluid, scaling to 100% of their parent container's width while maintaining their aspect ratio.
 
 ## Iteration Guide
-When building or iterating on UI in the Guild style, follow these steps to ensure consistency and adherence to the design system.
+When building or iterating on UI for plud, follow these steps to ensure consistency with the design system.
 
-1.  **Establish Structure**: Begin by laying out the page's vertical rhythm using alternating section bands with `{colors.canvas}` and `{colors.cloud}` backgrounds. Apply `{spacing.section}` of vertical padding to each.
-2.  **Set Typography**: Define the page's information hierarchy using only the roles from the `{typography}` scale. Start with the main `{typography.display-xl}` or `{typography.display-lg}` heading and work downwards. All text must be Manrope.
-3.  **Place Core Content**: Populate the sections with primary content, using `{typography.body-md}` set in `{colors.ink}` for maximum readability. Use `{typography.body-emphasis}` to highlight key terms.
-4.  **Identify the Primary Action**: Determine the single most important action a user can take on the page and implement it using a `{components.button-primary}`. This should be the most visually dominant interactive element.
-5.  **Add Secondary Actions**: For all other interactive elements, such as "Learn More" links or secondary navigation, use the less prominent `{components.button-secondary}` or `{components.nav-link}` styles.
-6.  **Organize with Cards**: Group related pieces of information into `{components.card}` elements. Ensure each card uses `{rounded.lg}` and a `{colors.hairline}` border, and contains consistent internal padding using `{spacing.lg}`.
-7.  **Apply Consistent Spacing**: Use the `{spacing}` scale for all margins, paddings, and layout gaps. Manually setting pixel values is forbidden. For example, use `{spacing.md}` between a heading and its subsequent paragraph.
-8.  **Verify Interactive States**: Check that every clickable element uses `cursor: pointer`. Implement hover and focus states for all interactive components, using transitions like `{motion.transition-default}`.
-9.  **Test Responsiveness**: Review the design at every breakpoint defined in the system. Ensure layouts reflow logically, typography scales correctly, and touch targets are at least 44x44px on mobile.
-10. **Final Review**: Perform a final quality check. Confirm that no shadows have been used (`{shadows.none}`), the color palette is limited to the defined tokens, and the overall feel aligns with Guild's clean, trustworthy, and organic aesthetic.
+1.  **Establish the Foundation:** Begin with the page structure. Use `{colors.canvas}` as the base background. Separate major content areas with `{spacing.section}` vertical margins and consider using `{colors.cloud}` for alternating section backgrounds.
+2.  **Define the Hierarchy:** Implement the typographic structure using the `{typography}` tokens. Start with a single `{typography.display-xl}` for the hero, followed by `{typography.display-lg}` for section headers. All body copy must be `{typography.body-md}` in `{colors.ink}`. All text must use the **DM Sans** font.
+3.  **Group Content in Cards:** Place related content inside `{components.card}` components. Ensure each card has a `{colors.paper}` background, a `1px solid {colors.hairline}` border, and `{rounded.lg}` corners.
+4.  **Place Key Actions:** Identify the primary user goal for the page and use a single `{components.button-primary}` for it. Use `{components.button-outline}` or `{components.link}` for all secondary and tertiary actions.
+5.  **Apply Color with Purpose:** Use the core color palette strictly. `{colors.primary}` is for interactive elements and their states. `{colors.ink}` and `{colors.ink-soft}` are for text. Do not introduce new colors.
+6.  **Use Accents Sparingly:** If categorical differentiation is needed, apply the `{colors.accent-*}` palette to small, decorative elements or badges, never to text or primary UI controls.
+7.  **Enforce Spacing Rhythm:** Check that all margins and paddings use a token from the `{spacing}` scale. Consistent spacing is crucial for the clean, organized feel of the brand.
+8.  **Maintain Flatness:** Double-check that no shadows have been applied to any element. All components must use `{shadows.none}`. Depth is created through layout, color, and borders, not elevation.
+9.  **Verify Interactivity:** Ensure every clickable element has `cursor: pointer` set. Test all hover and focus states to confirm they provide clear visual feedback and use `{motion.transition-fast}` for smooth animation.
+10. **Review Across Breakpoints:** Test the final design at all defined responsive breakpoints. Confirm that layouts collapse gracefully, touch targets are adequate, and the experience remains clear and usable on mobile devices.

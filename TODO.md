@@ -1,6 +1,0 @@
-- [ ] Restyle Admin Reps layout card (table + detail panel) in `app/(dashboards)/admin/reps/page.tsx`
-- [ ] Update reps list columns/labels for: rep name, department(s), status, verification, currently held, collection rate
-- [ ] Expand rep detail view into sections: full profile, linked departments, transaction history (mock scaffold), payout history (mock scaffold), verification documents (mock scaffold)
-- [ ] Replace action preview buttons with structured admin actions: approve/reject, suspend/reinstate, reassign, force-remove (danger emphasis)
-- [ ] Verify build/typecheck and fix any TS/JSX issues
-- [x] Verify build/typecheck and fix any TS/JSX issues
