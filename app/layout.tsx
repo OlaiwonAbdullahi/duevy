@@ -19,7 +19,6 @@ const BASE_URL = "https://duevy.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
-
   title: {
     default: "Duevy — Collect dues. Track every kobo. No wahala.",
     template: "%s | Duevy",
@@ -39,7 +38,6 @@ export const metadata: Metadata = {
   creator: "Duevy",
   publisher: "Duevy",
   category: "fintech",
-
   openGraph: {
     type: "website",
     url: BASE_URL,
@@ -57,7 +55,6 @@ export const metadata: Metadata = {
     ],
     locale: "en_NG",
   },
-
   twitter: {
     card: "summary_large_image",
     site: "@duevyapp",
@@ -67,7 +64,6 @@ export const metadata: Metadata = {
       "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
     images: ["/ogimage.png"],
   },
-
   robots: {
     index: true,
     follow: true,
@@ -78,7 +74,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
@@ -90,7 +85,6 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Duevy",
   },
-
   alternates: {
     canonical: BASE_URL,
   },
@@ -112,7 +106,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn("h-full antialiased", manrope.variable)}
-      suppressHydrationWarning
+      suppressHydrationWarning // Prevents secondary hydration attribute variations
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider
