@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { DM_Sans, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import SmoothScroll from "./components/SmoothScroll";
-import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "./components/ThemeProvider";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const bricolageGrotesque = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
@@ -16,51 +19,55 @@ const BASE_URL = "https://duevy.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
+
   title: {
-    default: "Duevy — Collect dues. Track every kobo. No wahala.",
+    default: "Duevy — University Payments, Simplified",
     template: "%s | Duevy",
   },
   description:
-    "Duevy gives Nigerian campus reps a wallet-based way to collect dues, levies, and payments — while every student sees exactly where their money went.",
+    "Duevy is the digital payment layer for university students — pay dues, handouts, and departmental fees instantly.",
   keywords: [
-    "campus dues collection Nigeria",
+    "university payments Nigeria",
     "student dues payment",
-    "departmental levies",
+    "departmental fees",
     "Nigerian university fintech",
     "course rep payments",
-    "class rep wallet",
+    "university payment app",
     "duevy",
   ],
   authors: [{ name: "Duevy", url: BASE_URL }],
   creator: "Duevy",
   publisher: "Duevy",
   category: "fintech",
+
   openGraph: {
     type: "website",
     url: BASE_URL,
     siteName: "Duevy",
-    title: "Duevy — Collect dues. Track every kobo. No wahala.",
+    title: "Duevy — University Payments, Simplified",
     description:
-      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
+      "Pay university dues, handouts, and departmental fees instantly with Duevy.",
     images: [
       {
         url: "/ogimage.png",
-        width: 1352,
-        height: 648,
-        alt: "Duevy — Campus dues, made transparent.",
+        width: 1200,
+        height: 630,
+        alt: "Duevy — University payments, finally simplified.",
       },
     ],
     locale: "en_NG",
   },
+
   twitter: {
     card: "summary_large_image",
     site: "@duevyapp",
     creator: "@duevyapp",
-    title: "Duevy — Collect dues. Track every kobo. No wahala.",
+    title: "Duevy — University Payments, Simplified",
     description:
-      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
+      "Pay university dues, handouts, and departmental fees instantly with Duevy.",
     images: ["/ogimage.png"],
   },
+
   robots: {
     index: true,
     follow: true,
@@ -71,10 +78,12 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
   },
+
   alternates: {
     canonical: BASE_URL,
   },
@@ -86,23 +95,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={cn("h-full antialiased", manrope.variable)}
-      suppressHydrationWarning // Prevents secondary hydration attribute variations
-    >
-      <body className="min-h-full flex flex-col">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SmoothScroll />
-          {children}
-          <Toaster position="top-center" />
-        </ThemeProvider>
-      </body>
+    <html lang="en" className={cn("h-full antialiased", dmSans.variable, bricolageGrotesque.variable)}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }
