@@ -13,6 +13,7 @@ import {
   CheckmarkCircle02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "../EmptyState";
 import {
   DUES,
@@ -165,13 +166,12 @@ export function StudentOverview({ name = "Amara" }: { name?: string }) {
             </ul>
           )}
 
-          <Link
-            href="/dashboard/dues"
-            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          >
-            Pay dues
-            <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
-          </Link>
+          <Button variant="brand" size="pill-lg" asChild className="mt-4 w-full">
+            <Link href="/dashboard/dues">
+              Pay dues
+              <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+            </Link>
+          </Button>
         </section>
 
         <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">

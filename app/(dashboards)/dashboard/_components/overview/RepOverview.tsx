@@ -16,6 +16,7 @@ import {
   SquareLock01Icon,
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "../EmptyState";
 import { UserAvatar } from "../UserAvatar";
 import {
@@ -162,13 +163,12 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
             </ul>
           )}
 
-          <Link
-            href="/dashboard/create-dues"
-            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          >
-            Manage dues
-            <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
-          </Link>
+          <Button variant="brand" size="pill-lg" asChild className="mt-5 w-full">
+            <Link href="/dashboard/create-dues">
+              Manage dues
+              <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+            </Link>
+          </Button>
         </section>
 
         <div className="flex flex-col gap-6">
@@ -182,13 +182,12 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
                 Send a reminder to students who haven&apos;t paid yet.
               </p>
             </div>
-            <Link
-              href="/dashboard/collections"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-            >
-              Send reminders
-              <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
-            </Link>
+            <Button variant="brand" size="pill-lg" asChild>
+              <Link href="/dashboard/collections">
+                Send reminders
+                <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
+              </Link>
+            </Button>
           </section>
 
           {/* Newest members — students who just joined with the code. */}
@@ -242,18 +241,12 @@ export function RepOverview({ name = "Amara" }: { name?: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/dashboard/dues"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          >
-            My dues
-          </Link>
-          <Link
-            href="/dashboard/wallet"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          >
-            My wallet
-          </Link>
+          <Button variant="brand-outline" size="pill" asChild>
+            <Link href="/dashboard/dues">My dues</Link>
+          </Button>
+          <Button variant="brand-outline" size="pill" asChild>
+            <Link href="/dashboard/wallet">My wallet</Link>
+          </Button>
         </div>
       </section>
     </div>

@@ -6,6 +6,7 @@ import {
   UserMultipleIcon,
   CheckmarkCircle02Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import type { Due, Space } from "./types";
 import {
   naira,
@@ -183,13 +184,14 @@ export function SpaceDetail({
                   {naira(selectedTotal)}
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="brand"
+                size="pill-lg"
                 onClick={() => onPay(selectedDues)}
-                className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                className="shrink-0"
               >
                 Pay {naira(selectedTotal)}
-              </button>
+              </Button>
             </div>
           </motion.div>
         )}

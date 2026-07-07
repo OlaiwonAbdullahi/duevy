@@ -5,6 +5,13 @@ import { BankIcon } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { BANK_OPTIONS } from "./data";
 import type { BankAccount } from "./types";
@@ -30,17 +37,21 @@ export function EditAccountModal({
       <div className="flex flex-col gap-4">
         <div>
           <label className="block text-xs font-medium text-ink-soft">Bank</label>
-          <select
-            value={bankName}
-            onChange={(e) => setBankName(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-2xl border border-cloud bg-canvas px-4 text-sm text-ink outline-none focus:border-brand cursor-pointer"
-          >
-            {BANK_OPTIONS.map((bank) => (
-              <option key={bank} value={bank}>
-                {bank}
-              </option>
-            ))}
-          </select>
+          <Select value={bankName} onValueChange={setBankName}>
+            <SelectTrigger
+              aria-label="Bank"
+              className="mt-1.5 h-11 w-full rounded-2xl text-sm sm:w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BANK_OPTIONS.map((bank) => (
+                <SelectItem key={bank} value={bank}>
+                  {bank}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>

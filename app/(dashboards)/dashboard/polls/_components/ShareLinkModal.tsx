@@ -8,6 +8,7 @@ import {
   Copy01Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { Modal } from "../../_components/Modal";
 import { naira, voteLink } from "./data";
 import type { Poll } from "./types";
@@ -43,25 +44,23 @@ export function ShareLinkModal({
 
       <div className="mt-4 flex items-center gap-2 rounded-2xl border border-cloud bg-paper px-4 py-3">
         <span className="min-w-0 flex-1 truncate text-sm text-ink">{link}</span>
-        <button
-          type="button"
-          onClick={copy}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
+        <Button variant="brand" size="pill" onClick={copy} className="shrink-0">
           <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={14} />
           {copied ? "Copied" : "Copy"}
-        </button>
+        </Button>
       </div>
 
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+      <Button
+        variant="brand-outline"
+        size="pill-lg"
+        asChild
+        className="mt-3 w-full"
       >
-        <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
-        Open ballot preview
-      </a>
+        <a href={link} target="_blank" rel="noopener noreferrer">
+          <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
+          Open ballot preview
+        </a>
+      </Button>
 
       <p className="mt-3 text-[11px] text-ink-soft">
         {poll.membersOnly

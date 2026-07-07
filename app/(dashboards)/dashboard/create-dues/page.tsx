@@ -11,7 +11,6 @@ import {
   Invoice01Icon,
 } from "@hugeicons/core-free-icons";
 import { StatCard } from "../_components/StatCard";
-import type { HugeIcon } from "../_components/nav-config";
 import { REP_SPACE, INITIAL_REP_DUES, naira } from "./_components/data";
 import type { DueDraft, RepDue } from "./_components/types";
 import { DueListRow } from "./_components/DueListRow";

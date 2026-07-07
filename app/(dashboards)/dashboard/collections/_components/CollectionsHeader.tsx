@@ -4,6 +4,7 @@ import {
   InformationCircleIcon,
   Notification03Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 
 export function CollectionsHeader({
   onDownload,
@@ -27,19 +28,21 @@ export function CollectionsHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
+        <Button
+          variant="brand"
+          size="pill-lg"
           onClick={onDownload}
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+          className="shrink-0"
         >
           <HugeiconsIcon icon={Download01Icon} size={16} />
           Download list
-        </button>
-        <div className="">
-          <button
-            type="button"
+        </Button>
+        <div>
+          <Button
+            variant="brand-outline"
+            size="pill-lg"
             onClick={onSendReminders}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-cloud bg-canvas px-5 text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="shrink-0"
           >
             <HugeiconsIcon
               icon={Notification03Icon}
@@ -47,7 +50,7 @@ export function CollectionsHeader({
               className="text-brand"
             />
             Send reminders
-          </button>
+          </Button>
 
           <ReminderInfo />
         </div>

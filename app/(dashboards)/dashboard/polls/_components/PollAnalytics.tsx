@@ -11,7 +11,6 @@ import {
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
 import { StatCard } from "../../_components/StatCard";
-import type { HugeIcon } from "../../_components/nav-config";
 import { relativeDue } from "../../dues/_components/data";
 import {
   naira,

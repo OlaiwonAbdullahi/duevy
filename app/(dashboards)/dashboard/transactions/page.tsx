@@ -8,8 +8,11 @@ import {
   MoneySend01Icon,
   ReceiptDollarIcon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { StatCard } from "../_components/StatCard";
-import type { HugeIcon } from "../_components/nav-config";
+import { BARE_INPUT } from "../_components/form-styles";
 import type { TxnFilter } from "./_components/types";
 import { TRANSACTIONS, naira, groupByDay } from "./_components/data";
 import type { Transaction } from "./_components/types";
@@ -121,12 +124,12 @@ export default function TransactionsPage() {
             size={16}
             className="shrink-0 text-ink-soft"
           />
-          <input
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search transactions"
             aria-label="Search transactions"
-            className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
+            className={cn(BARE_INPUT, "h-10 px-0")}
           />
         </div>
       </div>
@@ -140,16 +143,16 @@ export default function TransactionsPage() {
             description="Nothing matches the current filters. Try a different tab or clear your search."
             action={
               (filter !== "all" || query.trim() !== "") && (
-                <button
-                  type="button"
+                <Button
+                  variant="brand-outline"
+                  size="pill"
                   onClick={() => {
                     setFilter("all");
                     setQuery("");
                   }}
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   Clear filters
-                </button>
+                </Button>
               )
             }
           />

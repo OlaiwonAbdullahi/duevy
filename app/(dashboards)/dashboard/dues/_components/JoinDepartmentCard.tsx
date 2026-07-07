@@ -9,9 +9,13 @@ import {
   Alert01Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { JoinableDepartment } from "./types";
 import { findDepartmentByCode, KIND_GLYPH, SPACE_KIND_LABEL } from "./data";
 import { SpaceEmblem } from "./SpaceEmblem";
+import { BRAND_INPUT } from "../../_components/form-styles";
 
 const CODE_LENGTH = 5;
 
@@ -69,7 +73,7 @@ export function JoinDepartmentCard({
       </div>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <input
+        <Input
           value={code}
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && join()}
@@ -79,16 +83,20 @@ export function JoinDepartmentCard({
           spellCheck={false}
           placeholder="Enter 5-character code"
           aria-label="Department join code"
-          className="h-12 flex-1 rounded-2xl border border-cloud bg-paper px-4 text-base font-semibold uppercase tracking-[0.35em] text-ink outline-none transition-colors placeholder:text-sm placeholder:font-normal placeholder:tracking-normal placeholder:text-ink-soft focus:border-brand focus:ring-[3px] focus:ring-brand/15"
+          className={cn(
+            BRAND_INPUT,
+            "h-12 flex-1 bg-paper text-base font-semibold uppercase tracking-[0.35em] placeholder:text-sm placeholder:font-normal placeholder:tracking-normal md:text-base",
+          )}
         />
-        <button
-          type="button"
+        <Button
+          variant="brand"
+          size="pill-xl"
           onClick={join}
           disabled={!match || alreadyJoined}
-          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-40 disabled:hover:bg-brand cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          className="shrink-0"
         >
           Join
-        </button>
+        </Button>
       </div>
 
       {/* Result region — swaps between the match preview and a "not found" note. */}

@@ -10,8 +10,8 @@ import {
   PlusSignIcon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "../_components/StatCard";
-import type { HugeIcon } from "../_components/nav-config";
 import { EmptyState } from "../_components/EmptyState";
 import { REP_SPACE } from "../create-dues/_components/data";
 import { INITIAL_POLLS, naira, pollRevenue, slugify, totalVotes } from "./_components/data";
@@ -138,14 +138,15 @@ export default function PollsPage() {
                   awardees and more.
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="brand"
+                size="pill-lg"
                 onClick={openCreate}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                className="shrink-0"
               >
                 <HugeiconsIcon icon={PlusSignIcon} size={16} />
                 New poll
-              </button>
+              </Button>
             </header>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -170,14 +171,10 @@ export default function PollsPage() {
                   title="No polls yet"
                   description="Create your first vote poll for the dinner and awards night, then share the link with students."
                   action={
-                    <button
-                      type="button"
-                      onClick={openCreate}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                    >
+                    <Button variant="brand" size="pill" onClick={openCreate}>
                       <HugeiconsIcon icon={PlusSignIcon} size={15} />
                       Create poll
-                    </button>
+                    </Button>
                   }
                 />
               ) : (

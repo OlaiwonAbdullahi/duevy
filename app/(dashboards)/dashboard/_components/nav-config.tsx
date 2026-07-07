@@ -13,6 +13,7 @@ import {
   Shield01Icon,
   GiftIcon,
   UserGroup03Icon,
+  Megaphone01Icon,
 } from "@hugeicons/core-free-icons";
 
 /** The icon-data shape exported by @hugeicons/core-free-icons. */
@@ -105,7 +106,7 @@ export function getDashboardGroups(isRep: boolean): NavGroup[] {
 export const ADMIN_LINKS: NavLink[] = [
   { label: "Overview", href: "/admin", icon: Home01Icon },
   { label: "Users", href: "/admin/users", icon: UserMultipleIcon },
-  { label: "Reps", href: "/admin/reps", icon: UserMultipleIcon },
+  { label: "Reps", href: "/admin/reps", icon: UserGroup03Icon },
   { label: "Spaces", href: "/admin/spaces", icon: Building03Icon },
   {
     label: "Transactions",
@@ -113,7 +114,8 @@ export const ADMIN_LINKS: NavLink[] = [
     icon: ReceiptDollarIcon,
   },
   { label: "Referrals", href: "/admin/referrals", icon: GiftIcon },
-  { label: "Disputes", href: "/admin/disputes", icon: Megaphone01Icon },  
+  { label: "Polls", href: "/admin/polls", icon: CheckmarkSquare01Icon },
+  { label: "Disputes", href: "/admin/disputes", icon: Megaphone01Icon },
   { label: "Reports", href: "/admin/reports", icon: Analytics01Icon },
   { label: "Settings", href: "/admin/settings", icon: Shield01Icon },
 ];

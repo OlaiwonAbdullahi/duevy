@@ -16,16 +16,13 @@ import { cn } from "@/lib/utils";
 import type { NavGroup } from "./nav-config";
 
 function isActive(pathname: string, href: string) {
-  // Exact match for the section root, prefix match for its sub-routes.
   if (href === "/dashboard" || href === "/admin") return pathname === href;
   return pathname === href || pathname.startsWith(href + "/");
 }
 
 type SidebarProps = {
   groups: NavGroup[];
-  /** Small label under the wordmark, e.g. the current area or role. */
   subtitle?: string;
-  /** Mobile drawer state. */
   open: boolean;
   onClose: () => void;
 };
@@ -77,8 +74,13 @@ export default function Sidebar({
               className="h-7 w-auto"
             />
             <span className="flex flex-col">
-              <span className="text-ink text-lg tracking-tight leading-none">
-                Duevy.
+              <span className="flex items-center gap-1.5">
+                <span className="text-ink text-lg tracking-tight leading-none">
+                  Duevy.
+                </span>
+                <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide leading-none text-brand">
+                  Beta
+                </span>
               </span>
               {subtitle && (
                 <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-ink-soft">

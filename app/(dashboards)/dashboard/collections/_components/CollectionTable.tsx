@@ -5,8 +5,12 @@ import {
   Clock01Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { RepDue } from "../../create-dues/_components/types";
 import { naira } from "../../create-dues/_components/data";
+import { BARE_INPUT } from "../../_components/form-styles";
 import { COLLECTION_TABS } from "./data";
 import type { CollectionStudent, StatusFilter } from "./types";
 import { UserAvatar } from "../../_components/UserAvatar";
@@ -86,12 +90,12 @@ export function CollectionTable({
               size={16}
               className="shrink-0 text-ink-soft"
             />
-            <input
+            <Input
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
               placeholder="Search name, matric no, or email"
               aria-label="Search students"
-              className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
+              className={cn(BARE_INPUT, "h-10 px-0")}
             />
             {hasQuery && (
               <button
@@ -185,16 +189,16 @@ export function CollectionTable({
             description="No students match the current filters. Try a different status or search term."
             action={
               isFiltered && (
-                <button
-                  type="button"
+                <Button
+                  variant="brand-outline"
+                  size="pill"
                   onClick={() => {
                     onQueryChange("");
                     onFilterChange("all");
                   }}
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   Clear filters
-                </button>
+                </Button>
               )
             }
           />

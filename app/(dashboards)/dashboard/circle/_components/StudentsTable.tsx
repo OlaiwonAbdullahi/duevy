@@ -5,9 +5,13 @@ import {
   Search01Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { Student } from "./types";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { EmptyState } from "../../_components/EmptyState";
+import { BARE_INPUT } from "../../_components/form-styles";
 
 export function StudentsTable({
   students,
@@ -40,12 +44,12 @@ export function StudentsTable({
             size={16}
             className="shrink-0 text-ink-soft"
           />
-          <input
+          <Input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search name, matric no, or email"
             aria-label="Search students"
-            className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
+            className={cn(BARE_INPUT, "h-10 px-0")}
           />
           {hasQuery && (
             <button
@@ -121,13 +125,13 @@ export function StudentsTable({
             description="No members match your search. Try another name, matric number, or email."
             action={
               hasQuery && (
-                <button
-                  type="button"
+                <Button
+                  variant="brand-outline"
+                  size="pill"
                   onClick={() => onQueryChange("")}
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-cloud bg-paper px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   Clear search
-                </button>
+                </Button>
               )
             }
           />
