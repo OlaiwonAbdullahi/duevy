@@ -28,7 +28,6 @@ export default function Pricing() {
   return (
     <section id="pricing-fee" className="bg-[#fbfaf7] px-6 md:px-12 py-24">
       <div className="max-w-[1280px] mx-auto">
-        {/* Header */}
         <div className="max-w-2xl mb-16">
           <span className="inline-flex items-center bg-[#e6f2ec] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
             Pricing
@@ -38,18 +37,36 @@ export default function Pricing() {
           </h2>
           <p className="text-[#7a847f] text-base md:text-lg leading-relaxed">
             Duevy charges a simple 3% on every transaction — and that&apos;s it.
-            No signup cost, no monthly subscription, no fee to withdraw. You only
-            ever pay when a payment actually goes through, so it scales with what
-            you collect instead of billing you for sitting still.
+            No signup cost, no monthly subscription, no fee to withdraw. You
+            only ever pay when a payment actually goes through, so it scales
+            with what you collect instead of billing you for sitting still.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-6">
           {/* Headline fee card */}
           <div className="lg:col-span-2 bg-[#0b6e4f] rounded-[32px] p-8 md:p-12 flex flex-col justify-between overflow-hidden relative">
-            {/* soft decorative rings */}
-            <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full border border-white/15" />
-            <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full border border-white/15" />
+            <div
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1.5px)",
+                backgroundSize: "18px 18px",
+                maskImage:
+                  "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+                WebkitMaskImage:
+                  "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+              }}
+            />
+            <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
+              <div className="relative h-72 w-72">
+                <span className="absolute inset-0 rounded-[3.25rem] border border-white/15" />
+                <span className="absolute inset-8 rounded-[2.5rem] border border-white/10" />
+                <span className="absolute inset-16 rounded-[1.75rem] border border-white/[0.07]" />
+                <span className="absolute inset-16 rounded-l-[1.75rem] rounded-r-[6rem] border-r border-white/10" />
+              </div>
+            </div>
+            <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-[4rem] border border-white/10" />
 
             <div className="relative">
               <span className="w-12 h-12 rounded-full bg-white/15 text-white grid place-items-center mb-8">

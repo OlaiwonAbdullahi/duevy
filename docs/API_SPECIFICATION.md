@@ -1279,3 +1279,310 @@ payments §6.3, paid votes §11.6).
 _Questions or proposed changes: open a PR against this document. The frontend types in
 `app/(dashboards)/**/_components/types.ts` are the client-side contract mirror — keep both in
 sync._
+
+---
+
+## Appendix C — Design & Styling Reference
+
+This appendix documents the Duevy design system as implemented in the frontend
+(`app/globals.css`, `components/ui/`, `app/(dashboards)/dashboard/_components/`).
+Backend engineers generating server-side HTML (email templates, PDF receipts, notification
+payloads) should use the values here to stay visually consistent with the app.
+
+---
+
+### C.1 Brand Identity
+
+- **Product name:** Duevy (always one capital D, no all-caps)
+- **Tagline:** "Collect dues. Track every kobo. No wahala."
+- **Default theme colour:** Emerald green (`#0b6e4f`)
+- **Font:** [Manrope](https://fonts.google.com/specimen/Manrope) (weights 400 / 500 / 600 / 700 / 800) — loaded from Google Fonts via `next/font`. System fallback: `system-ui, sans-serif`.
+- **Icon library:** [Hugeicons](https://hugeicons.com/) (`@hugeicons/react`, stroke-based, size 18 px at default, 16 px small).
+
+---
+
+### C.2 Colour Tokens (Design Primitives)
+
+These CSS custom properties are declared on `:root` (light mode) and overridden in `.dark`.
+All `bg-brand`, `text-brand`, `bg-cloud` Tailwind classes resolve through these tokens.
+
+#### C.2.1 Light Mode (`:root`)
+
+| Token | Hex | Usage |
+|---|---|---|
+| `--p-primary` | `#0b6e4f` | Brand / CTA fill, active nav indicator |
+| `--p-primary-bright` | `#0f996d` | Hover state for brand buttons |
+| `--p-primary-deep` | `#08583f` | Active / pressed brand button |
+| `--p-on-primary` | `#ffffff` | Text on brand-coloured backgrounds |
+| `--p-ink` | `#1b2520` | Body text, headings |
+| `--p-ink-soft` | `#7a847f` | Placeholder text, secondary labels, muted captions |
+| `--p-canvas` | `#fbfaf7` | Page / sidebar background |
+| `--p-paper` | `#f4f2ec` | Hover-state fills, secondary card backgrounds |
+| `--p-cloud` | `#e6f2ec` | Active nav pill fill, card borders, icon chip background |
+| `--p-hairline` | `#e6f2ec` | Dividers, borders (same as cloud in light) |
+| `--p-hairline-strong` | `#7a847f` | Stronger separator lines |
+| `--p-link` | `#1b2520` | Default link colour (same as ink) |
+| `--p-link-pressed` | `#0b6e4f` | Visited / active link |
+| `--p-accent-gold` | `#e8a33d` | Decorative accent (awards, referral badges) |
+
+#### C.2.2 Dark Mode (`.dark`)
+
+| Token | Hex |
+|---|---|
+| `--p-primary` | `#0f996d` |
+| `--p-primary-bright` | `#14b581` |
+| `--p-primary-deep` | `#0b6e4f` |
+| `--p-ink` | `#eef1ef` |
+| `--p-ink-soft` | `#97a29d` |
+| `--p-canvas` | `#0e1411` |
+| `--p-paper` | `#171f1b` |
+| `--p-cloud` | `#24312b` |
+| `--p-hairline` | `#24312b` |
+
+#### C.2.3 Semantic / Component Tokens (Shadcn layer)
+
+Used by `<Button>`, `<Input>`, and all Shadcn primitives. Expressed in `oklch`.
+
+| Token | Light | Dark |
+|---|---|---|
+| `--background` | `#fbfaf7` | `oklch(0.145 0 0)` |
+| `--foreground` | `oklch(0.145 0 0)` | `oklch(0.985 0 0)` |
+| `--border` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 10%)` |
+| `--input` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 15%)` |
+| `--ring` | `oklch(0.708 0 0)` | `oklch(0.556 0 0)` |
+| `--muted` | `oklch(0.97 0 0)` | `oklch(0.269 0 0)` |
+| `--muted-foreground` | `oklch(0.556 0 0)` | `oklch(0.708 0 0)` |
+| `--destructive` | `oklch(0.577 0.245 27.325)` | `oklch(0.704 0.191 22.216)` |
+
+#### C.2.4 Notification / Status Tones
+
+These tone names appear on `Notification.tone` (§13) and `attention[].tone` (§14.1).
+Map them to colours for email / push rendering:
+
+| Tone | Light colour | Usage |
+|---|---|---|
+| `brand` | `#0b6e4f` (emerald) | Success, informational, payment received |
+| `amber` | `#e8a33d` | Warning, overdue, approaching deadline |
+| `rose` | `#b01e4e` / `oklch(0.704 0.191 22.216)` | Error, destructive, suspended |
+
+---
+
+### C.3 Typography
+
+All text is set in **Manrope**. Heading and body families are the same; weight and size carry
+the hierarchy.
+
+| Role | Size | Weight | Colour token | Notes |
+|---|---|---|---|---|
+| Page title (h1) | `3.75rem` (60 px) / `2.25rem` mobile | 600 | `--p-ink` | `tracking-tight`, `leading-[1.05]` |
+| Section heading (h2) | `~2rem` | 600 | `--p-ink` | |
+| Card heading | `text-lg` (18 px) | 600 | `--p-ink` | |
+| Stat value | `text-xl` (20 px) | 600 | `--p-ink` or `--p-primary` | `tracking-tight` |
+| Body / paragraph | `text-base` (16 px) | 400 | `--p-ink` | `leading-relaxed` |
+| Secondary / caption | `text-sm` (14 px) | 400–500 | `--p-ink-soft` | |
+| Label / badge | `text-xs` (12 px) | 600 | varies | `uppercase tracking-wide` for section labels |
+| Nav group label | `11 px` | 700 | `--p-ink-soft` | `uppercase tracking-wide` |
+
+**Email / PDF safe stack:** `'Manrope', 'Helvetica Neue', Arial, sans-serif`
+
+---
+
+### C.4 Spacing & Border Radius
+
+The base radius is `0.6875rem` (11 px), exposed as `--radius`.
+
+| Token | Value | Usage |
+|---|---|---|
+| `--radius-sm` | `~6.6 px` (`radius * 0.6`) | Small chips |
+| `--radius-md` | `~8.8 px` (`radius * 0.8`) | Inputs inside grouped containers |
+| `--radius-lg` (`--radius`) | `11 px` | Default (most form elements) |
+| `--radius-xl` | `~15.4 px` | Modals, dialogs |
+| `--radius-2xl` | `~19.8 px` | Large cards |
+| `--radius-3xl` | `~24.2 px` | Feature sections |
+| `--radius-4xl` | `~28.6 px` | Pill CTAs on landing page |
+| `rounded-full` (Tailwind) | `9999 px` | Sidebar nav pills, buttons with variant `brand` / `brand-outline` / `brand-ghost` |
+
+---
+
+### C.5 Button Variants
+
+Defined in `components/ui/button.tsx` with `class-variance-authority`. Use these descriptors
+when generating HTML emails or referencing component intent.
+
+| Variant | Background | Text | Border | Hover |
+|---|---|---|---|---|
+| `brand` | `--p-primary` | white | none | `--p-primary-bright` |
+| `brand-outline` | transparent | `--p-ink` | `--p-cloud` | `--p-paper` bg |
+| `brand-ghost` | transparent | `--p-ink-soft` | none | `--p-ink` text |
+| `danger` | `rose-600` | white | none | `rose-700` bg |
+| `danger-outline` | white | `rose-600` | `rose-300` | `rose-100` bg |
+| `default` | `--primary` (ink) | `--primary-foreground` | none | 80% opacity |
+| `destructive` | `destructive/10` | destructive | none | `destructive/20` bg |
+| `outline` | `input/30` | foreground | `--border` | `input/50` bg |
+| `ghost` | transparent | foreground | none | `--muted` bg |
+
+**Button sizes** (all `brand`/`danger` variants are `rounded-full`):
+
+| Size | Height | Padding | Font |
+|---|---|---|---|
+| `pill` | auto | `px-4 py-2` | `text-xs font-semibold` |
+| `pill-lg` | `44 px` | `px-6` | `text-sm font-semibold` |
+| `pill-xl` | `48 px` | `px-6` | `text-sm font-semibold` |
+| `default` | `36 px` | `px-3` | `text-sm font-medium` |
+| `sm` | `32 px` | `px-3` | `text-sm font-medium` |
+| `lg` | `40 px` | `px-4` | `text-sm font-medium` |
+
+---
+
+### C.6 Form Input Styling
+
+Two input class presets are used across dashboard forms (`form-styles.ts`):
+
+**`BRAND_INPUT`** — standard brand-styled input:
+```
+height: 44px; border-radius: ~22px (rounded-2xl);
+border: 1px solid --p-cloud; background: --p-canvas;
+padding: 0 16px; font-size: 14px; color: --p-ink;
+placeholder-color: --p-ink-soft;
+focus-border: --p-primary; focus-ring: 3px, rgba(primary, 0.15);
+```
+
+**`BARE_INPUT`** — borderless variant for prefix/suffix layouts:
+```
+height: 44px; border: none; background: transparent;
+padding: 0 8px; font-size: 14px; shadow: none;
+color: --p-ink; placeholder-color: --p-ink-soft;
+```
+
+Shadcn `<Input>` base styles (non-brand forms):
+```
+height: 36px; border-radius: 9999px (rounded-4xl);
+border: 1px solid --input; background: input/30;
+padding: 4px 12px; font-size: 14px;
+focus-ring: 3px; focus-ring-color: ring/50;
+```
+
+---
+
+### C.7 Card & Surface Patterns
+
+| Pattern | Classes | Notes |
+|---|---|---|
+| Standard card | `rounded-3xl border border-cloud bg-canvas p-5` | Used by `StatCard`, most dashboard panels |
+| Paper hover fill | `bg-paper` | Secondary background, nav hover |
+| Cloud fill | `bg-cloud` | Active nav pill, icon chip background |
+| Sidebar | `bg-canvas border-r border-cloud` width `288 px` | Fixed on desktop |
+| Divider / hairline | `border-cloud` | 1 px solid |
+
+**StatCard anatomy** (server-generated equivalents in emails):
+1. Icon chip — `36 × 36 px` circle, `bg-cloud text-brand`
+2. Label — `text-xs font-medium text-ink-soft`
+3. Value — `text-xl font-semibold tracking-tight` (brand-toned when positive metric)
+4. Hint — `text-xs text-ink-soft` (optional)
+
+**IconChip tones:**
+
+| Tone | Background | Text |
+|---|---|---|
+| `brand` | `--p-cloud` | `--p-primary` |
+| `danger` | `rose-100` | `rose-600` |
+
+---
+
+### C.8 Space / Department Themes
+
+A rep selects one theme for their space; the API returns `space.theme` (§4). The frontend
+stamps `data-space-theme` on `<html>` to re-tint the brand tokens.
+
+| Theme ID | Light primary | Dark primary | Cloud (light) | Cloud (dark) |
+|---|---|---|---|---|
+| `emerald` *(default)* | `#0b6e4f` | `#0f996d` | `#e6f2ec` | `#24312b` |
+| `ocean` | `#0a5c8c` | `#0e7fb8` | `#e3eef7` | `#1c2933` |
+| `royal` | `#5b2d9e` | `#7a3fd1` | `#eee8f9` | `#292336` |
+| `crimson` | `#b01e4e` | `#d63868` | `#fae6ed` | `#33212a` |
+| `tangerine` | `#b45309` | `#d97016` | `#faeddd` | `#33271d` |
+
+> **Email / PDF tip:** Use the light-mode primary for the theme's accent colour in
+> server-generated documents. Embed the hex directly (CSS variables are not available
+> in most email clients).
+
+---
+
+### C.9 Emblem / Avatar — Hue Palette
+
+`Space.hue` (§4) drives the coloured monogram emblem shown wherever a space is listed.
+
+| Hue | Colour |
+|---|---|
+| `emerald` | `#0b6e4f` (brand green) |
+| `indigo` | `#4338ca` |
+| `amber` | `#b45309` |
+| `rose` | `#b01e4e` |
+| `slate` | `#475569` |
+
+The emblem renders the space's `short` field (2–6 chars, e.g. `CSSA`) centred in the
+coloured circle. Use `font-weight: 700`, white text (`#ffffff`), `font-family: Manrope`.
+
+---
+
+### C.10 Animations & Motion
+
+| Name | Keyframe | Duration | Usage |
+|---|---|---|---|
+| `pulse-glow` | `opacity 0.5 → 1 → 0.5` | `3 s ease-in-out infinite` | Loading shimmer, skeleton glow |
+| `float-slow` | `translateY(0 → -10px → 0)` | `5 s ease-in-out infinite` | Decorative floating elements |
+| `float-slow-delayed` | `translateY(-5px → 5px → -5px)` | `6 s, delay 0.8 s` | Secondary floating element |
+| `ticker` | `translateX(0 → -50%)` | variable | Horizontal marquee / ticker strip |
+| Sidebar slide | `cubic-bezier(0.22, 1, 0.36, 1)` | `300 ms` | Mobile sidebar open/close |
+| Nav collapse | `height + opacity, same easing` | `240 ms` | Collapsible nav group |
+| All interactive hover | `transition-colors duration-300` | `300 ms` | Buttons, nav links, cards |
+| Icon translate on hover | `transition-transform duration-500` | `500 ms` | Arrow icons inside CTAs |
+
+**Smooth scroll:** Lenis is used for smooth page scrolling. The `data-lenis-prevent`
+attribute on any scrollable container opts it out.
+
+---
+
+### C.11 Email Template Guidelines
+
+When the backend generates HTML emails (due reminders, payment receipts, payout
+notifications), apply these conventions:
+
+1. **Font:** `'Manrope', 'Helvetica Neue', Arial, sans-serif` — embed a Google Fonts
+   `@import` or use a web-safe fallback.
+2. **Background:** `#fbfaf7` (canvas) body; `#ffffff` content panel.
+3. **Text:** `#1b2520` body; `#7a847f` secondary.
+4. **Primary CTA button:** `background: #0b6e4f; color: #fff; border-radius: 9999px;
+   padding: 12px 28px; font-weight: 600; text-decoration: none;`
+5. **Hover on CTAs is not supported in email** — use the base `#0b6e4f` fill.
+6. **Divider:** `border-top: 1px solid #e6f2ec;`
+7. **Amounts in ₦ (naira):** always format as `₦X,XXX.XX` (client's `naira()` helper).
+   Do **not** send raw kobo integers in email copy — convert at the template layer.
+8. **Tone colour bar** (top border on notification-style emails):
+
+   | Tone | Colour |
+   |---|---|
+   | `brand` | `#0b6e4f` |
+   | `amber` | `#e8a33d` |
+   | `rose` | `#b01e4e` |
+
+9. **Logo:** use `/icons/logo2.svg` (monochrome leaf mark, ~25 × 32 px) + "Duevy." wordmark
+   in `#1b2520` at `18 px / font-weight: 400`.
+
+---
+
+### C.12 PDF Receipt Guidelines
+
+Receipts are generated server-side (§6.5, §9.3). Reference values:
+
+- **Page size:** A5 portrait recommended.
+- **Header:** Duevy logo + "Official Receipt" label.
+- **Accent stripe:** `#0b6e4f` (or active space theme primary for space-specific receipts).
+- **Reference number:** monospaced (`Courier New`), prominent — e.g. `DVY-8842-0193`.
+- **Amount section:** `₦X,XXX.XX` in a large font (`24–28 px`), `font-weight: 700`.
+- **Fee breakdown** (3% processing charge per §1.5): show as:
+  - Amount paid: `₦X,XXX.XX`
+  - Processing fee (3%): `₦XX.XX` *(includes 1.5% Monnify + 1.5% Duevy)*
+  - Space receives: `₦X,XXX.XX`
+- **Footer:** "Duevy — duevy.app · @duevyapp", `#7a847f`, `10 px`.
+

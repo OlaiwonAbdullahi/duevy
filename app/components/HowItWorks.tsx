@@ -53,7 +53,6 @@ export default function HowItWorks() {
   const targetRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: targetRef });
 
-  // Translate the track from the first card to the last as the user scrolls.
   const x = useTransform(
     scrollYProgress,
     [0, 1],
@@ -68,7 +67,6 @@ export default function HowItWorks() {
       style={{ height: `${steps.length * 100}vh` }}
     >
       <div className="sticky top-0  overflow-hidden flex flex-col justify-center py-20 md:py-24">
-        {/* Header */}
         <div className="px-6 md:px-12 mb-10 shrink-0">
           <span className="inline-flex items-center bg-[#e6f2ec] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-4">
             How it works
@@ -77,17 +75,14 @@ export default function HowItWorks() {
             One simple flow, from set-up to settled.
           </h2>
         </div>
-
-        {/* Horizontal track */}
         <motion.div style={{ x }} className="flex">
           {steps.map((step) => (
             <div key={step.number} className="w-screen shrink-0 px-6 md:px-12">
-              <div className="max-w-[1180px] mx-auto">
+              <div className="max-w-295 mx-auto">
                 <div
-                  className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden min-h-[380px] md:min-h-[560px]"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden min-h-95 md:min-h-140"
                   style={{ backgroundColor: step.color }}
                 >
-                  {/* Text side */}
                   <div className="order-2 md:order-1 flex flex-col justify-center p-8 md:p-12 lg:p-14">
                     <div className="flex items-center gap-3 mb-6">
                       <span className="w-11 h-11 rounded-2xl bg-white/15 text-white grid place-items-center shrink-0">
@@ -106,14 +101,30 @@ export default function HowItWorks() {
                     </p>
                   </div>
 
-                  {/* Image side (hidden on mobile) */}
-                  <div className="hidden md:grid order-1 md:order-2 relative min-h-[280px] md:min-h-0 bg-white/5 p-8 md:p-12 place-items-center overflow-hidden">
-                    {/* soft decorative rings */}
-                    <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full border border-white/15" />
-                    <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full border border-white/15" />
+                  <div className="hidden md:grid order-1 md:order-2 relative min-h-70 md:min-h-0 bg-white/5 p-8 md:p-12 place-items-center overflow-hidden">
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-60"
+                      style={{
+                        backgroundImage:
+                          "radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1.5px)",
+                        backgroundSize: "18px 18px",
+                        maskImage:
+                          "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+                        WebkitMaskImage:
+                          "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+                      }}
+                    />
+                    <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
+                      <div className="relative h-72 w-72">
+                        <span className="absolute inset-0 rounded-[3.25rem] border border-white/15" />
+                        <span className="absolute inset-8 rounded-[2.5rem] border border-white/10" />
+                        <span className="absolute inset-16 rounded-[1.75rem] border border-white/[0.07]" />
+                        <span className="absolute inset-16 rounded-l-[1.75rem] rounded-r-[6rem] border-r border-white/10" />
+                      </div>
+                    </div>
+                    <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-[4rem] border border-white/10" />
 
-                    {/* floating product tile */}
-                    <div className="relative w-full max-w-[300px] rounded-3xl bg-white shadow-[0_24px_60px_-30px_rgba(11,110,79,0.5)] border border-white/60 p-6">
+                    <div className="relative w-full max-w-75 rounded-3xl bg-white shadow-[0_24px_60px_-30px_rgba(11,110,79,0.5)] border border-white/60 p-6">
                       <div className="flex items-center justify-between mb-6">
                         <span className="w-14 h-14 rounded-2xl bg-[#0b6e4f] text-white grid place-items-center">
                           <HugeiconsIcon icon={step.Icon} size={28} />
