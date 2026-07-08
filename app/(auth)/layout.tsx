@@ -12,18 +12,35 @@ const points = [
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#fbfaf7] lg:grid lg:grid-cols-2">
-      {/* Brand panel — desktop only */}
       <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#0b6e4f] p-12 xl:p-16">
-        {/* soft decorative rings */}
-        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full border border-white/15" />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full border border-white/15" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1.5px)",
+            backgroundSize: "18px 18px",
+            maskImage:
+              "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+            WebkitMaskImage:
+              "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+          }}
+        />
+        <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
+          <div className="relative h-72 w-72">
+            <span className="absolute inset-0 rounded-[3.25rem] border border-white/15" />
+            <span className="absolute inset-8 rounded-[2.5rem] border border-white/10" />
+            <span className="absolute inset-16 rounded-[1.75rem] border border-white/[0.07]" />
+            <span className="absolute inset-16 rounded-l-[1.75rem] rounded-r-[6rem] border-r border-white/10" />
+          </div>
+        </div>
+        <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-[4rem] border border-white/10" />
 
         <Link
           href="/"
-          className="relative inline-flex items-center gap-2 text-white text-xl tracking-tight cursor-pointer w-fit"
+          className="relative inline-flex items-center gap-1 text-white text-xl tracking-tight cursor-pointer w-fit"
         >
           <Image
-            src="/icons/logo.svg"
+            src="/icons/logo2.svg"
             alt=""
             width={28}
             height={28}

@@ -1,6 +1,6 @@
 # Duevy — Backend API Specification
 
-**Version:** 1.0.0-draft · **Status:** Proposed · **Last updated:** 2026-07-07
+**Version:** 1.0.0-draft · **Status:** Proposed · **Last updated:** 2026-07-08
 
 This document specifies the REST API required to power the Duevy frontend. It was derived
 from a full audit of the client codebase (`app/(auth)`, `app/(dashboards)/dashboard`,
@@ -23,7 +23,7 @@ UI already renders from mock data. Type names referenced below (e.g. `Due`, `Pol
 9. [Transactions](#9-transactions)
 10. [Payouts (Rep)](#10-payouts-rep)
 11. [Polls & Voting](#11-polls--voting)
-12. [Referrals](#12-referrals)
+12. [Referrals (Rep)](#12-referrals-rep)
 13. [Notifications](#13-notifications)
 14. [Admin Console](#14-admin-console)
 15. [Payment Provider Webhooks](#15-payment-provider-webhooks)
@@ -60,8 +60,8 @@ authorization before the request reaches a service.
 
 | Role      | Description                                                                                                                                                              | Scope                                                              |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `student` | Regular member of one or more spaces. Pays dues, votes, refers friends.                                                                                                  | Own resources only                                                 |
-| `rep`     | Department representative. Superset of `student` — additionally raises dues, manages the circle, requests payouts, runs polls.                                           | Own resources + spaces where they hold a rep role (`lead` or `co`) |
+| `student` | Regular member of one or more spaces. Pays dues, votes.                                                                                                                  | Own resources only                                                 |
+| `rep`     | Department representative. Superset of `student` — additionally raises dues, manages the circle, requests payouts, runs polls, refers new reps (§12).                    | Own resources + spaces where they hold a rep role (`lead` or `co`) |
 | `admin`   | Platform staff. Sub-roles: `super_admin`, `compliance_officer`, `support_lead`, each with a permission matrix over `userManagement`, `payouts`, `disputes`, `overrides`. | Platform-wide, gated by permission matrix                          |
 
 Endpoints are tagged with the minimum role required. A rep-only endpoint must also verify the
@@ -99,6 +99,13 @@ positive = credit into the wallet, negative = debit out — this matches the fro
 
 > ⚠️ The current frontend mock data holds whole-naira integers. When wiring the client,
 > convert at the boundary (`amountKobo / 100`) rather than changing display logic.
+
+**Processing charge.** Every successful due payment carries a **3% processing charge**:
+**1.5% payment-provider (Monnify) fee + 1.5% Duevy platform fee**. The payer is charged the
+due's face `amount`; the charge is deducted server-side from what the space collects, so the
+space nets 97%. Each 1.5% component is computed on the gross amount in kobo and rounded
+half-up. Collection totals (§7.6) expose `collected` / `fees` / `net`, and payout balances
+(§10.1) are always net of this charge. The Duevy 1.5% share is platform revenue.
 
 ### 1.6 Dates & times
 
@@ -151,12 +158,53 @@ Create an account with email + password.
 | Field           | Type    | Required | Constraints / Notes                                        |
 | --------------- | ------- | -------- | ---------------------------------------------------------- |
 | `name`          | string  | ✅       | Full name, 2–100 chars                                     |
+| `matricNo`      | string  | ✅       | Matriculation number, collected for both roles (`e.g. CSC/2021/045`) |
 | `email`         | string  | ✅       | Valid email, unique, lowercased server-side                |
 | `password`      | string  | ✅       | Min 8 chars (mirrors the signup form's `minLength={8}`)    |
 | `acceptedTerms` | boolean | ✅       | Must be `true`; server records timestamp + terms version   |
-| `referralCode`  | string  | ❌       | From `/join?ref=<code>` deep link; attributes the referral |
+| `role`          | enum    | ❌       | `student` (default) · `rep` — mirrors the signup screen's role picker (`RoleSelect`) |
+| `space`         | object  | ❌       | **Required when `role = rep`** — the department to create on approval (see below) |
+| `referralCode`  | string  | ❌       | From `/join?ref=<code>` deep link; attributes the referral (rep-only program, §12) |
 
-**Response `201`** — `{ user: User, accessToken: string }` + refresh cookie.
+`role` records the account's **intent** at signup:
+
+- `student` — the account is created as a plain `student` (§1.3). This is the default when the
+  field is omitted.
+- `rep` — a pending rep application is opened (`repApplicationStatus: "pending"`, surfaced to
+  admins at §14.3). **The account gets no dashboard access while pending** — it holds neither
+  the `rep` nor the `student` dashboard until an admin approves. Approval comes from
+  `POST /admin/reps/{repId}/verify` (§14.3) or attaching the applicant to a space as lead
+  (§14.4); either promotes the account to the `rep` role and provisions the `space` captured
+  here. On rejection (§14.3) the account falls back to a plain `student`. This is the
+  self-serve entry point into the rep flow — it does not bypass the verification gate.
+
+When `role = rep`, the client also collects the department setup and onboarding choices and
+sends them as `space`:
+
+```jsonc
+"space": {
+  "name": "Computer Science Students' Association",
+  "short": "CSSA",                       // 2–6 chars, drives the emblem
+  "kind": "department",                  // SpaceKind (§4)
+  "school": "University of Lagos",       // chosen from the `nigerian-universities` list
+  "faculty": "Faculty of Science",       // optional
+  "theme": "emerald",                    // space theme slug (§4) — emerald · ocean · royal · crimson · tangerine
+  "requireApproval": false,              // gate joins behind rep review (§4.4)
+  "coRepInvites": ["corep@school.edu.ng"] // emails, optional — granted `co` on approval (§5.6)
+}
+```
+
+These are held with the pending application and applied when an admin approves — the space is
+created (§14.4) and the co-rep invites are sent. Nothing is provisioned while pending.
+
+The signup UI (`(auth)/signup`, `SignupFlow`) is a multi-step flow: **role → your details
+(incl. matric no) → department details → co-rep invites → space settings** for reps, and
+**role → details** for students. A `rep` submission lands on an "Application received / under
+review" screen instead of the dashboard; students proceed straight in.
+
+**Response `201`** — `{ user: User, accessToken: string }` + refresh cookie. When `role: "rep"`
+was requested, `user.repApplicationStatus` is `"pending"` and the client routes to the pending
+screen rather than the dashboard.
 Sends a verification email (see 2.6).
 
 ### 2.2 `POST /auth/login` — **Public**
@@ -167,13 +215,21 @@ Sends a verification email (see 2.6).
 | `password` | string | ✅       |
 
 **Response `200`** — `{ user: User, accessToken: string }` + refresh cookie.
-**Errors:** `INVALID_CREDENTIALS` (401), `ACCOUNT_SUSPENDED` (403), `ACCOUNT_DEACTIVATED` (403).
+**Errors:** `INVALID_CREDENTIALS` (401), `ACCOUNT_SUSPENDED` (403), `ACCOUNT_DEACTIVATED` (403),
+`REP_APPROVAL_PENDING` (403).
+
+A pending rep (`repApplicationStatus: "pending"`, §2.1) authenticates successfully but has no
+dashboard yet: the server returns `REP_APPROVAL_PENDING` (403) with the `user` payload so the
+client can render the "under review" screen. Once approved, login behaves normally.
 
 ### 2.3 `POST /auth/google` — **Public**
 
 | Field          | Type   | Required | Notes                           |
 | -------------- | ------ | -------- | ------------------------------- |
 | `idToken`      | string | ✅       | Google ID token from OAuth flow |
+| `matricNo`     | string | ❌       | Required on first sign-in (both roles); collected by the client when absent |
+| `role`         | enum   | ❌       | `student` (default) · `rep` — same semantics as register (§2.1) |
+| `space`        | object | ❌       | Required when `role = rep` — same shape as register (§2.1) |
 | `referralCode` | string | ❌       | Same semantics as register      |
 
 Creates the account on first sign-in. **Response `200`** — same shape as login.
@@ -225,10 +281,11 @@ Returns the authenticated user with role and space memberships. This seeds `Role
 | `phone`         | string \| null             | E.164, e.g. `+2348012345678`           |
 | `avatarUrl`     | string \| null             | Initials avatar is the client fallback |
 | `role`          | enum                       | `student` · `rep` · `admin`            |
+| `repApplicationStatus` | enum \| null        | `none` · `pending` · `approved` · `rejected` — set when the account signed up as a rep (§2.1); `null`/`none` for plain students |
 | `matricNo`      | string \| null             |                                        |
 | `level`         | string \| null             | e.g. `"300"`                           |
 | `walletBalance` | integer                    | Kobo                                   |
-| `referralCode`  | string                     | e.g. `"AMARA500"`                      |
+| `referralCode`  | string \| null             | e.g. `"AMARA500"` — reps only (§12); `null` for students |
 | `spaces`        | `SpaceMembershipSummary[]` | See §4                                 |
 | `createdAt`     | string                     | ISO 8601                               |
 
@@ -548,6 +605,9 @@ Settle a due. Requires `Idempotency-Key`.
 **Errors:** `INSUFFICIENT_FUNDS` (402), `DUE_ALREADY_PAID` (409), `NOT_A_MEMBER` (403,
 unless the due `allowGuests`).
 
+The payer is charged the due's face `amount`; the 3% processing charge (§1.5) is deducted
+from the collected amount on the space side, never added on top for the payer.
+
 ### 6.4 `GET /payments/{reference}/status`
 
 Poll a pending online payment: `{ status: "pending" | "completed" | "failed", transaction? }`.
@@ -619,7 +679,9 @@ Per-student payment roster. Backs the collections table + stat tiles.
     // CollectionTotals
     "paid": 213, // students settled
     "unpaid": 215, // students outstanding
-    "collected": 74550000, // kobo received
+    "collected": 74550000, // kobo received (gross)
+    "fees": 2236500, // 3% processing charge (§1.5): 1.5% Monnify + 1.5% Duevy
+    "net": 72313500, // collected − fees; what flows to the payout balance
     "expected": 149800000, // kobo if everyone pays
     "rate": 0.4976, // collected / expected, 0..1
   },
@@ -767,6 +829,9 @@ payout history.
 }
 ```
 
+All balances are **net of the 3% processing charge** (§1.5) — fees are deducted at
+collection time, never at payout time.
+
 ### 10.2 `GET /spaces/{spaceId}/payout/account` — **Rep** · `PUT` to replace
 
 **`BankAccount` resource**
@@ -897,12 +962,15 @@ Full tallies plus revenue: `{ poll, totalVotes, revenue, categories: [{ id, titl
 
 ---
 
-## 12. Referrals
+## 12. Referrals (Rep)
 
-Backs `dashboard/referrals` — invite link, stat row, referral list. Reward is a fixed bounty
-(currently ₦500) credited when the referred friend pays their first due.
+Backs `dashboard/referrals` — invite link, stat row, referral list. **The referral program is
+rep-only**: only reps have a referral code, and the referred user must become a rep for the
+referral to count. Reward is a fixed bounty (currently ₦500) credited when the referred rep
+receives their first due payment. Students calling these endpoints get `FORBIDDEN` (403), and
+the client hides the referrals page from student accounts.
 
-### 12.1 `GET /referrals`
+### 12.1 `GET /referrals` — **Rep**
 
 ```jsonc
 {
@@ -921,14 +989,14 @@ Backs `dashboard/referrals` — invite link, stat row, referral list. Reward is 
 | Field    | Type    | Description                                                                              |
 | -------- | ------- | ---------------------------------------------------------------------------------------- |
 | `id`     | string  |                                                                                          |
-| `name`   | string  | Referred friend's name                                                                   |
-| `status` | enum    | `pending` (invite sent) · `joined` (signed up) · `paid` (first due paid — reward earned) |
-| `reward` | integer | Kobo earned from this friend (0 until `paid`)                                            |
+| `name`   | string  | Referred rep's name                                                                      |
+| `status` | enum    | `pending` (invite sent) · `joined` (signed up as a rep) · `paid` (received their first due payment — reward earned) |
+| `reward` | integer | Kobo earned from this referral (0 until `paid`)                                          |
 | `date`   | string  | ISO date invited/joined                                                                  |
 
 Referral earnings land in the wallet as `type: "referral"` transactions (§9).
 
-### 12.2 `POST /referrals/invites` _(optional, phase 2)_
+### 12.2 `POST /referrals/invites` — **Rep** _(optional, phase 2)_
 
 `{ emails: string[] }` — send invite emails carrying the caller's code. The share-link flow
 (§12.1) requires no endpoint.
@@ -1026,6 +1094,10 @@ Single aggregate for the overview page:
 
 ### 14.3 Reps — `/admin/reps`
 
+Reps reach this queue two ways: an admin attaches them to a space (§14.4), or they self-select
+the **rep** role at signup (§2.1), which opens a `pending` application. Approving via
+`/verify` (or attaching them as a space lead) promotes the account to the `rep` role.
+
 **`AdminRep` resource** (extends the mock `Rep`)
 
 | Field               | Type     | Description                                   |
@@ -1041,7 +1113,8 @@ Single aggregate for the overview page:
 | Method & path                                                    | Purpose                                      | Body                            |
 | ---------------------------------------------------------------- | -------------------------------------------- | ------------------------------- |
 | `GET /admin/reps`                                                | List. Filters: `status`, `verification`, `q` | —                               |
-| `POST /admin/reps/{repId}/verify`                                | Approve rep verification                     | `{ note?: string }`             |
+| `POST /admin/reps/{repId}/verify`                                | Approve rep verification / self-serve application (§2.1); promotes to `rep` role | `{ note?: string }`             |
+| `POST /admin/reps/{repId}/reject`                                | Reject a pending self-serve rep application; account stays a `student` | `{ reason: string }`            |
 | `POST /admin/reps/{repId}/suspend` · `…/reinstate`               | Toggle status                                | `{ reason: string }` on suspend |
 | `POST /admin/reps/{repId}/freeze-payouts` · `…/unfreeze-payouts` | Payout freeze (`PAYOUTS_FROZEN` on §10.3)    | `{ reason: string }`            |
 
@@ -1162,9 +1235,12 @@ payments §6.3, paid votes §11.6).
 | Enum                 | Values                                                                       | Source of truth                     |
 | -------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
 | `Role`               | `student` · `rep` · `admin`                                                  | `role-context.tsx` (+ admin)        |
+| `SignupRole`         | `student` · `rep`                                                            | `(auth)/components/RoleSelect.tsx`  |
+| `RepApplicationStatus` | `none` · `pending` · `approved` · `rejected`                               | §2.1 (self-serve rep signup)        |
 | `SpaceKind`          | `department` · `association` · `faculty` · `club`                            | `dues/_components/types.ts`         |
 | `SpaceMembership`    | `member` · `guest`                                                           | 〃                                  |
 | `EmblemHue`          | `emerald` · `indigo` · `amber` · `rose` · `slate`                            | 〃                                  |
+| `SpaceThemeId`       | `emerald` · `ocean` · `royal` · `crimson` · `tangerine`                      | `dashboard/_components/space-theme.tsx` |
 | `DueCategory`        | `levy` · `dinner` · `handout` · `welfare` · `sport`                          | 〃                                  |
 | `DueStatus` (viewer) | `unpaid` · `paid` · `overdue`                                                | 〃                                  |
 | `RepDueStatus`       | `draft` · `active` · `closed`                                                | `create-dues/_components/types.ts`  |
@@ -1190,7 +1266,7 @@ payments §6.3, paid votes §11.6).
 | 400  | `VALIDATION_ERROR`                                                                                                                                                                                                                                        | Any — details in `error.details[]` |
 | 401  | `UNAUTHENTICATED` / `TOKEN_EXPIRED` / `INVALID_CREDENTIALS`                                                                                                                                                                                               | Auth                               |
 | 402  | `INSUFFICIENT_FUNDS` / `INSUFFICIENT_PAYOUT_BALANCE`                                                                                                                                                                                                      | Payments, payouts                  |
-| 403  | `FORBIDDEN` / `MEMBERS_ONLY` / `NOT_A_MEMBER` / `ACCOUNT_SUSPENDED` / `ACCOUNT_DEACTIVATED`                                                                                                                                                               | Cross-cutting                      |
+| 403  | `FORBIDDEN` / `MEMBERS_ONLY` / `NOT_A_MEMBER` / `ACCOUNT_SUSPENDED` / `ACCOUNT_DEACTIVATED` / `REP_APPROVAL_PENDING`                                                                                                                                       | Cross-cutting                      |
 | 404  | `NOT_FOUND` / `JOIN_CODE_INVALID`                                                                                                                                                                                                                         | Cross-cutting                      |
 | 409  | `DUE_ALREADY_PAID` / `ALREADY_MEMBER` / `ALREADY_VOTED` / `POLL_CLOSED` / `POLL_STRUCTURE_LOCKED` / `DUE_HAS_PAYMENTS` / `ONLY_DRAFTS_DELETABLE` / `LAST_LEAD_REP` / `WALLET_NOT_EMPTY` / `UNPAID_OBLIGATIONS` / `NO_PAYOUT_ACCOUNT` / `ACCOUNT_COOLDOWN` | State conflicts                    |
 | 422  | `ACCOUNT_NAME_MISMATCH` / `FIELD_READ_ONLY`                                                                                                                                                                                                               | Semantic validation                |

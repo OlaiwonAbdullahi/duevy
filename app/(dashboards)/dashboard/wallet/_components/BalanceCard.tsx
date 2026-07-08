@@ -30,17 +30,19 @@ export function BalanceCard({
         }}
       />
 
-      {/* Concentric rings, top-right */}
-      <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/3 translate-x-1/3">
+      {/* Logo-derived motif: concentric rounded-square badges with the D's arc, top-right */}
+      <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
         <div className="relative h-72 w-72">
-          <span className="absolute inset-0 rounded-full border border-white/15" />
-          <span className="absolute inset-8 rounded-full border border-white/10" />
-          <span className="absolute inset-16 rounded-full border border-white/[0.07]" />
+          <span className="absolute inset-0 rounded-[3.25rem] border border-white/15" />
+          <span className="absolute inset-8 rounded-[2.5rem] border border-white/10" />
+          <span className="absolute inset-16 rounded-[1.75rem] border border-white/[0.07]" />
+          {/* the bowl of the "D" */}
+          <span className="absolute inset-16 rounded-l-[1.75rem] rounded-r-[6rem] border-r border-white/10" />
         </div>
       </div>
 
-      {/* Soft ring anchoring the bottom-left */}
-      <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full border border-white/10" />
+      {/* Soft rounded-square echo anchoring the bottom-left */}
+      <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-[4rem] border border-white/10" />
 
       <div className="relative flex items-center gap-2 text-white/80">
         <HugeiconsIcon icon={Wallet01Icon} size={16} />
