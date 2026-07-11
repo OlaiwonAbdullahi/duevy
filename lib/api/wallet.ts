@@ -12,7 +12,6 @@ export type TopUpPayload =
 
 export type TopUpResult = {
   transaction?: Transaction;
-  /** Present for `online` — redirect to Monnify hosted checkout. */
   checkoutUrl?: string;
   reference?: string;
 };
