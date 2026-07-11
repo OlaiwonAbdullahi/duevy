@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Search01Icon,
@@ -11,11 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { listTransactions } from "@/lib/api/transactions";
+import type { Transaction as ApiTransaction } from "@/lib/api/types";
 import { StatCard } from "../_components/StatCard";
 import { BARE_INPUT } from "../_components/form-styles";
-import type { TxnFilter } from "./_components/types";
-import { TRANSACTIONS, naira, groupByDay } from "./_components/data";
-import type { Transaction } from "./_components/types";
+import type { Transaction, TxnFilter, TxnType } from "./_components/types";
+import { TXN_META, naira, groupByDay } from "./_components/data";
 import { TransactionRow } from "./_components/TransactionRow";
 import { ReceiptModal } from "./_components/ReceiptModal";
 import { EmptyState } from "../_components/EmptyState";
@@ -26,15 +28,58 @@ const TABS: { value: TxnFilter; label: string }[] = [
   { value: "out", label: "Money out" },
 ];
 
+/** Map an API transaction (kobo, minimal fields) to the ledger row shape. */
+function adapt(t: ApiTransaction): Transaction {
+  const type = t.type as TxnType;
+  const meta = TXN_META[type] ?? TXN_META.due;
+  return {
+    id: t.id,
+    type,
+    title: t.title ?? meta.label,
+    detail: t.method ?? meta.label,
+    amount: t.amount / 100, // kobo → naira for the whole-naira `naira()` helper
+    method: t.method ?? "—",
+    date: t.createdAt,
+    status: t.status,
+    reference: t.reference,
+  };
+}
+
 export default function TransactionsPage() {
   const [filter, setFilter] = useState<TxnFilter>("all");
   const [query, setQuery] = useState("");
   const [receiptTxn, setReceiptTxn] = useState<Transaction | null>(null);
 
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        const { data } = await listTransactions({ perPage: 100 });
+        if (!cancelled) setTransactions(data.map(adapt));
+      } catch {
+        if (!cancelled) {
+          setError(true);
+          toast.error("Couldn't load your transactions.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Newest first, then apply the direction tab and search box.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return [...TRANSACTIONS]
+    return [...transactions]
       .sort((a, b) => +new Date(b.date) - +new Date(a.date))
       .filter((t) => (filter === "in" ? t.amount > 0 : true))
       .filter((t) => (filter === "out" ? t.amount < 0 : true))
@@ -45,20 +90,20 @@ export default function TransactionsPage() {
           t.detail.toLowerCase().includes(q) ||
           t.reference.toLowerCase().includes(q),
       );
-  }, [filter, query]);
+  }, [filter, query, transactions]);
 
   const groups = useMemo(() => groupByDay(filtered), [filtered]);
 
   // Totals reflect settled money only — pending/failed don't move the balance.
   const totals = useMemo(() => {
-    const settled = TRANSACTIONS.filter((t) => t.status === "completed");
+    const settled = transactions.filter((t) => t.status === "completed");
     return {
       in: settled.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
       out: settled
         .filter((t) => t.amount < 0)
         .reduce((s, t) => s + Math.abs(t.amount), 0),
     };
-  }, []);
+  }, [transactions]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -136,7 +181,19 @@ export default function TransactionsPage() {
 
       {/* Ledger. */}
       <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
-        {groups.length === 0 ? (
+        {loading ? (
+          <ul className="flex animate-pulse flex-col gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li key={i} className="h-14 rounded-2xl bg-paper" />
+            ))}
+          </ul>
+        ) : error ? (
+          <EmptyState
+            icon={ReceiptDollarIcon}
+            title="Couldn't load transactions"
+            description="Something went wrong reaching the server. Refresh the page to try again."
+          />
+        ) : groups.length === 0 ? (
           <EmptyState
             icon={ReceiptDollarIcon}
             title="No transactions found"

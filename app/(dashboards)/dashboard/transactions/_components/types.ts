@@ -1,5 +1,5 @@
 /** The kind of money movement — drives the row's icon, label and tint. */
-export type TxnType = "due" | "topup" | "referral" | "withdrawal" | "refund";
+export type TxnType = "due" | "topup" | "referral" | "withdrawal" | "refund" | "vote";
 
 export type TxnStatus = "completed" | "pending" | "failed";
 

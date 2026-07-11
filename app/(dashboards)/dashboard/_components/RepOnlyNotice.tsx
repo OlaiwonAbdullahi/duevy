@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Shown when a student lands on a rep-only route. Explains why and points back
- * to the overview. In this demo the role switch in the topbar unblocks it.
+ * to the overview.
  */
 export function RepOnlyNotice() {
   return (
@@ -23,11 +23,6 @@ export function RepOnlyNotice() {
         This section is for department reps — managing dues, collections,
         payouts and votes. Your account doesn&apos;t have rep access for this
         department.
-      </p>
-      <p className="mt-4 rounded-2xl bg-paper px-4 py-2.5 text-xs text-ink-soft">
-        Previewing the demo? Use{" "}
-        <span className="font-semibold text-ink">View as → Rep</span> in the top
-        bar.
       </p>
       <Button asChild variant="brand" size="pill-lg" className="mt-6">
         <Link href="/dashboard">

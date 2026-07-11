@@ -1,20 +1,18 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
-import { useRole, type Role } from "./role-context";
+import { Menu01Icon, Search01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { useAuth } from "@/lib/auth/auth-context";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { UserAvatar } from "./UserAvatar";
-
-/** The signed-in user. Swap for the session user once auth lands. */
-const USER_NAME = "Amara Okafor";
-
-const ROLES: { value: Role; label: string }[] = [
-  { value: "student", label: "Student" },
-  { value: "rep", label: "Rep" },
-];
 
 export default function Topbar({
   onMenu,
@@ -23,7 +21,15 @@ export default function Topbar({
   onMenu: () => void;
   onSearch: () => void;
 }) {
-  const { role, setRole } = useRole();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  async function handleLogout() {
+    setMenuOpen(false);
+    await logout();
+    router.push("/login");
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-18 items-center gap-2.5 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:gap-4 sm:px-6 lg:px-8">
@@ -62,39 +68,36 @@ export default function Topbar({
       </button>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {/* Role switch — demo only. Lets you see how one route renders per role.
-            Replace with the real signed-in role once auth is wired up. */}
-        <div className="flex items-center rounded-full border border-cloud bg-paper p-1">
-          <span className="hidden px-2 text-[11px] font-medium text-ink-soft md:inline">
-            View as
-          </span>
-          {ROLES.map((r) => (
-            <button
-              key={r.value}
-              onClick={() => setRole(r.value)}
-              className={cn(
-                "rounded-full px-2.5 py-1.5 text-[12px] font-semibold transition-colors duration-300 cursor-pointer sm:px-3",
-                role === r.value
-                  ? "bg-brand text-white"
-                  : "text-ink-soft hover:text-ink"
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-
         <ThemeToggle />
 
         <NotificationsMenu />
 
-        {role === "student" ? (
-          <UserAvatar name={USER_NAME} size={36} />
-        ) : (
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-brand text-[13px] font-semibold text-white">
-            AO
-          </div>
-        )}
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Account menu"
+              className="grid place-items-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              <UserAvatar name={user?.name ?? ""} size={36} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 p-1.5">
+            <div className="px-2.5 py-2">
+              <p className="truncate text-sm font-semibold text-ink">{user?.name}</p>
+              <p className="truncate text-xs text-ink-soft">{user?.email}</p>
+            </div>
+            <div className="my-1 h-px bg-cloud" />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
+            >
+              <HugeiconsIcon icon={Logout01Icon} size={16} />
+              Log out
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
     </header>
   );

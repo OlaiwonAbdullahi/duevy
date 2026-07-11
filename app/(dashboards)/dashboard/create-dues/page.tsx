@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -11,18 +11,74 @@ import {
   Invoice01Icon,
 } from "@hugeicons/core-free-icons";
 import { StatCard } from "../_components/StatCard";
-import { REP_SPACE, INITIAL_REP_DUES, naira } from "./_components/data";
-import type { DueDraft, RepDue } from "./_components/types";
+import { naira } from "./_components/data";
+import type { DueDraft, RepDue, RepDueStatus } from "./_components/types";
 import { DueListRow } from "./_components/DueListRow";
 import { DueForm } from "./_components/DueForm";
 import { EmptyState } from "../_components/EmptyState";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
+import { useRepSpace } from "../_components/use-rep-space";
+import {
+  listRepDues,
+  createDue,
+  updateDue,
+  deleteDue,
+  type DueDraft as ApiDueDraft,
+} from "@/lib/api/rep";
+import type { RepDue as ApiRepDue } from "@/lib/api/types";
+
+/** API rep due (kobo) → the page's RepDue (whole naira). */
+function adaptRepDue(api: ApiRepDue): RepDue {
+  return {
+    id: api.id,
+    title: api.title,
+    note: api.note ?? "",
+    amount: api.amount / 100,
+    dueDate: api.dueDate,
+    category: api.category,
+    allowGuests: api.allowGuests,
+    status: api.status as RepDueStatus,
+    paidCount: api.paidCount,
+    memberCount: api.memberCount,
+  };
+}
+
+/** DueForm draft (naira) → the create/update payload (kobo). */
+function toApiDraft(draft: DueDraft): ApiDueDraft {
+  return {
+    title: draft.title,
+    note: draft.note,
+    amount: draft.amount * 100,
+    dueDate: draft.dueDate,
+    category: draft.category,
+    allowGuests: draft.allowGuests,
+  };
+}
 
 export default function CreateDuesPage() {
-  const [dues, setDues] = useState<RepDue[]>(INITIAL_REP_DUES);
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+
+  const [dues, setDues] = useState<RepDue[]>([]);
   const [mode, setMode] = useState<"list" | "form">("list");
   const [editing, setEditing] = useState<RepDue | null>(null);
   const [toDelete, setToDelete] = useState<RepDue | null>(null);
+
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const apiDues = await listRepDues(spaceId);
+        if (!cancelled) setDues(apiDues.map(adaptRepDue));
+      } catch {
+        if (!cancelled) toast.error("Couldn't load your dues.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
 
   const totals = useMemo(() => {
     const active = dues.filter((d) => d.status === "active");
@@ -43,33 +99,40 @@ export default function CreateDuesPage() {
     setMode("form");
   };
 
-  const save = (draft: DueDraft) => {
-    if (editing) {
-      setDues((list) =>
-        list.map((d) => (d.id === editing.id ? { ...d, ...draft } : d)),
-      );
-      toast.success("Due updated", { description: draft.title });
-    } else {
-      const created: RepDue = {
-        id: crypto.randomUUID(),
-        ...draft,
-        status: "active",
-        paidCount: 0,
-        memberCount: REP_SPACE.memberCount,
-      };
-      setDues((list) => [created, ...list]);
-      toast.success("Due published", {
-        description: `${draft.title} · ${naira(draft.amount)}`,
-      });
+  const save = async (draft: DueDraft) => {
+    if (!spaceId) return;
+    try {
+      if (editing) {
+        const updated = await updateDue(spaceId, editing.id, toApiDraft(draft));
+        const row = adaptRepDue(updated);
+        setDues((list) => list.map((d) => (d.id === editing.id ? row : d)));
+        toast.success("Due updated", { description: draft.title });
+      } else {
+        const created = await createDue(spaceId, { ...toApiDraft(draft), publish: true });
+        setDues((list) => [adaptRepDue(created), ...list]);
+        toast.success("Due published", {
+          description: `${draft.title} · ${naira(draft.amount)}`,
+        });
+      }
+      setEditing(null);
+      setMode("list");
+    } catch {
+      toast.error("Couldn't save the due. Please try again.");
     }
-    setEditing(null);
-    setMode("list");
   };
 
-  const remove = (due: RepDue) => {
+  const remove = async (due: RepDue) => {
+    if (!spaceId) return;
+    const prev = dues;
     setDues((list) => list.filter((d) => d.id !== due.id));
-    toast.success("Due deleted", { description: due.title });
     setToDelete(null);
+    try {
+      await deleteDue(spaceId, due.id);
+      toast.success("Due deleted", { description: due.title });
+    } catch {
+      setDues(prev);
+      toast.error("Couldn't delete the due.");
+    }
   };
 
   return (
@@ -106,7 +169,7 @@ export default function CreateDuesPage() {
                   Dues
                 </h1>
                 <p className="mt-1 text-[13px] text-ink-soft">
-                  Dues you&apos;ve raised for {REP_SPACE.name}.
+                  Dues you&apos;ve raised for {repSpace?.name ?? "your department"}.
                 </p>
               </div>
               <button

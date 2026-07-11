@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Notification02Icon } from "@hugeicons/core-free-icons";
@@ -9,21 +9,57 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import * as notificationsApi from "@/lib/api/notifications";
+import type { NotificationItem } from "@/lib/api/types";
 import { EmptyState } from "./EmptyState";
 import {
-  INITIAL_NOTIFICATIONS,
+  KIND_ICON,
   TONE_CLASS,
+  timeAgo,
   type AppNotification,
 } from "./notifications-data";
 
+function adapt(n: NotificationItem): AppNotification {
+  return {
+    id: n.id,
+    icon: KIND_ICON[n.kind] ?? Notification02Icon,
+    tone: n.tone,
+    title: n.title,
+    detail: n.detail,
+    time: timeAgo(n.createdAt),
+    href: n.href ?? undefined,
+    read: n.read,
+  };
+}
+
 export function NotificationsMenu() {
-  const [items, setItems] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  const [items, setItems] = useState<AppNotification[]>([]);
   const unread = items.filter((n) => !n.read).length;
 
-  const markAllRead = () =>
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await notificationsApi.listNotifications({ perPage: 30 });
+        if (!cancelled) setItems(data.map(adapt));
+      } catch {
+        // Silent — the bell just shows the empty state if the feed can't load.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Optimistic — flip locally, then tell the server (ignore write failures).
+  const markAllRead = () => {
     setItems((list) => list.map((n) => ({ ...n, read: true })));
-  const markRead = (id: string) =>
+    notificationsApi.markAllRead().catch(() => {});
+  };
+  const markRead = (id: string) => {
     setItems((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    notificationsApi.markRead(id).catch(() => {});
+  };
 
   return (
     <Popover>

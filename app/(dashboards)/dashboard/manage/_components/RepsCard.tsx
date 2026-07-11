@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icons";
@@ -8,27 +8,56 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../_components/EmptyState";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
-
-type Rep = {
-  id: string;
-  name: string;
-  email: string;
-  role: "lead" | "co";
-};
-
-const INITIAL_REPS: Rep[] = [
-  { id: "r1", name: "Amara Okafor", email: "amara.okafor@student.edu", role: "lead" },
-  { id: "r2", name: "Tunde Balogun", email: "tunde.balogun@student.edu", role: "co" },
-  { id: "r3", name: "Ngozi Eze", email: "ngozi.eze@student.edu", role: "co" },
-];
+import { useRepSpace } from "../../_components/use-rep-space";
+import { listReps, inviteRep, removeRep } from "@/lib/api/rep";
+import type { SpaceRep as Rep } from "@/lib/api/types";
 
 /** Co-reps who help run collections. The lead rep can invite or remove them. */
 export function RepsCard() {
-  const [reps, setReps] = useState<Rep[]>(INITIAL_REPS);
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+  const [reps, setReps] = useState<Rep[]>([]);
 
-  const remove = (rep: Rep) => {
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    listReps(spaceId)
+      .then((list) => {
+        if (!cancelled) setReps(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
+
+  const remove = async (rep: Rep) => {
+    if (!spaceId) return;
+    const prev = reps;
     setReps((list) => list.filter((r) => r.id !== rep.id));
-    toast.success("Co-rep removed", { description: rep.name });
+    try {
+      await removeRep(spaceId, rep.id);
+      toast.success("Co-rep removed", { description: rep.name });
+    } catch {
+      setReps(prev);
+      toast.error("Couldn't remove the co-rep.");
+    }
+  };
+
+  const invite = async () => {
+    if (!spaceId) return;
+    const email = window.prompt("Invite a co-rep by email:")?.trim();
+    if (!email) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    try {
+      await inviteRep(spaceId, email);
+      toast.success("Invite sent", { description: email });
+    } catch {
+      toast.error("Couldn't send the invite.");
+    }
   };
 
   return (
@@ -37,15 +66,7 @@ export function RepsCard() {
       title="Reps & roles"
       description="People who can manage dues and approvals for this department."
       action={
-        <Button
-          variant="brand"
-          size="pill"
-          onClick={() =>
-            toast("Invite a co-rep", {
-              description: "This would send an invite by email in production.",
-            })
-          }
-        >
+        <Button variant="brand" size="pill" onClick={invite}>
           <HugeiconsIcon icon={Add01Icon} size={14} className="size-3.5" />
           Invite
         </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -12,8 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api/errors";
+import { lookupSpace } from "@/lib/api/spaces";
 import type { JoinableDepartment } from "./types";
-import { findDepartmentByCode, KIND_GLYPH, SPACE_KIND_LABEL } from "./data";
+import { adaptJoinable } from "./adapt";
+import { KIND_GLYPH, SPACE_KIND_LABEL } from "./data";
 import { SpaceEmblem } from "./SpaceEmblem";
 import { BRAND_INPUT } from "../../_components/form-styles";
 
@@ -21,8 +24,8 @@ const CODE_LENGTH = 5;
 
 /**
  * Search-by-code join. A student enters the 5-character code their rep shared;
- * once it resolves to a department, a preview appears and they join in one tap —
- * no request, no waiting for approval.
+ * once it resolves to a department (via `POST /spaces/lookup`), a preview
+ * appears and they join in one tap — no request, no waiting for approval.
  */
 export function JoinDepartmentCard({
   joinedIds,
@@ -32,14 +35,39 @@ export function JoinDepartmentCard({
   onJoin: (dept: JoinableDepartment) => void;
 }) {
   const [code, setCode] = useState("");
+  const [match, setMatch] = useState<JoinableDepartment | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const normalized = code.trim().toUpperCase();
   const complete = normalized.length === CODE_LENGTH;
-  const match = useMemo(
-    () => (complete ? findDepartmentByCode(normalized) : undefined),
-    [complete, normalized],
-  );
   const alreadyJoined = match ? joinedIds.includes(match.id) : false;
+
+  // Resolve the code once complete. Debounced + race-guarded so a stale response
+  // can't overwrite a newer lookup.
+  useEffect(() => {
+    if (!complete) {
+      setMatch(null);
+      setNotFound(false);
+      return;
+    }
+    let cancelled = false;
+    setNotFound(false);
+    const timer = setTimeout(async () => {
+      try {
+        const dept = await lookupSpace(normalized);
+        if (!cancelled) setMatch(adaptJoinable(dept));
+      } catch (err) {
+        if (!cancelled) {
+          setMatch(null);
+          setNotFound(!(err instanceof ApiError) || err.status === 404);
+        }
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [complete, normalized]);
 
   const handleChange = (value: string) => {
     // Codes are alphanumeric and upper-cased; strip anything else as they type.
@@ -54,6 +82,7 @@ export function JoinDepartmentCard({
     if (!match || alreadyJoined) return;
     onJoin(match);
     setCode("");
+    setMatch(null);
   };
 
   return (
@@ -141,7 +170,7 @@ export function JoinDepartmentCard({
             )}
           </motion.div>
         ) : (
-          complete && (
+          notFound && (
             <motion.p
               key="not-found"
               initial={{ opacity: 0, y: 8 }}

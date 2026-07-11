@@ -1,57 +1,128 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { INITIAL_REP_DUES } from "../create-dues/_components/data";
-import type { CollectionStudent, StatusFilter } from "./_components/types";
-import { COLLECTION_STUDENTS } from "./_components/data";
+import type { RepDue, RepDueStatus } from "../create-dues/_components/types";
+import type {
+  CollectionStudent,
+  CollectionTotals,
+  StatusFilter,
+} from "./_components/types";
 import { downloadCollectionCsv } from "./_components/csv";
 import { CollectionSummary } from "./_components/CollectionSummary";
 import { CollectionTable } from "./_components/CollectionTable";
 import { CollectionsHeader } from "./_components/CollectionsHeader";
 import { DueSelector } from "./_components/DueSelector";
 import { ExportOptions } from "./_components/ExportOptions";
+import { useRepSpace } from "../_components/use-rep-space";
+import { fromKobo } from "../_components/format";
+import { timeAgo } from "../_components/notifications-data";
+import { listRepDues, getCollections, remindUnpaid } from "@/lib/api/rep";
+import type {
+  RepDue as ApiRepDue,
+  CollectionStudent as ApiCollectionStudent,
+  CollectionTotals as ApiCollectionTotals,
+} from "@/lib/api/types";
 
-const ACTIVE_DUES = INITIAL_REP_DUES.filter((due) => due.status !== "draft");
+function adaptRepDue(api: ApiRepDue): RepDue {
+  return {
+    id: api.id,
+    title: api.title,
+    note: api.note ?? "",
+    amount: api.amount / 100,
+    dueDate: api.dueDate,
+    category: api.category,
+    allowGuests: api.allowGuests,
+    status: api.status as RepDueStatus,
+    paidCount: api.paidCount,
+    memberCount: api.memberCount,
+  };
+}
 
-function buildStudentsForDue(selectedIndex: number): CollectionStudent[] {
-  return COLLECTION_STUDENTS.map((student, index) => {
-    if (selectedIndex === 0) return student;
-    if (selectedIndex === 1) {
-      return {
-        ...student,
-        status: index < 6 ? "paid" : "unpaid",
-        paidAt: index < 6 ? student.paidAt ?? "This week" : undefined,
-        reference: index < 6 ? student.reference ?? `DVY-83${index}21` : undefined,
-      };
-    }
-    return {
-      ...student,
-      status: index === 6 ? "unpaid" : "paid",
-      paidAt: index === 6 ? undefined : student.paidAt ?? "Last month",
-      reference: index === 6 ? undefined : student.reference ?? `DVY-82${index}64`,
-    };
-  });
+function adaptStudent(api: ApiCollectionStudent): CollectionStudent {
+  return {
+    id: api.id,
+    name: api.name,
+    matricNo: api.matricNo,
+    level: api.level,
+    email: api.email,
+    status: api.status,
+    paidAt: api.paidAt ? timeAgo(api.paidAt) : undefined,
+    reference: api.reference ?? undefined,
+  };
+}
+
+const EMPTY_TOTALS: CollectionTotals = {
+  paid: 0,
+  unpaid: 0,
+  collected: 0,
+  expected: 0,
+  rate: 0,
+};
+
+function adaptTotals(api: ApiCollectionTotals): CollectionTotals {
+  return {
+    paid: api.paid,
+    unpaid: api.unpaid,
+    collected: fromKobo(api.collected),
+    expected: fromKobo(api.expected),
+    rate: Math.round(api.rate * 100),
+  };
 }
 
 export default function CollectionsPage() {
-  const [selectedDueId, setSelectedDueId] = useState(ACTIVE_DUES[0]?.id ?? "");
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+
+  const [dues, setDues] = useState<RepDue[]>([]);
+  const [selectedDueId, setSelectedDueId] = useState("");
+  const [students, setStudents] = useState<CollectionStudent[]>([]);
+  const [totals, setTotals] = useState<CollectionTotals>(EMPTY_TOTALS);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
 
-  const selectedDue =
-    ACTIVE_DUES.find((due) => due.id === selectedDueId) ?? ACTIVE_DUES[0];
+  const selectedDue = dues.find((due) => due.id === selectedDueId) ?? dues[0];
 
-  const students = useMemo(() => {
-    const selectedIndex = Math.max(
-      0,
-      ACTIVE_DUES.findIndex((due) => due.id === selectedDue?.id),
-    );
-    return buildStudentsForDue(selectedIndex);
-  }, [selectedDue?.id]);
+  // Load the space's published dues for the selector.
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const apiDues = await listRepDues(spaceId);
+        if (cancelled) return;
+        const active = apiDues.filter((d) => d.status !== "draft").map(adaptRepDue);
+        setDues(active);
+        setSelectedDueId((id) => id || active[0]?.id || "");
+      } catch {
+        if (!cancelled) toast.error("Couldn't load your dues.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
 
-  // Students matching the search box, before the status tab is applied — used
-  // both for the visible rows and to keep the tab counts in sync with search.
+  // Load the roster whenever the selected due changes.
+  useEffect(() => {
+    if (!spaceId || !selectedDueId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await getCollections(spaceId, selectedDueId, { perPage: 200 });
+        if (cancelled) return;
+        setStudents(data.students.map(adaptStudent));
+        setTotals(adaptTotals(data.totals));
+      } catch {
+        if (!cancelled) toast.error("Couldn't load the collection roster.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId, selectedDueId]);
+
+  // Students matching the search box, before the status tab is applied.
   const queryMatched = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q === "") return students;
@@ -80,18 +151,6 @@ export default function CollectionsPage() {
     [filter, queryMatched],
   );
 
-  const totals = useMemo(() => {
-    const paid = students.filter((student) => student.status === "paid").length;
-    const unpaid = students.length - paid;
-    return {
-      paid,
-      unpaid,
-      collected: paid * (selectedDue?.amount ?? 0),
-      expected: students.length * (selectedDue?.amount ?? 0),
-      rate: students.length ? Math.round((paid / students.length) * 100) : 0,
-    };
-  }, [selectedDue?.amount, students]);
-
   const handleDownload = (rows: CollectionStudent[], scope: string) => {
     if (!selectedDue) return;
     const safeTitle = selectedDue.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -101,26 +160,30 @@ export default function CollectionsPage() {
     });
   };
 
-  const handleSendReminders = () => {
-    if (!selectedDue) return;
-    const unpaid = students.filter((student) => student.status === "unpaid").length;
-    if (unpaid === 0) {
+  const handleSendReminders = async () => {
+    if (!selectedDue || !spaceId) return;
+    if (totals.unpaid === 0) {
       toast.info("Everyone has paid", {
         description: `No reminders needed for ${selectedDue.title}.`,
       });
       return;
     }
-    toast.success("Reminders sent", {
-      description: `${unpaid} unpaid student${unpaid === 1 ? "" : "s"} notified about ${selectedDue.title}.`,
-    });
+    try {
+      await remindUnpaid(spaceId, selectedDue.id);
+      toast.success("Reminders sent", {
+        description: `${totals.unpaid} unpaid student${
+          totals.unpaid === 1 ? "" : "s"
+        } notified about ${selectedDue.title}.`,
+      });
+    } catch {
+      toast.error("Couldn't send reminders. They may be rate-limited (once per day).");
+    }
   };
 
   if (!selectedDue) {
     return (
       <div className="mx-auto max-w-4xl rounded-3xl border border-cloud bg-canvas p-8 text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-ink">
-          Collections
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-ink">Collections</h1>
         <p className="mt-2 text-sm text-ink-soft">
           Create a due first to start tracking payments.
         </p>
@@ -135,11 +198,7 @@ export default function CollectionsPage() {
         onSendReminders={handleSendReminders}
       />
 
-      <DueSelector
-        dues={ACTIVE_DUES}
-        selectedDue={selectedDue}
-        onSelect={setSelectedDueId}
-      />
+      <DueSelector dues={dues} selectedDue={selectedDue} onSelect={setSelectedDueId} />
 
       <div className="mt-6">
         <CollectionSummary totals={totals} trackedCount={students.length} />

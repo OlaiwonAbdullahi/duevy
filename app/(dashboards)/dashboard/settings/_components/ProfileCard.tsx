@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { UserIcon } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/auth-context";
+import { updateProfile } from "@/lib/api/me";
+import { ApiError } from "@/lib/api/errors";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "./SettingsCard";
@@ -40,19 +43,42 @@ function Field({
 /** Personal details. Matric number and department are set by the school, so
  *  they're shown read-only; the student edits their own contact fields. */
 export function ProfileCard() {
-  const [name, setName] = useState("Amara Okafor");
-  const [email, setEmail] = useState("amara.okafor@student.edu.ng");
-  const [phone, setPhone] = useState("+234 801 234 5678");
+  const { user, refreshUser } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Seed the form from the signed-in user (GET /auth/me).
+  useEffect(() => {
+    if (!user) return;
+    setName(user.name);
+    setEmail(user.email);
+    setPhone(user.phone ?? "");
+    setDirty(false);
+  }, [user]);
 
   const edit = (setter: (v: string) => void) => (v: string) => {
     setter(v);
     setDirty(true);
   };
 
-  const save = () => {
-    setDirty(false);
-    toast.success("Profile updated");
+  const save = async () => {
+    setSaving(true);
+    try {
+      // Only the editable contact fields; matric/level/role are server-controlled.
+      await updateProfile({ name, email, phone: phone || undefined });
+      await refreshUser();
+      setDirty(false);
+      toast.success("Profile updated");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Couldn't save your profile.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -64,20 +90,22 @@ export function ProfileCard() {
         <button
           type="button"
           onClick={save}
-          disabled={!dirty}
+          disabled={!dirty || saving}
           className="shrink-0 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-50 cursor-pointer"
         >
-          Save
+          {saving ? "Saving…" : "Save"}
         </button>
       }
     >
       {/* Avatar + identity. */}
       <div className="flex items-center gap-4 border-b border-cloud pb-5">
-        <UserAvatar name={name} size={56} />
+        <UserAvatar name={name || "?"} size={56} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
           <p className="truncate text-xs text-ink-soft">
-            Computer Science · 300 level · CSC/2021/045
+            {[user?.level ? `${user.level} level` : null, user?.matricNo]
+              .filter(Boolean)
+              .join(" · ") || "Your account"}
           </p>
         </div>
       </div>
@@ -100,15 +128,15 @@ export function ProfileCard() {
             Matric number
           </Label>
           <div className="mt-1.5 flex h-11 items-center rounded-2xl border border-cloud bg-paper px-4 text-sm text-ink-soft">
-            CSC/2021/045
+            {user?.matricNo ?? "—"}
           </div>
         </div>
         <div>
           <Label className="block text-xs font-medium text-ink-soft">
-            Department
+            Level
           </Label>
           <div className="mt-1.5 flex h-11 items-center rounded-2xl border border-cloud bg-paper px-4 text-sm text-ink-soft">
-            Computer Science
+            {user?.level ?? "—"}
           </div>
         </div>
       </div>

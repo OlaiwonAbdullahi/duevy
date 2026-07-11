@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, Building03Icon } from "@hugeicons/core-free-icons";
+import { EmptyState } from "../_components/EmptyState";
 import type {
   Due,
   JoinableDepartment,
@@ -12,22 +13,54 @@ import type {
   Space,
 } from "./_components/types";
 import type { Card } from "../wallet/_components/types";
-import { SPACES, DUES, SAVED_CARDS, naira } from "./_components/data";
+import { naira } from "./_components/data";
+import { adaptSpace, adaptDue } from "./_components/adapt";
 import { SpaceCard } from "./_components/SpaceCard";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
 import { PayDueModal } from "./_components/PayDueModal";
 import { ReceiptModal } from "./_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "./_components/receipt";
+import { listSpaces, joinSpace } from "@/lib/api/spaces";
+import { listDues, payDue } from "@/lib/api/dues";
+import { getWallet, listCards } from "@/lib/api/wallet";
+import { fromKobo } from "../_components/format";
+import { useRole } from "../_components/role-context";
 
 export default function DuesPage() {
-  const [spaces, setSpaces] = useState<Space[]>(SPACES);
-  const [dues, setDues] = useState<Due[]>(DUES);
+  const { isPendingRep } = useRole();
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [dues, setDues] = useState<Due[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
-  const [balance, setBalance] = useState(8500);
+  const [balance, setBalance] = useState(0);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [apiSpaces, apiDues, wallet, savedCards] = await Promise.all([
+          listSpaces(),
+          listDues({ perPage: 100 }),
+          getWallet(),
+          listCards(),
+        ]);
+        if (cancelled) return;
+        setSpaces(apiSpaces.map(adaptSpace));
+        setDues(apiDues.data.map(adaptDue));
+        setBalance(fromKobo(wallet.balance));
+        setCards(savedCards);
+      } catch {
+        if (!cancelled) toast.error("Couldn't load your dues.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selected = spaces.find((s) => s.id === selectedId) ?? null;
   const selectedDues = useMemo(
@@ -51,42 +84,69 @@ export default function DuesPage() {
 
   // Joining by code is instant — the department drops straight into "Your
   // spaces" with its starter dues, no approval to wait on.
-  const joinDepartment = (dept: JoinableDepartment) => {
+  const joinDepartment = async (dept: JoinableDepartment) => {
     if (spaces.some((s) => s.id === dept.id)) return;
-    const space: Space = {
-      id: dept.id,
-      name: dept.name,
-      short: dept.short,
-      kind: dept.kind,
-      membership: dept.membership,
-      hue: dept.hue,
-      memberCount: dept.memberCount,
-    };
-    setSpaces((list) => [space, ...list]);
-    setDues((list) => [...dept.dues, ...list]);
-    toast.success(`Joined ${dept.short}`, {
-      description: "It's now under Your spaces.",
-    });
+    try {
+      await joinSpace(dept.id, { code: dept.code });
+      const space: Space = {
+        id: dept.id,
+        name: dept.name,
+        short: dept.short,
+        kind: dept.kind,
+        membership: dept.membership,
+        hue: dept.hue,
+        memberCount: dept.memberCount,
+      };
+      setSpaces((list) => [space, ...list]);
+      setDues((list) => [...dept.dues, ...list]);
+      toast.success(`Joined ${dept.short}`, {
+        description: "It's now under Your spaces.",
+      });
+    } catch {
+      toast.error(`Couldn't join ${dept.short}. Please try again.`);
+    }
   };
 
-  const confirmPay = (method: PayMethod, card?: Card) => {
+  const confirmPay = async (method: PayMethod, card?: Card) => {
     if (payDues.length === 0 || !selected) return;
+    if (isPendingRep) {
+      toast.info("Paused during review", {
+        description: "Payments unlock once your rep application is approved.",
+      });
+      return;
+    }
     const targetDues = payDues;
     const targetIds = targetDues.map((d) => d.id);
     const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
     const space = selected;
     setPendingIds(targetIds);
-    // Simulate collection posting. In production this hits the payments API,
-    // and the selected rows flip on the success response.
-    setTimeout(() => {
-      setDues((list) =>
-        list.map((d) =>
-          targetIds.includes(d.id) ? { ...d, status: "paid" } : d,
+
+    try {
+      // Settle each selected due. Online payments would return a checkoutUrl to
+      // redirect to; wallet/card settle synchronously.
+      const results = await Promise.all(
+        targetDues.map((d) =>
+          payDue(
+            d.id,
+            method === "card" && card
+              ? { method: "card", cardId: card.id }
+              : method === "online"
+                ? { method: "online" }
+                : { method: "wallet" },
+          ),
         ),
       );
-      if (method === "wallet") {
-        setBalance((b) => b - total);
+
+      const redirect = results.find((r) => r.checkoutUrl)?.checkoutUrl;
+      if (method === "online" && redirect) {
+        window.location.href = redirect;
+        return;
       }
+
+      setDues((list) =>
+        list.map((d) => (targetIds.includes(d.id) ? { ...d, status: "paid" } : d)),
+      );
+      if (method === "wallet") setBalance((b) => b - total);
       setPendingIds([]);
       setPayDues([]);
       // One receipt per due settled — surfaced together for download.
@@ -97,7 +157,10 @@ export default function DuesPage() {
             ? targetDues[0].title
             : `${targetDues.length} dues settled`,
       });
-    }, 900);
+    } catch {
+      setPendingIds([]);
+      toast.error("Payment failed. Please try again.");
+    }
   };
 
   return (
@@ -168,16 +231,25 @@ export default function DuesPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
                 Your spaces
               </h2>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {members.map((space) => (
-                  <SpaceCard
-                    key={space.id}
-                    space={space}
-                    dues={dues}
-                    onOpen={openSpace}
-                  />
-                ))}
-              </div>
+              {members.length === 0 ? (
+                <EmptyState
+                  className="mt-3"
+                  icon={Building03Icon}
+                  title="No spaces yet"
+                  description="Join a department using its code above to see it here."
+                />
+              ) : (
+                <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {members.map((space) => (
+                    <SpaceCard
+                      key={space.id}
+                      space={space}
+                      dues={dues}
+                      onOpen={openSpace}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
 
             {/* Bodies you're paying at without being a full member. */}
@@ -210,7 +282,7 @@ export default function DuesPage() {
           dues={payDues}
           space={selected}
           balance={balance}
-          cards={SAVED_CARDS}
+          cards={cards}
           pending={pendingIds.length > 0}
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}

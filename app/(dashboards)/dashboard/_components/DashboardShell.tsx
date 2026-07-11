@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Clock01Icon } from "@hugeicons/core-free-icons";
+import { useAuth } from "@/lib/auth/auth-context";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
 import { TourProvider } from "./DashboardTour";
@@ -11,8 +14,27 @@ import Topbar from "./Topbar";
 import { RepOnlyNotice } from "./RepOnlyNotice";
 import { CommandPalette } from "./CommandPalette";
 
+/** Shown across the dashboard while a rep application is under admin review. */
+function PendingRepBanner() {
+  return (
+    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700">
+        <HugeiconsIcon icon={Clock01Icon} size={18} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">Your rep application is under review</p>
+        <p className="mt-0.5 text-xs text-ink-soft">
+          You&apos;re signed in as a student for now. We&apos;ll email you once an admin
+          approves your department — then your rep tools unlock. Some actions are paused
+          until then.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ShellInner({ children }: { children: ReactNode }) {
-  const { role, isRep } = useRole();
+  const { role, isRep, isPendingRep } = useRole();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -32,6 +54,7 @@ function ShellInner({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen flex-col lg:pl-72">
         <Topbar onMenu={() => setOpen(true)} onSearch={() => setSearchOpen(true)} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          {isPendingRep && <PendingRepBanner />}
           {blocked ? <RepOnlyNotice /> : children}
         </main>
       </div>
@@ -42,8 +65,30 @@ function ShellInner({ children }: { children: ReactNode }) {
 }
 
 export default function DashboardShell({ children }: { children: ReactNode }) {
+  const { user, status } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    } else if (status === "authenticated" && user?.role === "admin") {
+      router.replace("/admin");
+    }
+  }, [status, user, router]);
+
+  if (status !== "authenticated" || !user || user.role === "admin") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />
+      </div>
+    );
+  }
+
   return (
-    <RoleProvider initialRole="student">
+    <RoleProvider
+      initialRole={user.role === "rep" ? "rep" : "student"}
+      isPendingRep={user.repApplicationStatus === "pending"}
+    >
       <SpaceThemeProvider>
         <TourProvider>
           <ShellInner>{children}</ShellInner>

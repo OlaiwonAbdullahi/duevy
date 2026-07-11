@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   MoneySend01Icon,
   ReceiptDollarIcon,
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "../../dashboard/_components/StatCard";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
@@ -14,115 +16,80 @@ import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
 import { Toolbar, SearchInput, FilterSelect } from "../_components/Toolbar";
 import { AdminModal, ModalField } from "../_components/AdminModal";
-import { naira } from "../_components/format";
+import { nairaFromKobo } from "../_components/format";
+import { ApiError } from "@/lib/api/errors";
+import {
+  listAdminTransactions,
+  refundTransaction,
+  type AdminTransaction,
+  type AdminTxnStatus,
+  type AdminTxnType,
+} from "@/lib/api/admin";
 
-type TxStatus = "completed" | "pending" | "failed" | "refunded";
-type TxType = "deposit" | "dues_payment" | "payout" | "refund";
-
-interface Transaction {
-  id: string;
-  reference: string;
-  date: string;
-  type: TxType;
-  status: TxStatus;
-  userName: string;
-  userEmail: string;
-  spaceName: string;
-  amount: number;
-}
-
-const transactions: Transaction[] = [
-  {
-    id: "TX-101",
-    reference: "DV-DEP-99201",
-    date: "2026-07-04 14:22",
-    type: "deposit",
-    status: "completed",
-    userName: "Chioma Adebayo",
-    userEmail: "chioma@duevy.com",
-    spaceName: "Accounting Dept",
-    amount: 25000,
-  },
-  {
-    id: "TX-102",
-    reference: "DV-DUE-88192",
-    date: "2026-07-04 11:05",
-    type: "dues_payment",
-    status: "completed",
-    userName: "Tunde Bakare",
-    userEmail: "tunde@duevy.com",
-    spaceName: "Engineering Faculty",
-    amount: 12000,
-  },
-  {
-    id: "TX-103",
-    reference: "DV-PAY-77210",
-    date: "2026-07-03 18:40",
-    type: "payout",
-    status: "pending",
-    userName: "Musa Ibrahim",
-    userEmail: "musa@duevy.com",
-    spaceName: "Economics Club",
-    amount: 150000,
-  },
-  {
-    id: "TX-104",
-    reference: "DV-REF-11029",
-    date: "2026-07-03 09:15",
-    type: "refund",
-    status: "refunded",
-    userName: "Amara Okafor",
-    userEmail: "amara@duevy.com",
-    spaceName: "Law Association",
-    amount: 5000,
-  },
-  {
-    id: "TX-105",
-    reference: "DV-DUE-55461",
-    date: "2026-07-02 16:30",
-    type: "dues_payment",
-    status: "failed",
-    userName: "Emeka Obi",
-    userEmail: "emeka@duevy.com",
-    spaceName: "Engineering Faculty",
-    amount: 12000,
-  },
-];
-
-const STATUS_TONES: Record<TxStatus, StatusTone> = {
+const STATUS_TONES: Record<AdminTxnStatus, StatusTone> = {
   completed: "ok",
   pending: "warn",
   failed: "bad",
   refunded: "neutral",
 };
 
-const TYPE_LABELS: Record<TxType, string> = {
+const TYPE_LABELS: Record<AdminTxnType, string> = {
   deposit: "Deposit",
   dues_payment: "Dues payment",
   payout: "Payout",
   refund: "Refund",
 };
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString("en-NG", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function AdminTransactionsPage() {
+  const [transactions, setTransactions] = useState<AdminTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return transactions.filter(
-      (tx) =>
-        (q === "" ||
-          tx.reference.toLowerCase().includes(q) ||
-          tx.userName.toLowerCase().includes(q) ||
-          tx.spaceName.toLowerCase().includes(q)) &&
-        (statusFilter === "all" || tx.status === statusFilter) &&
-        (typeFilter === "all" || tx.type === typeFilter),
-    );
-  }, [search, statusFilter, typeFilter]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const selected = transactions.find((tx) => tx.id === selectedId) ?? null;
+  async function load() {
+    setLoading(true);
+    try {
+      const { data } = await listAdminTransactions({
+        q: debouncedSearch || undefined,
+        type: typeFilter === "all" ? undefined : (typeFilter as AdminTxnType),
+        status: statusFilter === "all" ? undefined : statusFilter,
+        perPage: 100,
+      });
+      setTransactions(data);
+    } catch {
+      toast.error("Couldn't load transactions.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, statusFilter, typeFilter]);
+
+  const selected = useMemo(
+    () => transactions.find((tx) => tx.id === selectedId) ?? null,
+    [transactions, selectedId],
+  );
 
   const totalVolume = transactions.reduce((s, tx) => s + tx.amount, 0);
   const duesVolume = transactions
@@ -131,6 +98,24 @@ export default function AdminTransactionsPage() {
   const pendingPayouts = transactions.filter(
     (tx) => tx.type === "payout" && tx.status === "pending",
   ).length;
+
+  async function handleRefund(tx: AdminTransaction) {
+    const reason = window.prompt(`Reason for refunding ${tx.reference}?`)?.trim();
+    if (!reason) return;
+    setBusy(true);
+    try {
+      const updated = await refundTransaction(tx.id, { reason });
+      setTransactions((prev) => prev.map((t) => (t.id === tx.id ? updated : t)));
+      toast.success(`${tx.reference} refunded.`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't refund this transaction.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canRefund = (tx: AdminTransaction) =>
+    (tx.type === "dues_payment" || tx.type === "deposit") && tx.status === "completed";
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -143,10 +128,10 @@ export default function AdminTransactionsPage() {
         <StatCard
           icon={ReceiptDollarIcon}
           label="Total volume"
-          value={naira(totalVolume)}
+          value={nairaFromKobo(totalVolume)}
           tone="brand"
         />
-        <StatCard icon={Wallet01Icon} label="Dues collected" value={naira(duesVolume)} />
+        <StatCard icon={Wallet01Icon} label="Dues collected" value={nairaFromKobo(duesVolume)} />
         <StatCard
           icon={MoneySend01Icon}
           label="Pending payouts"
@@ -188,7 +173,13 @@ export default function AdminTransactionsPage() {
       </Toolbar>
 
       <TableCard title="Ledger" subtitle="Click a row for the full record">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-12 animate-pulse rounded-xl bg-paper" />
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
           <EmptyState
             icon={ReceiptDollarIcon}
             title="No transactions match"
@@ -206,7 +197,7 @@ export default function AdminTransactionsPage() {
               { label: "Date" },
             ]}
           >
-            {filtered.map((tx) => (
+            {transactions.map((tx) => (
               <tr
                 key={tx.id}
                 onClick={() => setSelectedId(tx.id)}
@@ -219,14 +210,14 @@ export default function AdminTransactionsPage() {
                   <p className="font-semibold text-ink">{tx.userName}</p>
                   <p className="mt-0.5 text-xs text-ink-soft">{tx.userEmail}</p>
                 </td>
-                <td className="p-4 font-medium">{tx.spaceName}</td>
+                <td className="p-4 font-medium">{tx.spaceName ?? "—"}</td>
                 <td className="p-4">{TYPE_LABELS[tx.type]}</td>
-                <td className="p-4 font-semibold">{naira(tx.amount)}</td>
+                <td className="p-4 font-semibold">{nairaFromKobo(tx.amount)}</td>
                 <td className="p-4">
                   <StatusBadge tone={STATUS_TONES[tx.status]}>{tx.status}</StatusBadge>
                 </td>
                 <td className="p-4 whitespace-nowrap text-xs text-ink-soft">
-                  {tx.date}
+                  {formatDate(tx.createdAt)}
                 </td>
               </tr>
             ))}
@@ -240,9 +231,21 @@ export default function AdminTransactionsPage() {
           title={TYPE_LABELS[selected.type]}
           description={selected.reference}
           onClose={() => setSelectedId(null)}
+          footer={
+            canRefund(selected) ? (
+              <Button
+                variant="danger-outline"
+                size="pill"
+                disabled={busy}
+                onClick={() => handleRefund(selected)}
+              >
+                Refund
+              </Button>
+            ) : undefined
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <ModalField label="Amount">{naira(selected.amount)}</ModalField>
+            <ModalField label="Amount">{nairaFromKobo(selected.amount)}</ModalField>
             <ModalField label="Status">
               <StatusBadge tone={STATUS_TONES[selected.status]}>
                 {selected.status}
@@ -254,9 +257,9 @@ export default function AdminTransactionsPage() {
                 {selected.userEmail}
               </p>
             </ModalField>
-            <ModalField label="Space">{selected.spaceName}</ModalField>
+            <ModalField label="Space">{selected.spaceName ?? "—"}</ModalField>
             <ModalField label="Date" className="sm:col-span-2">
-              {selected.date}
+              {formatDate(selected.createdAt)}
             </ModalField>
           </div>
         </AdminModal>

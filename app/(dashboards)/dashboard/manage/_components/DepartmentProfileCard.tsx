@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Building03Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { BRAND_INPUT } from "../../_components/form-styles";
-import { REP_SPACE } from "../../create-dues/_components/data";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
+import { useRepSpace } from "../../_components/use-rep-space";
+import { getSpace } from "@/lib/api/spaces";
+import { updateSpaceProfile } from "@/lib/api/rep";
 
 function Field({
   label,
@@ -37,22 +39,54 @@ function Field({
 
 /** The department's public identity — what students see when they join and pay. */
 export function DepartmentProfileCard() {
-  const [name, setName] = useState(REP_SPACE.name);
-  const [acronym, setAcronym] = useState(REP_SPACE.short);
-  const [faculty, setFaculty] = useState("Faculty of Science");
-  const [about, setAbout] = useState(
-    "Official space for Computer Science students to pay departmental dues, buy handouts, and keep up with association levies.",
-  );
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+
+  const [name, setName] = useState(repSpace?.name ?? "");
+  const [acronym, setAcronym] = useState("");
+  const [faculty, setFaculty] = useState("");
+  const [memberCount, setMemberCount] = useState(0);
+  const [about, setAbout] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    getSpace(spaceId)
+      .then((space) => {
+        if (cancelled) return;
+        setName(space.name);
+        setAcronym(space.short);
+        setFaculty(space.faculty ?? "");
+        setAbout(space.about ?? "");
+        setMemberCount(space.memberCount);
+        setDirty(false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
 
   const edit = (setter: (v: string) => void) => (v: string) => {
     setter(v);
     setDirty(true);
   };
 
-  const save = () => {
-    setDirty(false);
-    toast.success("Department details saved", { description: name });
+  const save = async () => {
+    if (!spaceId) return;
+    setSaving(true);
+    try {
+      // `faculty` isn't part of the profile patch (§4.6) — name/short/about only.
+      await updateSpaceProfile(spaceId, { name, short: acronym, about });
+      setDirty(false);
+      toast.success("Department details saved", { description: name });
+    } catch {
+      toast.error("Couldn't save your changes.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -61,7 +95,7 @@ export function DepartmentProfileCard() {
       title="Department profile"
       description="The name and details students see across Duevy."
       action={
-        <Button variant="brand" size="pill" onClick={save} disabled={!dirty}>
+        <Button variant="brand" size="pill" onClick={save} disabled={!dirty || saving}>
           Save
         </Button>
       }
@@ -74,7 +108,7 @@ export function DepartmentProfileCard() {
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
           <p className="truncate text-xs text-ink-soft">
-            {faculty} · {REP_SPACE.memberCount} members
+            {faculty} · {memberCount} members
           </p>
         </div>
       </div>

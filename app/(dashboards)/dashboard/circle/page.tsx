@@ -1,16 +1,50 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { INITIAL_STUDENTS, REP_JOIN_CODE, generateJoinCode } from "./_components/data";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type { Student } from "./_components/types";
 import { CircleHeader } from "./_components/CircleHeader";
 import { CircleStats } from "./_components/CircleStats";
 import { StudentsTable } from "./_components/StudentsTable";
+import { useRepSpace } from "../_components/use-rep-space";
+import { timeAgo } from "../_components/notifications-data";
+import { listMembers, regenerateJoinCode, getRepOverview } from "@/lib/api/rep";
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function CirclePage() {
-  const [students] = useState<Student[]>(INITIAL_STUDENTS);
-  const [code, setCode] = useState(REP_JOIN_CODE);
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+
+  const [students, setStudents] = useState<Student[]>([]);
+  const [recentCount, setRecentCount] = useState(0);
+  const [code, setCode] = useState("—");
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [members, overview] = await Promise.all([
+          listMembers(spaceId, { perPage: 100 }),
+          getRepOverview(spaceId),
+        ]);
+        if (cancelled) return;
+        const weekAgo = Date.now() - WEEK_MS;
+        setRecentCount(
+          members.data.filter((m) => new Date(m.joinedAt).getTime() >= weekAgo).length,
+        );
+        setStudents(members.data.map((m) => ({ ...m, joinedAt: timeAgo(m.joinedAt) })));
+        setCode(overview.joinCode);
+      } catch {
+        if (!cancelled) toast.error("Couldn't load your circle.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
 
   const filteredStudents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -23,10 +57,16 @@ export default function CirclePage() {
     );
   }, [query, students]);
 
-  // Students who joined this week — a light signal that the code is circulating.
-  const recentJoins = students.filter((s) => /Jun|Jul|Just now/.test(s.joinedAt));
-
-  const regenerateCode = () => setCode(generateJoinCode());
+  const regenerateCode = async () => {
+    if (!spaceId) return;
+    try {
+      const { code: next } = await regenerateJoinCode(spaceId);
+      setCode(next);
+      toast.success("Join code regenerated", { description: "The old code no longer works." });
+    } catch {
+      toast.error("Couldn't regenerate the code.");
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -34,7 +74,7 @@ export default function CirclePage() {
 
       <CircleStats
         studentCount={students.length}
-        recentCount={recentJoins.length}
+        recentCount={recentCount}
         code={code}
         onRegenerate={regenerateCode}
       />

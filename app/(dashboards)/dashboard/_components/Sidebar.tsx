@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -13,6 +13,7 @@ import {
   NewTwitterIcon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/auth-context";
 import type { NavGroup } from "./nav-config";
 
 function isActive(pathname: string, href: string) {
@@ -34,6 +35,9 @@ export default function Sidebar({
   onClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
   // Which collapsible groups are folded away, keyed by title. A rep lands with
   // the Student group folded so the rep tools are front and centre.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
@@ -41,6 +45,16 @@ export default function Sidebar({
   });
   const toggle = (title: string) =>
     setCollapsed((c) => ({ ...c, [title]: !c[title] }));
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.push("/login");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <>
@@ -196,9 +210,14 @@ export default function Sidebar({
 
         {/* Footer: follow + sign out */}
         <div className="border-t border-cloud p-4">
-          <button className="mt-1 flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer">
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="mt-1 flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+          >
             <HugeiconsIcon icon={Logout01Icon} size={18} className="shrink-0" />
-            Sign out
+            {loggingOut ? "Signing out…" : "Sign out"}
           </button>
           <a
             href="https://x.com/duevyapp"

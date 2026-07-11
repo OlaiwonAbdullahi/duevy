@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ArrowRightIcon, CloseIcon } from "./icons";
 import Image from "next/image";
+import Link from "next/link";
 
 const links = [
   { label: "How it works", href: "#how-it-works" },
@@ -37,7 +38,7 @@ export default function Navbar() {
             : "max-w-6xl mt-0 h-18 px-6 md:px-12 rounded-none border border-transparent bg-[#fbfaf7]/70 backdrop-blur-md"
         }`}
       >
-        <a href="#" className="flex items-center gap-2 cursor-pointer">
+        <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <Image
             src="/icons/logo2.svg"
             alt="Duevy Logo"
@@ -47,7 +48,7 @@ export default function Navbar() {
             priority
           />
           <span className="text-[#1b2520]  text-xl tracking-tight">Duevy.</span>
-        </a>
+        </Link>
 
         {/* Desktop nav — centered */}
         <div className="hidden lg:flex items-center bg-[#f4f2ec] rounded-full text-[#7a847f] gap-2 absolute left-1/2 -translate-x-1/2">
@@ -64,14 +65,14 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="">
-          <a
-            href="#"
+          <Link
+            href="/login"
             className="hidden lg:inline-flex items-center gap-2 text-[13px] font-semibold rounded-full px-5 py-2.5  transition-colors duration-300 cursor-pointer group"
           >
             Sign in
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            href="/signup"
             className="hidden lg:inline-flex items-center gap-2 bg-[#0b6e4f] text-white text-[13px] font-semibold rounded-full px-5 py-2.5 hover:bg-[#0f996d] transition-colors duration-300 cursor-pointer group"
           >
             Get started
@@ -79,7 +80,7 @@ export default function Navbar() {
               size={15}
               className="transition-transform duration-500 group-hover:translate-x-1"
             />
-          </a>
+          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -132,21 +133,21 @@ export default function Navbar() {
           ))}
         </div>
         <div className="px-8 pb-12 flex flex-col gap-3">
-          <a
-            href="#"
+          <Link
+            href="/login"
             onClick={() => setOpen(false)}
             className="inline-flex items-center justify-center gap-2 bg-[#f4f2ec] text-[#1b2520] text-base font-semibold rounded-full px-6 h-[52px] cursor-pointer"
           >
             Sign in
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            href="/signup"
             onClick={() => setOpen(false)}
             className="inline-flex items-center justify-center gap-2 bg-[#0b6e4f] text-white text-base font-semibold rounded-full px-6 h-[52px] hover:bg-[#0f996d] transition-colors duration-300 cursor-pointer"
           >
             Get started
             <ArrowRightIcon size={16} />
-          </a>
+          </Link>
         </div>
       </div>
     </nav>

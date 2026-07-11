@@ -1,32 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Analytics01Icon, Download01Icon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, Download01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BRAND_INPUT } from "../../dashboard/_components/form-styles";
+import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
 import TableCard from "../_components/TableCard";
-import StatusBadge from "../_components/StatusBadge";
+import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
 import { FilterSelect } from "../_components/Toolbar";
 import { AdminModal } from "../_components/AdminModal";
 import { cn } from "@/lib/utils";
+import { apiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
+import {
+  createReport,
+  listReports,
+  reportDownloadPath,
+  type Report,
+  type ReportScope,
+} from "@/lib/api/admin";
 
-type ReportScope = "financial_summary" | "space_collection" | "rep_performance" | "full_ledger";
 type ExportFormat = "csv" | "pdf";
-
-interface ReportLog {
-  id: string;
-  name: string;
-  scope: ReportScope;
-  format: ExportFormat;
-  generatedAt: string;
-  fileSize: string;
-  status: "ready" | "expired";
-}
 
 const SCOPE_LABELS: Record<ReportScope, string> = {
   financial_summary: "Financial summary",
@@ -35,58 +34,82 @@ const SCOPE_LABELS: Record<ReportScope, string> = {
   full_ledger: "Full transaction ledger",
 };
 
-const initialHistory: ReportLog[] = [
-  {
-    id: "REP-901",
-    name: "Full_Ledger_Q2_Audit.csv",
-    scope: "full_ledger",
-    format: "csv",
-    generatedAt: "2026-07-04 14:20",
-    fileSize: "1.4 MB",
-    status: "ready",
-  },
-  {
-    id: "REP-902",
-    name: "Financial_Summary_July.pdf",
-    scope: "financial_summary",
-    format: "pdf",
-    generatedAt: "2026-07-03 09:12",
-    fileSize: "420 KB",
-    status: "ready",
-  },
-  {
-    id: "REP-903",
-    name: "Space_Collection_June.csv",
-    scope: "space_collection",
-    format: "csv",
-    generatedAt: "2026-06-30 18:00",
-    fileSize: "850 KB",
-    status: "expired",
-  },
-];
+function statusTone(status: string): StatusTone {
+  if (status === "ready") return "ok";
+  if (status === "expired") return "neutral";
+  return "warn";
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString("en-NG", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function AdminReportsPage() {
-  const [history, setHistory] = useState<ReportLog[]>(initialHistory);
+  const [history, setHistory] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [scope, setScope] = useState<ReportScope>("financial_summary");
   const [format, setFormat] = useState<ExportFormat>("csv");
-  const [startDate, setStartDate] = useState("2026-06-01");
-  const [endDate, setEndDate] = useState("2026-07-05");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const generateReport = () => {
-    const report: ReportLog = {
-      id: `REP-${Math.floor(100 + Math.random() * 900)}`,
-      name: `${SCOPE_LABELS[scope].replaceAll(" ", "_")}_${startDate}_to_${endDate}.${format}`,
-      scope,
-      format,
-      generatedAt: new Date().toISOString().replace("T", " ").slice(0, 16),
-      fileSize: `${Math.floor(150 + Math.random() * 800)} KB`,
-      status: "ready",
-    };
-    setHistory((prev) => [report, ...prev]);
-    setBuilderOpen(false);
-    toast(`Report ready: ${report.name}`);
-  };
+  async function load() {
+    setLoading(true);
+    try {
+      const { data } = await listReports({ perPage: 100 });
+      setHistory(data);
+    } catch {
+      toast.error("Couldn't load reports.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function generateReport() {
+    if (!startDate || !endDate) {
+      toast.error("Pick a date range first.");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const report = await createReport({ scope, format, from: startDate, to: endDate });
+      setHistory((prev) => [report, ...prev]);
+      setBuilderOpen(false);
+      toast.success(`${SCOPE_LABELS[report.scope]} report queued.`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't generate this report.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function download(report: Report) {
+    setDownloadingId(report.id);
+    try {
+      const blob = await apiClient.getBlob(reportDownloadPath(report.id));
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${SCOPE_LABELS[report.scope].replaceAll(" ", "_")}_${report.from}_to_${report.to}.${report.format}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't download this report.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -94,54 +117,72 @@ export default function AdminReportsPage() {
         title="Reports"
         description="Export financial and performance data as CSV or PDF."
         right={
-          <Button variant="brand" size="pill" onClick={() => setBuilderOpen(true)}>
-            New report
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="brand-outline" size="pill" onClick={load} disabled={loading}>
+              <HugeiconsIcon icon={RefreshIcon} size={14} />
+              Refresh
+            </Button>
+            <Button variant="brand" size="pill" onClick={() => setBuilderOpen(true)}>
+              New report
+            </Button>
+          </div>
         }
       />
 
       <TableCard title="Generated reports" subtitle="Recent exports and their download status">
-        <DataTable
-          headers={[
-            { label: "Report" },
-            { label: "Scope" },
-            { label: "Format" },
-            { label: "Size" },
-            { label: "Generated" },
-            { label: "Status" },
-            { label: "", align: "right" },
-          ]}
-        >
-          {history.map((log) => (
-            <tr key={log.id}>
-              <td className="p-4 font-semibold text-ink">{log.name}</td>
-              <td className="p-4">{SCOPE_LABELS[log.scope]}</td>
-              <td className="p-4 font-mono text-xs font-semibold uppercase text-brand">
-                {log.format}
-              </td>
-              <td className="p-4 text-ink-soft">{log.fileSize}</td>
-              <td className="p-4 whitespace-nowrap text-xs text-ink-soft">
-                {log.generatedAt}
-              </td>
-              <td className="p-4">
-                <StatusBadge tone={log.status === "ready" ? "ok" : "neutral"}>
-                  {log.status}
-                </StatusBadge>
-              </td>
-              <td className="p-4 text-right">
-                <Button
-                  variant="brand-outline"
-                  size="pill"
-                  disabled={log.status !== "ready"}
-                  onClick={() => toast(`Downloading ${log.name}…`)}
-                >
-                  <HugeiconsIcon icon={Download01Icon} size={14} data-icon="inline-start" />
-                  Download
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </DataTable>
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-12 animate-pulse rounded-xl bg-paper" />
+            ))}
+          </div>
+        ) : history.length === 0 ? (
+          <EmptyState
+            icon={Analytics01Icon}
+            title="No reports yet"
+            description="Generate one to see it show up here."
+          />
+        ) : (
+          <DataTable
+            headers={[
+              { label: "Scope" },
+              { label: "Range" },
+              { label: "Format" },
+              { label: "Generated" },
+              { label: "Status" },
+              { label: "", align: "right" },
+            ]}
+          >
+            {history.map((report) => (
+              <tr key={report.id}>
+                <td className="p-4 font-semibold text-ink">{SCOPE_LABELS[report.scope]}</td>
+                <td className="p-4 text-ink-soft">
+                  {report.from} → {report.to}
+                </td>
+                <td className="p-4 font-mono text-xs font-semibold uppercase text-brand">
+                  {report.format}
+                </td>
+                <td className="p-4 whitespace-nowrap text-xs text-ink-soft">
+                  {formatDate(report.createdAt)}
+                </td>
+                <td className="p-4">
+                  <StatusBadge tone={statusTone(report.status)}>{report.status}</StatusBadge>
+                </td>
+                <td className="p-4 text-right">
+                  <Button
+                    variant="brand-outline"
+                    size="pill"
+                    disabled={report.status !== "ready" || downloadingId === report.id}
+                    onClick={() => download(report)}
+                  >
+                    <HugeiconsIcon icon={Download01Icon} size={14} data-icon="inline-start" />
+                    {downloadingId === report.id ? "Downloading…" : "Download"}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        )}
       </TableCard>
 
       {builderOpen && (
@@ -155,8 +196,8 @@ export default function AdminReportsPage() {
               <Button variant="brand-outline" size="pill" onClick={() => setBuilderOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="brand" size="pill" onClick={generateReport}>
-                Generate report
+              <Button variant="brand" size="pill" disabled={generating} onClick={generateReport}>
+                {generating ? "Generating…" : "Generate report"}
               </Button>
             </>
           }
@@ -186,6 +227,7 @@ export default function AdminReportsPage() {
                 <Input
                   id="report-start"
                   type="date"
+                  required
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className={BRAND_INPUT}
@@ -201,6 +243,7 @@ export default function AdminReportsPage() {
                 <Input
                   id="report-end"
                   type="date"
+                  required
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className={BRAND_INPUT}

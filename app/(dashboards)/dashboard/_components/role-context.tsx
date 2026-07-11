@@ -1,36 +1,37 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 export type Role = "student" | "rep";
 
 type RoleContextValue = {
   role: Role;
-  setRole: (role: Role) => void;
   /** A rep sees every student section plus the rep-only ones. */
   isRep: boolean;
+  /** True while a rep application is awaiting admin approval (role is still `student`). */
+  isPendingRep: boolean;
 };
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
 /**
- * Holds the "who is looking at this screen" role for the whole dashboard.
- *
- * Right now the role is just local state seeded to `student` so we can demo how
- * one route (`/dashboard/...`) renders differently per role. Once auth lands,
- * swap the initial value for the signed-in user's role from the session.
+ * Holds the viewer's role for the whole dashboard. The role is the signed-in
+ * account's real role from the session (`DashboardShell` seeds it from
+ * `useAuth`) — there is no client-side switching.
  */
 export function RoleProvider({
   children,
   initialRole = "student",
+  isPendingRep = false,
 }: {
   children: ReactNode;
   initialRole?: Role;
+  isPendingRep?: boolean;
 }) {
-  const [role, setRole] = useState<Role>(initialRole);
-
   return (
-    <RoleContext.Provider value={{ role, setRole, isRep: role === "rep" }}>
+    <RoleContext.Provider
+      value={{ role: initialRole, isRep: initialRole === "rep", isPendingRep }}
+    >
       {children}
     </RoleContext.Provider>
   );

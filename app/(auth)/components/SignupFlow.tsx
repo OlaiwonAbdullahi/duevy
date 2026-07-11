@@ -3,14 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowRight01Icon,
   UserIcon,
   Building03Icon,
-  SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
-import { GoogleIcon } from "../../components/icons";
+import { useAuth } from "@/lib/auth/auth-context";
+import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
@@ -35,6 +36,7 @@ type Account = {
   matricNo: string;
   email: string;
   password: string;
+  acceptedTerms: boolean;
 };
 
 const EMPTY_SPACE: SpaceDetails = {
@@ -47,21 +49,22 @@ const EMPTY_SPACE: SpaceDetails = {
 
 export default function SignupFlow() {
   const router = useRouter();
+  const { register } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   const [role, setRole] = useState<SignupRole>("student");
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [account, setAccount] = useState<Account>({
     name: "",
     matricNo: "",
     email: "",
     password: "",
+    acceptedTerms: false,
   });
   const [space, setSpace] = useState<SpaceDetails>(EMPTY_SPACE);
   const [coReps, setCoReps] = useState<string[]>([]);
   const [settings, setSettings] = useState<SpaceSettings>({
     theme: "emerald",
-    requireApproval: false,
   });
 
   const steps = STEPS[role];
@@ -71,26 +74,80 @@ export default function SignupFlow() {
   const goBack = () => setStepIndex((index) => Math.max(0, index - 1));
   const goNext = () => setStepIndex((index) => index + 1);
 
-  function handleAccountSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleAccountSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    setAccount({
+    const nextAccount: Account = {
       name: String(data.get("name") ?? "").trim(),
       matricNo: String(data.get("matricNo") ?? "").trim(),
       email: String(data.get("email") ?? "").trim(),
       password: String(data.get("password") ?? ""),
-    });
-    // Students finish here; reps continue into department setup.
-    if (role === "student") {
-      router.push("/dashboard");
+      acceptedTerms: data.get("terms") === "on",
+    };
+    setAccount(nextAccount);
+
+    // Reps continue into department setup; the API call happens once that's collected too.
+    if (role === "rep") {
+      goNext();
       return;
     }
-    goNext();
+
+    setSubmitting(true);
+    try {
+      await register({
+        role: "student",
+        name: nextAccount.name,
+        matricNo: nextAccount.matricNo,
+        email: nextAccount.email,
+        password: nextAccount.password,
+        acceptedTerms: nextAccount.acceptedTerms,
+      });
+      toast.success("Account created", { description: "Sign in to continue." });
+      router.push("/login");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't reach the server. Check your connection and try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  // Rep signup complete — awaiting admin approval.
-  if (submitted) {
-    return <RepPending />;
+  async function handleSpaceSettingsSubmit(data: SpaceSettings) {
+    setSettings(data);
+    setSubmitting(true);
+    try {
+      await register({
+        role: "rep",
+        name: account.name,
+        matricNo: account.matricNo,
+        email: account.email,
+        password: account.password,
+        acceptedTerms: account.acceptedTerms,
+        space: {
+          name: space.spaceName,
+          short: space.short,
+          kind: space.kind,
+          school: space.school,
+          faculty: space.faculty || undefined,
+          theme: data.theme,
+        },
+      });
+      toast.success("Application submitted", {
+        description: "Sign in to track your review.",
+      });
+      router.push("/login");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't reach the server. Check your connection and try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const RoleIcon = ROLE_META[role].icon;
@@ -150,24 +207,6 @@ export default function SignupFlow() {
             </span>
             <span className="text-[#0b6e4f] text-[13px] font-medium">Change</span>
           </button>
-
-          {/* Social */}
-          <button
-            type="button"
-            className="inline-flex h-13 w-full items-center justify-center gap-3 rounded-full border border-[#e6f2ec] bg-[#f4f2ec] text-[#1b2520] text-[15px] font-semibold transition-colors duration-300 hover:bg-[#e6f2ec] cursor-pointer"
-          >
-            <GoogleIcon size={18} />
-            Sign up with Google
-          </button>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <span className="h-px flex-1 bg-[#e6f2ec]" />
-            <span className="text-[#7a847f] text-[12px] font-medium uppercase tracking-[0.14em]">
-              or
-            </span>
-            <span className="h-px flex-1 bg-[#e6f2ec]" />
-          </div>
 
           {/* Form */}
           <form className="flex flex-col gap-5" onSubmit={handleAccountSubmit}>
@@ -249,14 +288,21 @@ export default function SignupFlow() {
 
             <button
               type="submit"
-              className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
+              disabled={submitting}
+              className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             >
-              {role === "rep" ? "Continue" : "Create account"}
-              <HugeiconsIcon
-                icon={ArrowRight01Icon}
-                size={16}
-                className="transition-transform duration-500 group-hover:translate-x-1"
-              />
+              {submitting
+                ? "Creating account…"
+                : role === "rep"
+                  ? "Continue"
+                  : "Create account"}
+              {!submitting && (
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  size={16}
+                  className="transition-transform duration-500 group-hover:translate-x-1"
+                />
+              )}
             </button>
           </form>
         </div>
@@ -265,7 +311,7 @@ export default function SignupFlow() {
       {currentId === "space" && (
         <SpaceDetailsStep
           defaultValues={space}
-          submitLabel="Create account"
+          submitLabel="Continue"
           onBack={goBack}
           onSubmit={(data) => {
             setSpace(data);
@@ -290,12 +336,9 @@ export default function SignupFlow() {
       {currentId === "settings" && (
         <SpaceSettingsStep
           defaultValues={settings}
-          submitLabel="Finish setup"
+          submitLabel={submitting ? "Finishing setup…" : "Finish setup"}
           onBack={goBack}
-          onSubmit={(data) => {
-            setSettings(data);
-            setSubmitted(true);
-          }}
+          onSubmit={handleSpaceSettingsSubmit}
         />
       )}
 
@@ -351,54 +394,4 @@ function headerFor(
         subtitle: `A few defaults for ${space} — change them anytime.`,
       };
   }
-}
-
-/** Shown after a rep finishes onboarding — their account waits on admin approval. */
-function RepPending() {
-  return (
-    <div className="flex flex-col text-center">
-      <span className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-2xl bg-[#e6f2ec] text-[#0b6e4f]">
-        <HugeiconsIcon icon={SecurityCheckIcon} size={26} />
-      </span>
-
-      <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
-        Application received
-      </h1>
-      <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">
-        Your rep account and department are set up and now under review. We
-        verify every department rep before payouts can move — you&apos;ll get an
-        email once you&apos;re approved and can sign in to your dashboard.
-      </p>
-
-      <div className="rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] p-5 text-left">
-        <p className="text-[#1b2520] text-[13px] font-semibold mb-3">
-          What happens next
-        </p>
-        <ul className="flex flex-col gap-3">
-          {[
-            "We review your details, usually within 1–2 business days.",
-            "You'll get an approval email at the address you signed up with.",
-            "Sign in to publish dues and start collecting.",
-          ].map((item) => (
-            <li
-              key={item}
-              className="flex items-start gap-3 text-[#7a847f] text-[13px] leading-relaxed"
-            >
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0b6e4f]" />
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <p className="mt-8 text-center text-[#7a847f] text-[14px]">
-        <Link
-          href="/login"
-          className="text-[#0b6e4f] font-semibold hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
-        >
-          Back to sign in
-        </Link>
-      </p>
-    </div>
-  );
 }

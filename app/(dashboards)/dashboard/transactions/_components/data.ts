@@ -4,6 +4,7 @@ import {
   GiftIcon,
   MoneySend01Icon,
   ArrowReloadHorizontalIcon,
+  CheckmarkSquare01Icon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
 import type { Transaction, TxnStatus, TxnType } from "./types";
@@ -17,6 +18,7 @@ export const TXN_META: Record<TxnType, { icon: HugeIcon; label: string }> = {
   referral: { icon: GiftIcon, label: "Referral bonus" },
   withdrawal: { icon: MoneySend01Icon, label: "Withdrawal" },
   refund: { icon: ArrowReloadHorizontalIcon, label: "Refund" },
+  vote: { icon: CheckmarkSquare01Icon, label: "Poll vote" },
 };
 
 export const STATUS_META: Record<

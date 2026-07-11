@@ -11,6 +11,7 @@ import {
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
 import { StatCard } from "../../_components/StatCard";
+import { EmptyState } from "../../_components/EmptyState";
 import { relativeDue } from "../../dues/_components/data";
 import {
   naira,
@@ -131,9 +132,13 @@ function Leaderboard({ poll }: { poll: Poll }) {
       </div>
 
       {!anyVotes ? (
-        <p className="mt-5 rounded-2xl border border-dashed border-cloud px-4 py-6 text-center text-xs text-ink-soft">
-          No votes yet. Rankings appear once students start voting.
-        </p>
+        <EmptyState
+          size="sm"
+          className="mt-5 rounded-2xl border border-dashed border-cloud"
+          icon={Medal01Icon}
+          title="No votes yet"
+          description="Rankings appear once students start voting."
+        />
       ) : (
         <ol className="mt-4 flex flex-col gap-3">
           {entries.map((entry, index) => (

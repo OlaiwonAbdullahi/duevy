@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Megaphone01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -11,95 +11,9 @@ import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
 import { Toolbar, SearchInput, FilterSelect } from "../_components/Toolbar";
 import { AdminModal, ModalField } from "../_components/AdminModal";
-import { naira } from "../_components/format";
-
-type DisputeStatus = "open" | "under_review" | "resolved";
-type DisputeType = "payment_not_reflecting" | "non_remittance" | "refund_request";
-
-interface Evidence {
-  title: string;
-  description: string;
-  reference?: string;
-  amount?: number;
-}
-
-interface Dispute {
-  id: string;
-  type: DisputeType;
-  openedBy: string;
-  email: string;
-  department: string;
-  status: DisputeStatus;
-  slaDays: number;
-  ageDays: number;
-  studentEvidence: Evidence;
-  repEvidence: Evidence;
-}
-
-const initialDisputes: Dispute[] = [
-  {
-    id: "DSP-1042",
-    type: "payment_not_reflecting",
-    openedBy: "Ada Nwosu",
-    email: "ada@duevy.com",
-    department: "Computer Science 2025",
-    status: "open",
-    slaDays: 5,
-    ageDays: 4,
-    studentEvidence: {
-      title: "Payment confirmation",
-      description: "Transferred via bank rail; debit alert received.",
-      reference: "MNFY-TX-882910",
-      amount: 12000,
-    },
-    repEvidence: {
-      title: "Ledger sync history",
-      description: "No matching transaction found for this student.",
-      reference: "REPLOG-992",
-    },
-  },
-  {
-    id: "DSP-1041",
-    type: "non_remittance",
-    openedBy: "Kofi Mensah",
-    email: "kofi@duevy.com",
-    department: "Business Studies 2025",
-    status: "under_review",
-    slaDays: 7,
-    ageDays: 2,
-    studentEvidence: {
-      title: "Class ledger",
-      description: "32 students paid cash to the rep, but the space balance hasn't moved.",
-      amount: 160000,
-    },
-    repEvidence: {
-      title: "Rep wallet",
-      description: "Wallet holds ₦98,000; outflows temporarily capped.",
-      amount: 98000,
-    },
-  },
-  {
-    id: "DSP-1039",
-    type: "refund_request",
-    openedBy: "Zainab Sani",
-    email: "zainab@duevy.com",
-    department: "Mass Comm 2024",
-    status: "resolved",
-    slaDays: 14,
-    ageDays: 16,
-    studentEvidence: {
-      title: "Double charge",
-      description: "Card retry after a timeout caused a duplicate debit.",
-      reference: "VISA-WNK-1102",
-      amount: 5000,
-    },
-    repEvidence: {
-      title: "Gateway confirmed",
-      description: "Two identical collection events 45 seconds apart.",
-      amount: 5000,
-    },
-  },
-];
+import { ApiError } from "@/lib/api/errors";
+import type { Dispute, DisputeStatus, DisputeType } from "@/lib/api/types";
+import { listAdminDisputes, claimDispute, resolveDispute } from "@/lib/api/admin";
 
 const STATUS_TONES: Record<DisputeStatus, StatusTone> = {
   open: "warn",
@@ -119,68 +33,105 @@ const TYPE_LABELS: Record<DisputeType, string> = {
   refund_request: "Refund request",
 };
 
-function EvidenceCard({ side, evidence }: { side: string; evidence: Evidence }) {
-  return (
-    <div className="space-y-2 rounded-2xl border border-cloud bg-canvas p-4">
-      <StatusBadge tone="neutral">{side}</StatusBadge>
-      <p className="text-[13px] font-semibold text-ink">{evidence.title}</p>
-      <p className="text-xs leading-5 text-ink-soft">{evidence.description}</p>
-      {evidence.reference && (
-        <p className="rounded-lg border border-cloud bg-paper/40 p-1.5 font-mono text-[11px] text-ink-soft">
-          Ref: {evidence.reference}
-        </p>
-      )}
-      {evidence.amount !== undefined && (
-        <p className="text-[13px] font-semibold text-ink">{naira(evidence.amount)}</p>
-      )}
-    </div>
-  );
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString("en-NG", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function AdminDisputesPage() {
-  const [disputes, setDisputes] = useState<Dispute[]>(initialDisputes);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return disputes.filter(
-      (d) =>
-        (q === "" ||
-          d.id.toLowerCase().includes(q) ||
-          d.openedBy.toLowerCase().includes(q) ||
-          d.department.toLowerCase().includes(q)) &&
-        (statusFilter === "all" || d.status === statusFilter),
-    );
-  }, [disputes, search, statusFilter]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const selected = disputes.find((d) => d.id === selectedId) ?? null;
+  async function load() {
+    setLoading(true);
+    try {
+      const { data } = await listAdminDisputes({
+        q: debouncedSearch || undefined,
+        status: statusFilter === "all" ? undefined : (statusFilter as DisputeStatus),
+        perPage: 100,
+      });
+      setDisputes(data);
+    } catch {
+      toast.error("Couldn't load disputes.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const resolve = (id: string, outcome: "refund" | "release" | "freeze") => {
-    setDisputes((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: "resolved" as const } : d)),
-    );
-    const labels = {
-      refund: "refund issued to the student",
-      release: "payout released",
-      freeze: "rep wallet frozen",
-    };
-    toast(`${id} resolved — ${labels[outcome]}.`);
-  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, statusFilter]);
+
+  const selected = useMemo(
+    () => disputes.find((d) => d.id === selectedId) ?? null,
+    [disputes, selectedId],
+  );
+
+  const patch = (id: string, next: Dispute) =>
+    setDisputes((prev) => prev.map((d) => (d.id === id ? next : d)));
+
+  async function claim(dispute: Dispute) {
+    setBusy(true);
+    try {
+      const updated = await claimDispute(dispute.id);
+      patch(dispute.id, updated);
+      toast.success(`${dispute.id} is now under review.`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't claim this dispute.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resolve(dispute: Dispute, resolution: "upheld" | "rejected") {
+    const note = window
+      .prompt(
+        resolution === "upheld"
+          ? `Note for upholding ${dispute.id}?`
+          : `Reason for rejecting ${dispute.id}?`,
+      )
+      ?.trim();
+    if (!note) return;
+    setBusy(true);
+    try {
+      const updated = await resolveDispute(dispute.id, { resolution, note });
+      patch(dispute.id, updated);
+      toast.success(`${dispute.id} resolved — ${resolution}.`);
+      setSelectedId(null);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't resolve this dispute.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Disputes"
-        description="Reported payment issues with both parties' evidence, ready to settle."
+        description="Reported payment issues, ready to claim and settle."
       />
 
       <Toolbar>
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search by ticket, claimant or space…"
+          placeholder="Search by ticket, claimant or department…"
         />
         <FilterSelect
           value={statusFilter}
@@ -195,8 +146,14 @@ export default function AdminDisputesPage() {
         />
       </Toolbar>
 
-      <TableCard title="Tickets" subtitle="Click a row to review the evidence">
-        {filtered.length === 0 ? (
+      <TableCard title="Tickets" subtitle="Click a row to review and settle">
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 animate-pulse rounded-xl bg-paper" />
+            ))}
+          </div>
+        ) : disputes.length === 0 ? (
           <EmptyState
             icon={Megaphone01Icon}
             title="No disputes match"
@@ -207,40 +164,37 @@ export default function AdminDisputesPage() {
             headers={[
               { label: "Ticket" },
               { label: "Claimant" },
-              { label: "Space" },
+              { label: "Department" },
               { label: "Issue" },
               { label: "Age" },
               { label: "Status" },
             ]}
           >
-            {filtered.map((d) => {
-              const breached = d.ageDays >= d.slaDays && d.status !== "resolved";
-              return (
-                <tr
-                  key={d.id}
-                  onClick={() => setSelectedId(d.id)}
-                  className="cursor-pointer transition-colors hover:bg-paper/40"
-                >
-                  <td className="p-4 font-mono text-xs font-semibold text-ink">{d.id}</td>
-                  <td className="p-4">
-                    <p className="font-semibold text-ink">{d.openedBy}</p>
-                    <p className="mt-0.5 text-xs text-ink-soft">{d.email}</p>
-                  </td>
-                  <td className="p-4 font-medium">{d.department}</td>
-                  <td className="p-4">{TYPE_LABELS[d.type]}</td>
-                  <td className="p-4">
-                    <StatusBadge tone={breached ? "bad" : "neutral"}>
-                      {d.ageDays}d of {d.slaDays}d SLA
-                    </StatusBadge>
-                  </td>
-                  <td className="p-4">
-                    <StatusBadge tone={STATUS_TONES[d.status]}>
-                      {STATUS_LABELS[d.status]}
-                    </StatusBadge>
-                  </td>
-                </tr>
-              );
-            })}
+            {disputes.map((d) => (
+              <tr
+                key={d.id}
+                onClick={() => setSelectedId(d.id)}
+                className="cursor-pointer transition-colors hover:bg-paper/40"
+              >
+                <td className="p-4 font-mono text-xs font-semibold text-ink">{d.id}</td>
+                <td className="p-4">
+                  <p className="font-semibold text-ink">{d.openedBy}</p>
+                  {d.email && <p className="mt-0.5 text-xs text-ink-soft">{d.email}</p>}
+                </td>
+                <td className="p-4 font-medium">{d.department ?? "—"}</td>
+                <td className="p-4">{TYPE_LABELS[d.type]}</td>
+                <td className="p-4">
+                  <StatusBadge tone={d.breached ? "bad" : "neutral"}>
+                    {d.ageDays}d of {d.slaDays}d SLA
+                  </StatusBadge>
+                </td>
+                <td className="p-4">
+                  <StatusBadge tone={STATUS_TONES[d.status]}>
+                    {STATUS_LABELS[d.status]}
+                  </StatusBadge>
+                </td>
+              </tr>
+            ))}
           </DataTable>
         )}
       </TableCard>
@@ -250,58 +204,71 @@ export default function AdminDisputesPage() {
           wide
           icon={Megaphone01Icon}
           title={`Ticket ${selected.id}`}
-          description={`${TYPE_LABELS[selected.type]} · ${selected.department}`}
+          description={`${TYPE_LABELS[selected.type]}${selected.department ? ` · ${selected.department}` : ""}`}
           onClose={() => setSelectedId(null)}
           footer={
-            selected.status !== "resolved" && (
+            selected.status === "open" ? (
+              <Button variant="brand" size="pill" disabled={busy} onClick={() => claim(selected)}>
+                Claim ticket
+              </Button>
+            ) : selected.status === "under_review" ? (
               <>
                 <Button
                   variant="danger-outline"
                   size="pill"
-                  onClick={() => resolve(selected.id, "freeze")}
+                  disabled={busy}
+                  onClick={() => resolve(selected, "rejected")}
                 >
-                  Freeze rep wallet
-                </Button>
-                <Button
-                  variant="brand-outline"
-                  size="pill"
-                  onClick={() => resolve(selected.id, "release")}
-                >
-                  Release payout
+                  Reject
                 </Button>
                 <Button
                   variant="brand"
                   size="pill"
-                  onClick={() => resolve(selected.id, "refund")}
+                  disabled={busy}
+                  onClick={() => resolve(selected, "upheld")}
                 >
-                  Refund student
+                  Uphold
                 </Button>
               </>
-            )
+            ) : undefined
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <ModalField label="Claimant">
               {selected.openedBy}
-              <p className="mt-0.5 text-xs font-normal text-ink-soft">{selected.email}</p>
+              {selected.email && (
+                <p className="mt-0.5 text-xs font-normal text-ink-soft">{selected.email}</p>
+              )}
             </ModalField>
             <ModalField label="SLA">
               {selected.ageDays} of {selected.slaDays} days
-              {selected.ageDays >= selected.slaDays && selected.status !== "resolved" && (
+              {selected.breached && (
                 <span className="ml-2">
                   <StatusBadge tone="bad">Breached</StatusBadge>
                 </span>
               )}
             </ModalField>
+            <ModalField label="Opened">{formatDate(selected.createdAt)}</ModalField>
+            {selected.txnReference && (
+              <ModalField label="Transaction reference">
+                <span className="font-mono">{selected.txnReference}</span>
+              </ModalField>
+            )}
           </div>
 
-          <p className="mt-5 mb-2 text-[11px] font-semibold text-ink-soft">
-            Evidence from both parties
+          <p className="mt-5 mb-2 text-[11px] font-semibold text-ink-soft">Description</p>
+          <p className="rounded-2xl border border-cloud bg-canvas p-4 text-[13px] leading-6 text-ink">
+            {selected.description}
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <EvidenceCard side="Student" evidence={selected.studentEvidence} />
-            <EvidenceCard side="Rep" evidence={selected.repEvidence} />
-          </div>
+
+          {selected.resolution && (
+            <>
+              <p className="mt-5 mb-2 text-[11px] font-semibold text-ink-soft">Resolution</p>
+              <p className="rounded-2xl border border-cloud bg-paper/30 p-4 text-[13px] leading-6 text-ink">
+                {selected.resolution}
+              </p>
+            </>
+          )}
         </AdminModal>
       )}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { UserIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -12,66 +12,16 @@ import { DataTable } from "../_components/DataTable";
 import { Toolbar, SearchInput, FilterSelect } from "../_components/Toolbar";
 import { RowActions } from "../_components/RowActions";
 import { AdminModal, ModalField } from "../_components/AdminModal";
-import { naira } from "../_components/format";
-
-type UserRole = "student" | "rep" | "admin";
-type KycStatus = "verified" | "pending" | "rejected" | "unverified";
-
-interface AppUser {
-  id: string;
-  role: UserRole;
-  name: string;
-  email: string;
-  department: string;
-  walletBalance: number;
-  isDeactivated: boolean;
-  isSuspended: boolean;
-  kycStatus: KycStatus;
-  kycDocs: string[];
-  spaces: string[];
-}
-
-const initialUsers: AppUser[] = [
-  {
-    id: "user_2891",
-    role: "student",
-    name: "Ada Nwosu",
-    email: "ada@duevy.com",
-    department: "Computer Science 2025",
-    walletBalance: 1200,
-    isDeactivated: false,
-    isSuspended: false,
-    kycStatus: "verified",
-    kycDocs: ["BVN verification", "School ID card"],
-    spaces: ["Faculty of Science Collective", "Computer Science Association"],
-  },
-  {
-    id: "user_774",
-    role: "rep",
-    name: "Kofi Mensah",
-    email: "kofi@duevy.com",
-    department: "Business Studies 2025",
-    walletBalance: 98000,
-    isDeactivated: false,
-    isSuspended: false,
-    kycStatus: "pending",
-    kycDocs: ["NIN slip"],
-    spaces: ["Business Studies Hub"],
-  },
-  {
-    id: "user_112",
-    role: "student",
-    name: "Zainab Sani",
-    email: "zainab@duevy.com",
-    department: "Mass Comm 2024",
-    walletBalance: 0,
-    isDeactivated: true,
-    isSuspended: false,
-    kycStatus: "rejected",
-    kycDocs: ["NIN (mismatched)"],
-    spaces: ["Mass Communication Press Unit"],
-  },
-];
+import { nairaFromKobo } from "../_components/format";
+import {
+  listAdminUsers,
+  suspendUser,
+  unsuspendUser,
+  deactivateUser,
+  reviewKyc,
+  type AdminUser,
+} from "@/lib/api/admin";
+import type { KycStatus, UserRole } from "@/lib/api/types";
 
 const KYC_TONES: Record<KycStatus, StatusTone> = {
   verified: "ok",
@@ -87,39 +37,98 @@ const ROLE_TONES: Record<UserRole, StatusTone> = {
 };
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AppUser[]>(initialUsers);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [kycFilter, setKycFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return users.filter(
-      (u) =>
-        (q === "" ||
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
-          u.department.toLowerCase().includes(q)) &&
-        (roleFilter === "all" || u.role === roleFilter) &&
-        (kycFilter === "all" || u.kycStatus === kycFilter),
-    );
-  }, [users, search, roleFilter, kycFilter]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  // Keep the modal in sync with list edits by deriving it from the list.
+  async function load() {
+    setLoading(true);
+    try {
+      const { data } = await listAdminUsers({
+        role: roleFilter === "all" ? undefined : (roleFilter as UserRole),
+        kycStatus: kycFilter === "all" ? undefined : (kycFilter as KycStatus),
+        q: debouncedSearch || undefined,
+        perPage: 100,
+      });
+      console.log(data);
+      setUsers(data);
+    } catch {
+      toast.error("Couldn't load users.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleFilter, kycFilter, debouncedSearch]);
+
   const selected = users.find((u) => u.id === selectedId) ?? null;
 
-  const toggleFlag = (id: string, key: "isSuspended" | "isDeactivated") => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, [key]: !u[key] } : u)),
-    );
-    const user = users.find((u) => u.id === id);
-    if (!user) return;
-    toast(
-      key === "isSuspended"
-        ? `${user.name} ${user.isSuspended ? "unsuspended" : "suspended"}.`
-        : `${user.name} ${user.isDeactivated ? "reactivated" : "deactivated"}.`,
-    );
+  const setSuspended = async (u: AdminUser, next: boolean) => {
+    setBusy(true);
+    try {
+      if (next) {
+        const reason = window
+          .prompt(`Reason for suspending ${u.name}?`)
+          ?.trim();
+        if (!reason) return;
+        await suspendUser(u.id, reason);
+      } else {
+        await unsuspendUser(u.id);
+      }
+      setUsers((list) =>
+        list.map((x) => (x.id === u.id ? { ...x, isSuspended: next } : x)),
+      );
+      toast.success(`${u.name} ${next ? "suspended" : "unsuspended"}.`);
+    } catch {
+      toast.error("Action failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deactivate = async (u: AdminUser) => {
+    const reason = window.prompt(`Reason for deactivating ${u.name}?`)?.trim();
+    if (!reason) return;
+    setBusy(true);
+    try {
+      await deactivateUser(u.id, reason);
+      setUsers((list) =>
+        list.map((x) => (x.id === u.id ? { ...x, isDeactivated: true } : x)),
+      );
+      toast.success(`${u.name} deactivated.`);
+    } catch {
+      toast.error("Action failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const decideKyc = async (u: AdminUser, decision: "verified" | "rejected") => {
+    setBusy(true);
+    try {
+      const { kycStatus } = await reviewKyc(u.id, { decision });
+      setUsers((list) =>
+        list.map((x) => (x.id === u.id ? { ...x, kycStatus } : x)),
+      );
+      toast.success(`KYC ${decision} for ${u.name}.`);
+    } catch {
+      toast.error("Couldn't update KYC.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -133,7 +142,7 @@ export default function AdminUsersPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search by name, email or department…"
+          placeholder="Search by name or email…"
         />
         <FilterSelect
           value={roleFilter}
@@ -155,12 +164,19 @@ export default function AdminUsersPage() {
             { value: "verified", label: "Verified" },
             { value: "pending", label: "Pending" },
             { value: "rejected", label: "Rejected" },
+            { value: "unverified", label: "Unverified" },
           ]}
         />
       </Toolbar>
 
       <TableCard title="Accounts" subtitle="Click a row for the full profile">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 animate-pulse rounded-xl bg-paper" />
+            ))}
+          </div>
+        ) : users.length === 0 ? (
           <EmptyState
             icon={UserIcon}
             title="No users match"
@@ -170,14 +186,13 @@ export default function AdminUsersPage() {
           <DataTable
             headers={[
               { label: "User" },
-              { label: "Department" },
               { label: "Role" },
               { label: "Balance" },
               { label: "KYC" },
               { label: "", align: "right" },
             ]}
           >
-            {filtered.map((u) => (
+            {users.map((u) => (
               <tr
                 key={u.id}
                 onClick={() => setSelectedId(u.id)}
@@ -186,20 +201,25 @@ export default function AdminUsersPage() {
                 <td className="p-4">
                   <div className="flex flex-wrap items-center gap-2 font-semibold text-ink">
                     {u.name}
-                    {u.isSuspended && <StatusBadge tone="bad">Suspended</StatusBadge>}
+                    {u.isSuspended && (
+                      <StatusBadge tone="bad">Suspended</StatusBadge>
+                    )}
                     {u.isDeactivated && (
                       <StatusBadge tone="neutral">Inactive</StatusBadge>
                     )}
                   </div>
                   <p className="mt-0.5 text-xs text-ink-soft">{u.email}</p>
                 </td>
-                <td className="p-4 font-medium">{u.department}</td>
                 <td className="p-4">
                   <StatusBadge tone={ROLE_TONES[u.role]}>{u.role}</StatusBadge>
                 </td>
-                <td className="p-4 font-semibold">{naira(u.walletBalance)}</td>
+                <td className="p-4 font-semibold">
+                  {nairaFromKobo(u.walletBalance ?? 0)}
+                </td>
                 <td className="p-4">
-                  <StatusBadge tone={KYC_TONES[u.kycStatus]}>{u.kycStatus}</StatusBadge>
+                  <StatusBadge tone={KYC_TONES[u.kycStatus]}>
+                    {u.kycStatus}
+                  </StatusBadge>
                 </td>
                 <td className="p-4 text-right">
                   <RowActions
@@ -207,12 +227,16 @@ export default function AdminUsersPage() {
                       {
                         label: u.isSuspended ? "Unsuspend" : "Suspend",
                         tone: u.isSuspended ? "default" : "danger",
-                        onSelect: () => toggleFlag(u.id, "isSuspended"),
+                        onSelect: () => setSuspended(u, !u.isSuspended),
                       },
-                      {
-                        label: u.isDeactivated ? "Reactivate" : "Deactivate",
-                        onSelect: () => toggleFlag(u.id, "isDeactivated"),
-                      },
+                      ...(u.isDeactivated
+                        ? []
+                        : [
+                            {
+                              label: "Deactivate",
+                              onSelect: () => deactivate(u),
+                            },
+                          ]),
                     ]}
                   />
                 </td>
@@ -227,54 +251,69 @@ export default function AdminUsersPage() {
           wide
           icon={UserIcon}
           title={selected.name}
-          description={`${selected.email} · ${selected.department}`}
+          description={selected.email}
           onClose={() => setSelectedId(null)}
           footer={
             <>
+              {selected.kycStatus === "pending" && (
+                <>
+                  <Button
+                    variant="brand-outline"
+                    size="pill"
+                    disabled={busy}
+                    onClick={() => decideKyc(selected, "verified")}
+                  >
+                    Approve KYC
+                  </Button>
+                  <Button
+                    variant="danger-outline"
+                    size="pill"
+                    disabled={busy}
+                    onClick={() => decideKyc(selected, "rejected")}
+                  >
+                    Reject KYC
+                  </Button>
+                </>
+              )}
               <Button
-                variant={selected.isSuspended ? "brand-outline" : "danger-outline"}
+                variant={
+                  selected.isSuspended ? "brand-outline" : "danger-outline"
+                }
                 size="pill"
-                onClick={() => toggleFlag(selected.id, "isSuspended")}
+                disabled={busy}
+                onClick={() => setSuspended(selected, !selected.isSuspended)}
               >
                 {selected.isSuspended ? "Unsuspend" : "Suspend"}
               </Button>
-              <Button
-                variant="brand-outline"
-                size="pill"
-                onClick={() => toggleFlag(selected.id, "isDeactivated")}
-              >
-                {selected.isDeactivated ? "Reactivate" : "Deactivate"}
-              </Button>
+              {!selected.isDeactivated && (
+                <Button
+                  variant="brand-outline"
+                  size="pill"
+                  disabled={busy}
+                  onClick={() => deactivate(selected)}
+                >
+                  Deactivate
+                </Button>
+              )}
             </>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <ModalField label="Wallet balance">{naira(selected.walletBalance)}</ModalField>
+            <ModalField label="Role">
+              <StatusBadge tone={ROLE_TONES[selected.role]}>
+                {selected.role}
+              </StatusBadge>
+            </ModalField>
+            <ModalField label="Wallet balance">
+              {nairaFromKobo(selected.walletBalance ?? 0)}
+            </ModalField>
             <ModalField label="KYC status">
               <StatusBadge tone={KYC_TONES[selected.kycStatus]}>
                 {selected.kycStatus}
               </StatusBadge>
             </ModalField>
-            <ModalField label="Spaces">
-              <ul className="space-y-1 text-[13px]">
-                {selected.spaces.map((space) => (
-                  <li key={space} className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-                    {space}
-                  </li>
-                ))}
-              </ul>
-            </ModalField>
-            <ModalField label="KYC documents">
-              {selected.kycDocs.length ? (
-                <ul className="space-y-1 text-[13px] font-medium text-ink-soft">
-                  {selected.kycDocs.map((doc) => (
-                    <li key={doc}>{doc}</li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="text-ink-soft">None uploaded</span>
-              )}
+            <ModalField label="Matric number">
+              {selected.matricNo ?? "—"}
             </ModalField>
           </div>
         </AdminModal>

@@ -6,7 +6,6 @@ import {
   ArrowRight01Icon,
   Tick02Icon,
   PaintBoardIcon,
-  SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
 import {
   SPACE_THEMES,
@@ -15,13 +14,11 @@ import {
 
 export type SpaceSettings = {
   theme: SpaceThemeId;
-  requireApproval: boolean;
 };
 
 /**
- * Onboarding step (rep only): a couple of space defaults the rep can change
- * later. `theme` is the space colour (shared `SPACE_THEMES`, same list as the
- * dashboard manage page); `requireApproval` gates joins behind rep review (§4.4).
+ * Onboarding step (rep only): the space colour the rep can change later —
+ * `theme` uses the shared `SPACE_THEMES` (same list as the dashboard manage page).
  */
 export default function SpaceSettingsStep({
   defaultValues,
@@ -35,16 +32,13 @@ export default function SpaceSettingsStep({
   onSubmit: (data: SpaceSettings) => void;
 }) {
   const [theme, setTheme] = useState<SpaceThemeId>(defaultValues.theme);
-  const [requireApproval, setRequireApproval] = useState(
-    defaultValues.requireApproval,
-  );
 
   return (
     <form
       className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit({ theme, requireApproval });
+        onSubmit({ theme });
       }}
     >
       {/* Space theme */}
@@ -103,39 +97,6 @@ export default function SpaceSettingsStep({
           })}
         </ul>
       </div>
-
-      {/* Join approval */}
-      <label className="flex items-start justify-between gap-4 rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] p-4 cursor-pointer">
-        <span className="flex items-start gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e6f2ec] text-[#0b6e4f]">
-            <HugeiconsIcon icon={SecurityCheckIcon} size={18} />
-          </span>
-          <span className="flex flex-col gap-1">
-            <span className="text-[#1b2520] text-[14px] font-semibold leading-none">
-              Approve new members
-            </span>
-            <span className="text-[#7a847f] text-[12px] leading-snug">
-              Review each join request before students can pay dues.
-            </span>
-          </span>
-        </span>
-
-        <button
-          type="button"
-          role="switch"
-          aria-checked={requireApproval}
-          onClick={() => setRequireApproval((value) => !value)}
-          className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-300 cursor-pointer ${
-            requireApproval ? "bg-[#0b6e4f]" : "bg-[#d9e5df]"
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-300 ${
-              requireApproval ? "left-[22px]" : "left-0.5"
-            }`}
-          />
-        </button>
-      </label>
 
       <div className="mt-1 flex items-center gap-3">
         <button

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import SmoothScroll from "./components/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { AuthProvider } from "@/lib/auth/auth-context";
 import { PwaRegister } from "./components/pwa/PwaRegister";
 import { InstallBanner } from "./components/pwa/InstallBanner";
 import { NetworkIndicator } from "./components/pwa/NetworkIndicator";
@@ -116,10 +117,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SmoothScroll />
-          {children}
-          <NetworkIndicator />
-          <InstallBanner />
-          <Toaster position="top-center" />
+          <AuthProvider>
+            {children}
+            <NetworkIndicator />
+            <InstallBanner />
+          </AuthProvider>
+          <Toaster position="top-center" richColors />
           <PwaRegister />
         </ThemeProvider>
       </body>

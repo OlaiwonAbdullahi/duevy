@@ -189,7 +189,6 @@ sends them as `space`:
   "school": "University of Lagos",       // chosen from the `nigerian-universities` list
   "faculty": "Faculty of Science",       // optional
   "theme": "emerald",                    // space theme slug (§4) — emerald · ocean · royal · crimson · tangerine
-  "requireApproval": false,              // gate joins behind rep review (§4.4)
   "coRepInvites": ["corep@school.edu.ng"] // emails, optional — granted `co` on approval (§5.6)
 }
 ```

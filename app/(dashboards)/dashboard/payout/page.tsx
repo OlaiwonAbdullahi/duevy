@@ -1,61 +1,128 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  INITIAL_PAYOUTS,
-  PAYOUT_ACCOUNT,
-  TOTAL_COLLECTED,
-  accountLabel,
-  naira,
-} from "./_components/data";
+import { accountLabel, naira } from "./_components/data";
 import type { BankAccount, Payout } from "./_components/types";
+
+/** Placeholder until the rep's real account loads from the API. */
+const EMPTY_ACCOUNT: BankAccount = { bankName: "", accountName: "", accountNumber: "" };
 import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { PayoutAccountCard } from "./_components/PayoutAccountCard";
 import { PayoutHistory } from "./_components/PayoutHistory";
 import { WithdrawModal } from "./_components/WithdrawModal";
 import { EditAccountModal } from "./_components/EditAccountModal";
+import { useRepSpace } from "../_components/use-rep-space";
+import { fromKobo } from "../_components/format";
+import { timeAgo } from "../_components/notifications-data";
+import {
+  getPayoutSummary,
+  getPayoutAccount,
+  setPayoutAccount,
+  requestPayout,
+  listPayouts,
+} from "@/lib/api/payouts";
+import type { AccountEdit } from "./_components/EditAccountModal";
+import type { Payout as ApiPayout } from "@/lib/api/types";
+import { ApiError } from "@/lib/api/errors";
+
+/** API payout (kobo, ISO date) → history row. */
+function adaptPayout(p: ApiPayout): Payout {
+  return {
+    id: p.id,
+    amount: fromKobo(p.amount),
+    requestedAt: timeAgo(p.requestedAt),
+    reference: p.reference,
+    status: p.status,
+    account: p.account,
+  };
+}
 
 export default function PayoutPage() {
-  const [payouts, setPayouts] = useState<Payout[]>(INITIAL_PAYOUTS);
-  const [account, setAccount] = useState<BankAccount>(PAYOUT_ACCOUNT);
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [account, setAccount] = useState<BankAccount>(EMPTY_ACCOUNT);
+  const [hasAccount, setHasAccount] = useState(false);
+  const [available, setAvailable] = useState(0);
+  const [pending, setPending] = useState(0);
+  const [collected, setCollected] = useState(0);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  // Money already withdrawn (completed) or in flight (processing) is no longer
-  // available; failed payouts return to the pool.
-  const { available, pending } = useMemo(() => {
-    const claimed = payouts
-      .filter((p) => p.status === "completed" || p.status === "processing")
-      .reduce((sum, p) => sum + p.amount, 0);
-    const inFlight = payouts
-      .filter((p) => p.status === "processing")
-      .reduce((sum, p) => sum + p.amount, 0);
-    return { available: TOTAL_COLLECTED - claimed, pending: inFlight };
-  }, [payouts]);
+  async function refresh(id: string) {
+    const [summary, acct, history] = await Promise.all([
+      getPayoutSummary(id),
+      getPayoutAccount(id).catch(() => null), // no account set yet is fine
+      listPayouts(id),
+    ]);
+    setAvailable(fromKobo(summary.available));
+    setPending(fromKobo(summary.pending));
+    // Total ever in the department's favour — available + in-flight + paid out.
+    setCollected(fromKobo(summary.available + summary.pending + summary.lifetime));
+    if (acct && acct.accountNumber) {
+      setAccount({
+        bankName: acct.bankName ?? "",
+        accountName: acct.accountName ?? "",
+        accountNumber: acct.accountNumber,
+      });
+      setHasAccount(true);
+    } else {
+      setHasAccount(false);
+    }
+    setPayouts(history.map(adaptPayout));
+  }
 
-  const handleWithdraw = (amount: number) => {
-    const created: Payout = {
-      id: crypto.randomUUID(),
-      amount,
-      requestedAt: "Just now",
-      reference: `PYT-${Math.floor(90000 + Math.random() * 9999)}`,
-      status: "processing",
-      account: accountLabel(account),
-    };
-    setPayouts((list) => [created, ...list]);
-    setWithdrawOpen(false);
-    toast.success("Payout requested", {
-      description: `${naira(amount)} on its way to ${account.accountName}.`,
-    });
+  useEffect(() => {
+    if (!spaceId) return;
+    refresh(spaceId).catch(() => toast.error("Couldn't load your payout details."));
+  }, [spaceId]);
+
+  const handleWithdraw = async (amount: number) => {
+    if (!spaceId) return;
+    try {
+      await requestPayout(spaceId, { amount: amount * 100 });
+      setWithdrawOpen(false);
+      toast.success("Payout requested", {
+        description: `${naira(amount)} on its way to ${account.accountName}.`,
+      });
+      await refresh(spaceId);
+    } catch {
+      toast.error("Couldn't request the payout. Please try again.");
+    }
   };
 
-  const handleSaveAccount = (next: BankAccount) => {
-    setAccount(next);
-    setEditOpen(false);
-    toast.success("Payout account updated", {
-      description: `${next.bankName} · ${accountLabel(next)}`,
-    });
+  const handleSaveAccount = async (next: AccountEdit) => {
+    if (!spaceId) return;
+    try {
+      // The API strictly takes { bankCode, accountNumber } — the account name is
+      // resolved + verified server-side via Monnify name-enquiry.
+      await setPayoutAccount(spaceId, {
+        bankCode: next.bankCode,
+        accountNumber: next.accountNumber,
+      });
+      setEditOpen(false);
+      toast.success("Payout account updated", {
+        description: `${next.bankName} · ${accountLabel({
+          bankName: next.bankName,
+          accountName: "",
+          accountNumber: next.accountNumber,
+        })}`,
+      });
+      await refresh(spaceId);
+    } catch (err) {
+      const unverifiable =
+        err instanceof ApiError && err.code === "ACCOUNT_UNVERIFIABLE";
+      toast.error(
+        unverifiable ? "We couldn't verify that account" : "Couldn't update the account",
+        {
+          description: unverifiable
+            ? "Double-check the bank and account number and try again."
+            : "Something went wrong. Please try again.",
+        },
+      );
+    }
   };
 
   return (
@@ -75,11 +142,15 @@ export default function PayoutPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <PayoutBalanceCard
           available={available}
-          collected={TOTAL_COLLECTED}
+          collected={collected}
           pending={pending}
           onWithdraw={() => setWithdrawOpen(true)}
         />
-        <PayoutAccountCard account={account} onEdit={() => setEditOpen(true)} />
+        <PayoutAccountCard
+          account={account}
+          hasAccount={hasAccount}
+          onEdit={() => setEditOpen(true)}
+        />
       </div>
 
       <div className="mt-6">
@@ -96,6 +167,7 @@ export default function PayoutPage() {
       )}
       {editOpen && (
         <EditAccountModal
+          spaceId={spaceId ?? ""}
           account={account}
           onClose={() => setEditOpen(false)}
           onSave={handleSaveAccount}
