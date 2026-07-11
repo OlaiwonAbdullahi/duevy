@@ -20,12 +20,13 @@ import { KIND_GLYPH, SPACE_KIND_LABEL } from "./data";
 import { SpaceEmblem } from "./SpaceEmblem";
 import { BRAND_INPUT } from "../../_components/form-styles";
 
-const CODE_LENGTH = 5;
+const MIN_CODE = 4;
+const MAX_CODE = 20;
 
 /**
- * Search-by-code join. A student enters the 5-character code their rep shared;
- * once it resolves to a department (via `POST /spaces/lookup`), a preview
- * appears and they join in one tap — no request, no waiting for approval.
+ * Search-by-code join. A student enters the code their rep shared (any length,
+ * dashes allowed, e.g. "CSC29-LMYB"); once it resolves to a department via
+ * `POST /spaces/lookup`, a preview appears and they join in one tap.
  */
 export function JoinDepartmentCard({
   joinedIds,
@@ -39,13 +40,13 @@ export function JoinDepartmentCard({
   const [notFound, setNotFound] = useState(false);
 
   const normalized = code.trim().toUpperCase();
-  const complete = normalized.length === CODE_LENGTH;
+  const ready = normalized.length >= MIN_CODE;
   const alreadyJoined = match ? joinedIds.includes(match.id) : false;
 
-  // Resolve the code once complete. Debounced + race-guarded so a stale response
-  // can't overwrite a newer lookup.
+  // Resolve the code once it's long enough. Debounced + race-guarded so a stale
+  // response can't overwrite a newer lookup.
   useEffect(() => {
-    if (!complete) {
+    if (!ready) {
       setMatch(null);
       setNotFound(false);
       return;
@@ -67,14 +68,14 @@ export function JoinDepartmentCard({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [complete, normalized]);
+  }, [ready, normalized]);
 
   const handleChange = (value: string) => {
-    // Codes are alphanumeric and upper-cased; strip anything else as they type.
+    // Codes are upper-cased alphanumerics with optional dashes (e.g. CSC29-LMYB).
     const cleaned = value
       .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .slice(0, CODE_LENGTH);
+      .replace(/[^A-Z0-9-]/g, "")
+      .slice(0, MAX_CODE);
     setCode(cleaned);
   };
 
@@ -110,7 +111,7 @@ export function JoinDepartmentCard({
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
-          placeholder="Enter 5-character code"
+          placeholder="Enter your department code"
           aria-label="Department join code"
           className={cn(
             BRAND_INPUT,
@@ -185,8 +186,8 @@ export function JoinDepartmentCard({
                 className="shrink-0 text-ink-soft"
               />
               No department found for{" "}
-              <span className="font-semibold text-ink">{normalized}</span>. Check
-              the code with your rep.
+              <span className="font-semibold text-ink">{normalized}</span>.
+              Check the code with your rep.
             </motion.p>
           )
         )}

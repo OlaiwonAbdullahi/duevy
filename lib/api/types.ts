@@ -36,6 +36,11 @@ export type KycStatus = "unverified" | "pending" | "verified" | "rejected";
 export type SpaceMembershipSummary = {
   id: string;
   name: string;
+  short?: string;
+  kind?: SpaceKind;
+  hue?: EmblemHue;
+  /** Present on the rep membership entry — the department's join code. */
+  joinCode?: string | null;
   /** Viewer-relative. Reps see a rep-ish role on the department they manage. */
   membership: "member" | "guest" | "rep" | "lead" | "co";
 };
@@ -72,7 +77,7 @@ export type Space = {
   kind: SpaceKind;
   hue?: EmblemHue;
   theme?: SpaceThemeId | null;
-  about?: string;
+  about?: string | null;
   faculty?: string | null;
   school?: string;
   memberCount: number;
@@ -90,9 +95,11 @@ export type Due = {
   spaceId: string;
   title: string;
   note?: string | null;
-  /** Face amount (kobo). */
+  /** Face amount the rep set (kobo). */
   amount: number;
-  /** Amount actually charged to the payer — face + 3% processing fee. */
+  /** 3% processing fee added on top for the payer (kobo). */
+  processingFee?: number;
+  /** What the payer is actually charged — `amount + processingFee` (kobo). */
   payableAmount?: number;
   dueDate: string;
   category: DueCategory;
@@ -219,7 +226,14 @@ export type RepOverview = {
     collectionRate: number;
   };
   activeDues: RepDue[];
-  newMembers: Array<{ id: string; name: string; matricNo: string; level: string; joinedAt: string }>;
+  newMembers: Array<{
+    id: string;
+    name: string;
+    matricNo: string;
+    level: string | null;
+    email: string;
+    joinedAt: string;
+  }>;
 };
 
 // ---- Payouts (§10) --------------------------------------------------------

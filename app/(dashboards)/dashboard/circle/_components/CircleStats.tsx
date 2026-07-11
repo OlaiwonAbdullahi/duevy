@@ -6,11 +6,13 @@ export function CircleStats({
   studentCount,
   recentCount,
   code,
+  spaceName,
   onRegenerate,
 }: {
   studentCount: number;
   recentCount: number;
   code: string;
+  spaceName: string;
   onRegenerate: () => void;
 }) {
   return (
@@ -28,7 +30,7 @@ export function CircleStats({
         value={String(recentCount)}
         hint="Joined with the code"
       />
-      <JoinCodeStat code={code} onRegenerate={onRegenerate} />
+      <JoinCodeStat code={code} spaceName={spaceName} onRegenerate={onRegenerate} />
     </div>
   );
 }

@@ -94,7 +94,10 @@ export function RepOverview() {
       ) : loading ? (
         <div className="mt-6 grid animate-pulse gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 rounded-3xl border border-cloud bg-canvas" />
+            <div
+              key={i}
+              className="h-28 rounded-3xl border border-cloud bg-canvas"
+            />
           ))}
         </div>
       ) : (
@@ -204,7 +207,12 @@ export function RepOverview() {
                 </ul>
               )}
 
-              <Button variant="brand" size="pill-lg" asChild className="mt-5 w-full">
+              <Button
+                variant="brand"
+                size="pill-lg"
+                asChild
+                className="mt-5 w-full"
+              >
                 <Link href="/dashboard/create-dues">
                   Manage dues
                   <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
@@ -233,7 +241,11 @@ export function RepOverview() {
 
               {/* Newest members — students who just joined with the code. */}
               <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
-                <PanelHeader title="New members" href="/dashboard/circle" cta="Circle" />
+                <PanelHeader
+                  title="New members"
+                  href="/dashboard/circle"
+                  cta="Circle"
+                />
 
                 {members.length === 0 ? (
                   <EmptyState
@@ -255,7 +267,8 @@ export function RepOverview() {
                             {member.name}
                           </p>
                           <p className="truncate text-xs text-ink-soft">
-                            {member.matricNo} · {member.level}
+                            {member.matricNo}
+                            {member.level ? ` · ${member.level}` : ""}
                           </p>
                         </div>
                         <span className="shrink-0 text-[11px] text-ink-soft">

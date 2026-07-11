@@ -8,7 +8,7 @@ import { CircleStats } from "./_components/CircleStats";
 import { StudentsTable } from "./_components/StudentsTable";
 import { useRepSpace } from "../_components/use-rep-space";
 import { timeAgo } from "../_components/notifications-data";
-import { listMembers, regenerateJoinCode, getRepOverview } from "@/lib/api/rep";
+import { listMembers, getRepOverview, regenerateJoinCode } from "@/lib/api/rep";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -26,6 +26,8 @@ export default function CirclePage() {
     let cancelled = false;
     (async () => {
       try {
+        // Members roster + join code — the join code comes from the same
+        // `/spaces/{spaceId}/overview` the rep dashboard uses.
         const [members, overview] = await Promise.all([
           listMembers(spaceId, { perPage: 100 }),
           getRepOverview(spaceId),
@@ -62,9 +64,11 @@ export default function CirclePage() {
     try {
       const { code: next } = await regenerateJoinCode(spaceId);
       setCode(next);
-      toast.success("Join code regenerated", { description: "The old code no longer works." });
+      toast.success("Join code regenerated", {
+        description: "The old code no longer works — reshare the new one.",
+      });
     } catch {
-      toast.error("Couldn't regenerate the code.");
+      toast.error("Couldn't regenerate the code. Please try again.");
     }
   };
 
@@ -76,6 +80,7 @@ export default function CirclePage() {
         studentCount={students.length}
         recentCount={recentCount}
         code={code}
+        spaceName={repSpace?.name ?? "your department"}
         onRegenerate={regenerateCode}
       />
 

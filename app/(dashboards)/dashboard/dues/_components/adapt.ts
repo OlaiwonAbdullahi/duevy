@@ -29,16 +29,21 @@ export function adaptSpace(api: ApiSpace): Space {
   };
 }
 
-/** API due → dues-wall due (kobo → naira). */
+/** API due → dues-wall due. Students are charged `payableAmount` (face + 3% fee),
+ * so that's what we show/settle; kobo → naira. */
 export function adaptDue(api: ApiDue): Due {
+  // Join-code preview dues come back with a rep status ("active"); treat anything
+  // that isn't a settled/overdue student status as unpaid.
+  const status: Due["status"] =
+    api.status === "paid" || api.status === "overdue" ? api.status : "unpaid";
   return {
     id: api.id,
     spaceId: api.spaceId,
     title: api.title,
     note: api.note ?? "",
-    amount: api.amount / 100,
+    amount: (api.payableAmount ?? api.amount) / 100,
     dueDate: api.dueDate,
-    status: api.status,
+    status,
     category: api.category,
   };
 }

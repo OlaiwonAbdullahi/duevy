@@ -11,7 +11,6 @@ import {
   ArrowReloadHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { REP_SPACE } from "../../create-dues/_components/data";
 
 /**
  * The join code as a stat card — carries its own copy / share / regenerate
@@ -19,9 +18,11 @@ import { REP_SPACE } from "../../create-dues/_components/data";
  */
 export function JoinCodeStat({
   code,
+  spaceName,
   onRegenerate,
 }: {
   code: string;
+  spaceName: string;
   onRegenerate: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -38,7 +39,7 @@ export function JoinCodeStat({
   };
 
   const share = async () => {
-    const message = `Join ${REP_SPACE.name} on Duevy. Open the app, tap "Join a department" and enter code ${code}.`;
+    const message = `Join ${spaceName} on Duevy. Open the app, tap "Join a department" and enter code ${code}.`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({ title: "Join on Duevy", text: message });
@@ -57,13 +58,6 @@ export function JoinCodeStat({
     }
   };
 
-  const regenerate = () => {
-    onRegenerate();
-    toast.success("New code generated", {
-      description: "The old code no longer works.",
-    });
-  };
-
   return (
     <div className="rounded-3xl border border-cloud bg-canvas p-5">
       <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
@@ -75,7 +69,12 @@ export function JoinCodeStat({
       </p>
 
       <div className="mt-3 flex items-center gap-1.5">
-        <Button variant="brand" size="xs" onClick={copy} className="h-8 px-3 text-[11px] font-semibold">
+        <Button
+          variant="brand"
+          size="xs"
+          onClick={copy}
+          className="h-8 px-3 text-[11px] font-semibold"
+        >
           <HugeiconsIcon icon={copied ? CopyCheckIcon : Copy01Icon} size={13} />
           {copied ? "Copied" : "Copy"}
         </Button>
@@ -92,7 +91,7 @@ export function JoinCodeStat({
         <Button
           variant="brand-outline"
           size="icon-sm"
-          onClick={regenerate}
+          onClick={onRegenerate}
           title="Regenerate code"
           aria-label="Regenerate code"
           className="text-ink-soft hover:text-ink"
