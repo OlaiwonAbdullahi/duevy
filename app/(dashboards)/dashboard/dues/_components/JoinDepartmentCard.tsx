@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -24,9 +24,9 @@ const MIN_CODE = 4;
 const MAX_CODE = 20;
 
 /**
- * Search-by-code join. A student enters the code their rep shared (any length,
- * dashes allowed, e.g. "CSC29-LMYB"); once it resolves to a department via
- * `POST /spaces/lookup`, a preview appears and they join in one tap.
+ * Search-by-code join, two steps: enter the code and **Look up** the department
+ * (`POST /spaces/lookup`); once it resolves, a preview appears with a **Join**
+ * button. Codes may contain dashes (e.g. "CSC29-LMYB").
  */
 export function JoinDepartmentCard({
   joinedIds,
@@ -38,45 +38,34 @@ export function JoinDepartmentCard({
   const [code, setCode] = useState("");
   const [match, setMatch] = useState<JoinableDepartment | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [looking, setLooking] = useState(false);
 
   const normalized = code.trim().toUpperCase();
   const ready = normalized.length >= MIN_CODE;
   const alreadyJoined = match ? joinedIds.includes(match.id) : false;
 
-  // Resolve the code once it's long enough. Debounced + race-guarded so a stale
-  // response can't overwrite a newer lookup.
-  useEffect(() => {
-    if (!ready) {
-      setMatch(null);
-      setNotFound(false);
-      return;
-    }
-    let cancelled = false;
-    setNotFound(false);
-    const timer = setTimeout(async () => {
-      try {
-        const dept = await lookupSpace(normalized);
-        if (!cancelled) setMatch(adaptJoinable(dept));
-      } catch (err) {
-        if (!cancelled) {
-          setMatch(null);
-          setNotFound(!(err instanceof ApiError) || err.status === 404);
-        }
-      }
-    }, 350);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [ready, normalized]);
-
   const handleChange = (value: string) => {
     // Codes are upper-cased alphanumerics with optional dashes (e.g. CSC29-LMYB).
-    const cleaned = value
-      .toUpperCase()
-      .replace(/[^A-Z0-9-]/g, "")
-      .slice(0, MAX_CODE);
+    const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_CODE);
     setCode(cleaned);
+    // Editing the code invalidates any previous lookup result.
+    setMatch(null);
+    setNotFound(false);
+  };
+
+  const lookup = async () => {
+    if (!ready || looking) return;
+    setLooking(true);
+    setMatch(null);
+    setNotFound(false);
+    try {
+      const dept = await lookupSpace(normalized);
+      setMatch(adaptJoinable(dept));
+    } catch (err) {
+      setNotFound(!(err instanceof ApiError) || err.status === 404);
+    } finally {
+      setLooking(false);
+    }
   };
 
   const join = () => {
@@ -84,6 +73,7 @@ export function JoinDepartmentCard({
     onJoin(match);
     setCode("");
     setMatch(null);
+    setNotFound(false);
   };
 
   return (
@@ -97,7 +87,7 @@ export function JoinDepartmentCard({
             Join a department
           </h2>
           <p className="mt-0.5 text-xs text-ink-soft">
-            Got a code from your rep? Enter it to find your department and join.
+            Got a code from your rep? Enter it and look up your department.
           </p>
         </div>
       </div>
@@ -106,7 +96,12 @@ export function JoinDepartmentCard({
         <Input
           value={code}
           onChange={(event) => handleChange(event.target.value)}
-          onKeyDown={(event) => event.key === "Enter" && join()}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            // If a match is already showing, Enter confirms; otherwise it looks up.
+            if (match && !alreadyJoined) join();
+            else lookup();
+          }}
           inputMode="text"
           autoCapitalize="characters"
           autoComplete="off"
@@ -121,15 +116,15 @@ export function JoinDepartmentCard({
         <Button
           variant="brand"
           size="pill-xl"
-          onClick={join}
-          disabled={!match || alreadyJoined}
+          onClick={lookup}
+          disabled={!ready || looking}
           className="shrink-0"
         >
-          Join
+          {looking ? "Looking up…" : "Look up"}
         </Button>
       </div>
 
-      {/* Result region — swaps between the match preview and a "not found" note. */}
+      {/* Result region — the match preview (with a Join button) or a "not found" note. */}
       <AnimatePresence mode="wait" initial={false}>
         {match ? (
           <motion.div
@@ -140,15 +135,9 @@ export function JoinDepartmentCard({
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="mt-4 flex flex-col gap-4 rounded-2xl border border-cloud bg-paper p-4 sm:flex-row sm:items-center"
           >
-            <SpaceEmblem
-              space={match}
-              glyph={KIND_GLYPH[match.kind]}
-              size={56}
-            />
+            <SpaceEmblem space={match} glyph={KIND_GLYPH[match.kind]} size={56} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink">
-                {match.name}
-              </p>
+              <p className="truncate text-sm font-semibold text-ink">{match.name}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
                 <span>{SPACE_KIND_LABEL[match.kind]}</span>
                 <span className="text-cloud">•</span>
@@ -159,15 +148,26 @@ export function JoinDepartmentCard({
                   {match.memberCount.toLocaleString("en-NG")}
                 </span>
               </div>
-              <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-ink-soft">
-                {match.about}
-              </p>
+              {match.about && (
+                <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-ink-soft">
+                  {match.about}
+                </p>
+              )}
             </div>
-            {alreadyJoined && (
+            {alreadyJoined ? (
               <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand sm:self-center">
                 <HugeiconsIcon icon={CheckmarkCircle02Icon} size={13} />
                 Already joined
               </span>
+            ) : (
+              <Button
+                variant="brand"
+                size="pill"
+                onClick={join}
+                className="shrink-0 self-start sm:self-center"
+              >
+                Join department
+              </Button>
             )}
           </motion.div>
         ) : (
@@ -186,8 +186,8 @@ export function JoinDepartmentCard({
                 className="shrink-0 text-ink-soft"
               />
               No department found for{" "}
-              <span className="font-semibold text-ink">{normalized}</span>.
-              Check the code with your rep.
+              <span className="font-semibold text-ink">{normalized}</span>. Check the
+              code with your rep.
             </motion.p>
           )
         )}
