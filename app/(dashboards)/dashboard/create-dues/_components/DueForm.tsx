@@ -39,7 +39,7 @@ export function DueForm({
 }: {
   initial: RepDue | null;
   onCancel: () => void;
-  onSave: (draft: DueDraft) => void;
+  onSave: (draft: DueDraft) => Promise<void>;
 }) {
   const editing = !!initial;
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -50,6 +50,7 @@ export function DueForm({
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [allowGuests, setAllowGuests] = useState(initial?.allowGuests ?? false);
+  const [submitting, setSubmitting] = useState(false);
 
   const amount = Number(amountDigits || 0);
   const valid = title.trim().length > 1 && amount > 0 && dueDate !== "";
@@ -57,19 +58,24 @@ export function DueForm({
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 9);
   const formatDigits = (d: string) => (d ? Number(d).toLocaleString("en-NG") : "");
 
-  const submit = () => {
+  const submit = async () => {
     if (!valid) {
       toast.error("Add a title, amount and deadline first");
       return;
     }
-    onSave({
-      title: title.trim(),
-      note: note.trim(),
-      amount,
-      dueDate,
-      category,
-      allowGuests,
-    });
+    setSubmitting(true);
+    try {
+      await onSave({
+        title: title.trim(),
+        note: note.trim(),
+        amount,
+        dueDate,
+        category,
+        allowGuests,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -181,15 +187,25 @@ export function DueForm({
             <button
               type="button"
               onClick={submit}
-              disabled={!valid}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-50 cursor-pointer"
+              disabled={!valid || submitting}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
-              {editing ? "Save changes" : "Publish due"}
+              {submitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {submitting
+                ? editing
+                  ? "Saving changes…"
+                  : "Publishing…"
+                : editing
+                  ? "Save changes"
+                  : "Publish due"}
             </button>
             <button
               type="button"
               onClick={onCancel}
-              className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-full bg-paper text-sm font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer"
+              disabled={submitting}
+              className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-full bg-paper text-sm font-semibold text-ink transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>

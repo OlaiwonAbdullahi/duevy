@@ -42,11 +42,18 @@ export function listCards() {
 }
 
 export type SaveCardPayload = {
-  /** Tokenized card reference from the PSP inline SDK — raw PANs never touch the API. */
-  providerToken: string;
+  /**
+   * Tokenized card reference from the PSP (Monnify) inline SDK — raw PANs never
+   * touch the API. Attach it here once the inline SDK is integrated.
+   */
+  providerToken?: string;
+  brand: string;
+  last4: string;
+  expiry: string;
   isDefault?: boolean;
 };
 
+/** Save a tokenized card. The first card saved is always forced default. */
 export function saveCard(payload: SaveCardPayload) {
   return apiClient.post<Card>("/wallet/cards", payload);
 }

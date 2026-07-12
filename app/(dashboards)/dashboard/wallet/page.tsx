@@ -17,6 +17,7 @@ import {
   getWalletActivity,
   topUp,
   listCards,
+  saveCard,
   setDefaultCard,
   deleteCard,
   type WalletActivity,
@@ -166,19 +167,24 @@ export default function WalletPage() {
     }
   };
 
-  const handleAddCard = (card: Card) => {
-    // NOTE: real card capture needs the PSP inline tokenization SDK to produce a
-    // `providerToken` for `POST /wallet/cards`. That SDK isn't wired in this app
-    // yet, so we add the card locally; swap for `saveCard({ providerToken })`
-    // once tokenization lands.
-    setCards((list) => [
-      ...list.map((c) => (card.isDefault ? { ...c, isDefault: false } : c)),
-      card,
-    ]);
-    setAddCardOpen(false);
-    toast.success("Card added", {
-      description: `${card.brand} •••• ${card.last4}`,
-    });
+  const handleAddCard = async (card: Card) => {
+    try {
+      // Sends only real, non-sensitive card fields. The PSP (Monnify) inline SDK
+      // still needs to supply `providerToken` for the backend to accept this.
+      await saveCard({
+        brand: card.brand,
+        last4: card.last4,
+        expiry: card.expiry,
+        isDefault: card.isDefault,
+      });
+      setAddCardOpen(false);
+      toast.success("Card added", {
+        description: `${card.brand} •••• ${card.last4}`,
+      });
+      await refresh();
+    } catch {
+      toast.error("Couldn't add the card. Please try again.");
+    }
   };
 
   const removeCard = async (card: Card) => {
