@@ -140,7 +140,7 @@ export function RepOverview() {
               hint="Raise a new charge"
             />
             <QuickAction
-              href="/dashboard/collections"
+              href="/dashboard/create-dues"
               icon={Notification03Icon}
               label="Send reminders"
               hint="Nudge unpaid students"
@@ -164,7 +164,7 @@ export function RepOverview() {
             <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
               <PanelHeader
                 title="Active dues"
-                href="/dashboard/collections"
+                href="/dashboard/create-dues"
                 cta="Collections"
               />
 
@@ -232,7 +232,7 @@ export function RepOverview() {
                   </p>
                 </div>
                 <Button variant="brand" size="pill-lg" asChild>
-                  <Link href="/dashboard/collections">
+                  <Link href="/dashboard/create-dues">
                     Send reminders
                     <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
                   </Link>

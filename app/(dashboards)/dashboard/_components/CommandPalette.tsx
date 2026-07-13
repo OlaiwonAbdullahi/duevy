@@ -50,7 +50,6 @@ const PAGE_DESC: Record<string, string> = {
   "/dashboard/settings": "Profile, theme and preferences",
   "/dashboard/create-dues": "Raise and manage department dues",
   "/dashboard/circle": "Members and join requests",
-  "/dashboard/collections": "See who has paid each due",
   "/dashboard/polls": "Award votes, results and links",
   "/dashboard/payout": "Withdraw collected funds",
   "/dashboard/manage": "Department profile, reps and settings",
@@ -147,7 +146,7 @@ const REP_ACTIONS: Omit<CommandItem, "id">[] = [
     icon: Notification03Icon,
     label: "Send reminders",
     sublabel: "Nudge students who haven't paid",
-    href: "/dashboard/collections",
+    href: "/dashboard/create-dues",
     keywords: "send reminders nudge unpaid follow up chase",
   },
   {
@@ -221,7 +220,7 @@ function buildIndex(isRep: boolean): CommandItem[] {
     icon: Invoice01Icon,
     label: due.title,
     sublabel: `₦${due.amount.toLocaleString("en-NG")}`,
-    href: "/dashboard/collections",
+    href: "/dashboard/create-dues",
     keywords: `${due.title} ${due.category}`.toLowerCase(),
   }));
 

@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 export function CollectionsHeader({
   onDownload,
   onSendReminders,
+  sendingReminders = false,
 }: {
   onDownload: () => void;
   onSendReminders: () => void;
+  sendingReminders?: boolean;
 }) {
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -42,14 +44,19 @@ export function CollectionsHeader({
             variant="brand-outline"
             size="pill-lg"
             onClick={onSendReminders}
+            disabled={sendingReminders}
             className="shrink-0"
           >
-            <HugeiconsIcon
-              icon={Notification03Icon}
-              size={16}
-              className="text-brand"
-            />
-            Send reminders
+            {sendingReminders ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+            ) : (
+              <HugeiconsIcon
+                icon={Notification03Icon}
+                size={16}
+                className="text-brand"
+              />
+            )}
+            {sendingReminders ? "Sending…" : "Send reminders"}
           </Button>
 
           <ReminderInfo />

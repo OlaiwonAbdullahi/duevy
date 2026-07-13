@@ -23,9 +23,19 @@ export function JoinCodeStat({
 }: {
   code: string;
   spaceName: string;
-  onRegenerate: () => void;
+  onRegenerate: () => Promise<void>;
 }) {
   const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const regenerate = async () => {
+    setRegenerating(true);
+    try {
+      await onRegenerate();
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const copy = async () => {
     try {
@@ -91,12 +101,17 @@ export function JoinCodeStat({
         <Button
           variant="brand-outline"
           size="icon-sm"
-          onClick={onRegenerate}
+          onClick={regenerate}
+          disabled={regenerating}
           title="Regenerate code"
           aria-label="Regenerate code"
           className="text-ink-soft hover:text-ink"
         >
-          <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={14} />
+          {regenerating ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink-soft/30 border-t-ink-soft" />
+          ) : (
+            <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={14} />
+          )}
         </Button>
       </div>
     </div>

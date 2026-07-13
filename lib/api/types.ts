@@ -189,7 +189,7 @@ export type CollectionStudent = {
   id: string;
   name: string;
   matricNo: string;
-  level: string;
+  level: string | null;
   email: string;
   status: "paid" | "unpaid";
   paidAt: string | null;

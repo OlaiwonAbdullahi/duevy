@@ -17,6 +17,7 @@ export function RepsCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
   const [reps, setReps] = useState<Rep[]>([]);
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -52,11 +53,14 @@ export function RepsCard() {
       toast.error("Enter a valid email address.");
       return;
     }
+    setInviting(true);
     try {
       await inviteRep(spaceId, email);
       toast.success("Invite sent", { description: email });
     } catch {
       toast.error("Couldn't send the invite.");
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -66,9 +70,13 @@ export function RepsCard() {
       title="Reps & roles"
       description="People who can manage dues and approvals for this department."
       action={
-        <Button variant="brand" size="pill" onClick={invite}>
-          <HugeiconsIcon icon={Add01Icon} size={14} className="size-3.5" />
-          Invite
+        <Button variant="brand" size="pill" onClick={invite} disabled={inviting}>
+          {inviting ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          ) : (
+            <HugeiconsIcon icon={Add01Icon} size={14} className="size-3.5" />
+          )}
+          {inviting ? "Inviting…" : "Invite"}
         </Button>
       }
     >

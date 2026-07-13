@@ -22,13 +22,14 @@ export function AddCardModal({
   onAdd,
 }: {
   onClose: () => void;
-  onAdd: (card: Card) => void;
+  onAdd: (card: Card) => Promise<void>;
 }) {
   const [number, setNumber] = useState("");
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
   const [makeDefault, setMakeDefault] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const digits = number.replace(/\D/g, "");
   const brand = brandFromNumber(digits);
@@ -43,15 +44,20 @@ export function AddCardModal({
     /^\d{2}\/\d{2}$/.test(expiry) &&
     cvv.length >= 3;
 
-  const submit = () => {
+  const submit = async () => {
     if (!valid) return;
-    onAdd({
-      id: crypto.randomUUID(),
-      brand,
-      last4: digits.slice(-4),
-      expiry,
-      isDefault: makeDefault,
-    });
+    setSubmitting(true);
+    try {
+      await onAdd({
+        id: crypto.randomUUID(),
+        brand,
+        last4: digits.slice(-4),
+        expiry,
+        isDefault: makeDefault,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const onExpiryChange = (raw: string) => {
@@ -145,11 +151,14 @@ export function AddCardModal({
       <Button
         variant="brand"
         size="pill-xl"
-        disabled={!valid}
+        disabled={!valid || submitting}
         onClick={submit}
         className="mt-6 w-full"
       >
-        Add card
+        {submitting && (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        )}
+        {submitting ? "Adding card…" : "Add card"}
       </Button>
 
       <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-ink-soft">

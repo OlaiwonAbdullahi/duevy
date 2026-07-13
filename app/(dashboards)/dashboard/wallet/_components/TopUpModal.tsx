@@ -30,30 +30,39 @@ export function TopUpModal({
   cards: Card[];
   defaultCard: Card | undefined;
   onClose: () => void;
-  onConfirm: (amount: number, via: TopUpSource) => void;
+  onConfirm: (amount: number, via: TopUpSource) => Promise<void>;
 }) {
   const [amount, setAmount] = useState<number | "">("");
   const [method, setMethod] = useState<TopUpMethod>(
     cards.length ? "card" : "online",
   );
   const [cardId, setCardId] = useState(defaultCard?.id ?? "");
+  const [submitting, setSubmitting] = useState(false);
 
   const selectedCard = cards.find((c) => c.id === cardId) ?? defaultCard;
   const value = typeof amount === "number" ? amount : 0;
   const amountOk = value >= 100;
   const valid = amountOk && (method === "online" || !!selectedCard);
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!valid) return;
-    if (method === "card" && selectedCard) {
-      onConfirm(value, { source: "card", card: selectedCard });
-    } else {
-      onConfirm(value, { source: "online" });
+    setSubmitting(true);
+    try {
+      if (method === "card" && selectedCard) {
+        await onConfirm(value, { source: "card", card: selectedCard });
+      } else {
+        await onConfirm(value, { source: "online" });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const ctaLabel =
-    method === "online"
+  const ctaLabel = submitting
+    ? method === "online"
+      ? "Redirecting…"
+      : "Topping up…"
+    : method === "online"
       ? "Continue to Monnify"
       : amountOk
         ? `Top up ${naira(value)}`
@@ -177,12 +186,15 @@ export function TopUpModal({
       <Button
         variant="brand"
         size="pill-xl"
-        disabled={!valid}
+        disabled={!valid || submitting}
         onClick={confirm}
         className="mt-6 w-full"
       >
+        {submitting && (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        )}
         {ctaLabel}
-        {method === "online" && valid && (
+        {!submitting && method === "online" && valid && (
           <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
         )}
       </Button>

@@ -23,12 +23,23 @@ export function WithdrawModal({
   available: number;
   account: BankAccount;
   onClose: () => void;
-  onConfirm: (amount: number) => void;
+  onConfirm: (amount: number) => Promise<void>;
 }) {
   const [amount, setAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const parsed = Number(amount.replace(/[^0-9]/g, ""));
   const tooMuch = parsed > available;
   const valid = parsed > 0 && !tooMuch;
+
+  const confirm = async () => {
+    if (!valid) return;
+    setSubmitting(true);
+    try {
+      await onConfirm(parsed);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Modal title="Withdraw funds" icon={MoneySend01Icon} onClose={onClose}>
@@ -93,18 +104,23 @@ export function WithdrawModal({
         <button
           type="button"
           onClick={onClose}
-          className="h-12 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          disabled={submitting}
+          className="h-12 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           Cancel
         </button>
         <button
           type="button"
-          disabled={!valid}
-          onClick={() => valid && onConfirm(parsed)}
+          disabled={!valid || submitting}
+          onClick={confirm}
           className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          <HugeiconsIcon icon={MoneySend01Icon} size={16} />
-          Withdraw
+          {submitting ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          ) : (
+            <HugeiconsIcon icon={MoneySend01Icon} size={16} />
+          )}
+          {submitting ? "Requesting…" : "Withdraw"}
         </button>
       </div>
     </Modal>

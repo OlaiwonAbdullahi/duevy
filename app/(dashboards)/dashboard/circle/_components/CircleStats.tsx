@@ -13,7 +13,7 @@ export function CircleStats({
   recentCount: number;
   code: string;
   spaceName: string;
-  onRegenerate: () => void;
+  onRegenerate: () => Promise<void>;
 }) {
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-3">

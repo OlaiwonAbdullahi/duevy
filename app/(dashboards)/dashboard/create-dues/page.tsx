@@ -15,6 +15,7 @@ import { naira } from "./_components/data";
 import type { DueDraft, RepDue, RepDueStatus } from "./_components/types";
 import { DueListRow } from "./_components/DueListRow";
 import { DueForm } from "./_components/DueForm";
+import { DueCollections } from "./_components/DueCollections";
 import { EmptyState } from "../_components/EmptyState";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
 import { useRepSpace } from "../_components/use-rep-space";
@@ -60,8 +61,9 @@ export default function CreateDuesPage() {
   const spaceId = repSpace?.id;
 
   const [dues, setDues] = useState<RepDue[]>([]);
-  const [mode, setMode] = useState<"list" | "form">("list");
+  const [mode, setMode] = useState<"list" | "form" | "collections">("list");
   const [editing, setEditing] = useState<RepDue | null>(null);
+  const [viewingDue, setViewingDue] = useState<RepDue | null>(null);
   const [toDelete, setToDelete] = useState<RepDue | null>(null);
 
   useEffect(() => {
@@ -97,6 +99,10 @@ export default function CreateDuesPage() {
   const openEdit = (due: RepDue) => {
     setEditing(due);
     setMode("form");
+  };
+  const openCollections = (due: RepDue) => {
+    setViewingDue(due);
+    setMode("collections");
   };
 
   const save = async (draft: DueDraft) => {
@@ -150,6 +156,20 @@ export default function CreateDuesPage() {
               initial={editing}
               onCancel={() => setMode("list")}
               onSave={save}
+            />
+          </motion.div>
+        ) : mode === "collections" && viewingDue && spaceId ? (
+          <motion.div
+            key="collections"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            <DueCollections
+              spaceId={spaceId}
+              due={viewingDue}
+              onBack={() => setMode("list")}
             />
           </motion.div>
         ) : (
@@ -226,6 +246,7 @@ export default function CreateDuesPage() {
                       due={due}
                       onEdit={openEdit}
                       onDelete={setToDelete}
+                      onViewCollections={openCollections}
                     />
                   ))}
                 </ul>

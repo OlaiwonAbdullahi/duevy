@@ -63,11 +63,6 @@ export const REP_LINKS: NavLink[] = [
   },
   { label: "Circle", href: "/dashboard/circle", icon: UserGroup03Icon }, // members etc.
   {
-    label: "Collections",
-    href: "/dashboard/collections",
-    icon: UserMultipleIcon,
-  }, // who's paid / unpaid
-  {
     label: "Create Vote Poll",
     href: "/dashboard/polls",
     icon: CheckmarkSquare01Icon,

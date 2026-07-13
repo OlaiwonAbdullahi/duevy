@@ -71,7 +71,7 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     title: "Payment received",
     detail: "Amina Bello paid ₦7,500 for the departmental levy.",
     time: "5h ago",
-    href: "/dashboard/collections",
+    href: "/dashboard/create-dues",
     read: false,
   },
   {

@@ -31,12 +31,13 @@ export function EditAccountModal({
   spaceId: string;
   account: BankAccount;
   onClose: () => void;
-  onSave: (next: AccountEdit) => void;
+  onSave: (next: AccountEdit) => Promise<void>;
 }) {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState(account.accountNumber);
+  const [saving, setSaving] = useState(false);
 
   // Name-enquiry state — the resolved holder name the rep confirms before saving.
   const [resolvedName, setResolvedName] = useState<string | null>(null);
@@ -117,6 +118,16 @@ export function EditAccountModal({
 
   const canSave = inputsReady && resolvedName !== null;
 
+  const save = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await onSave({ bankCode, bankName, accountNumber });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Modal title="Edit payout account" icon={BankIcon} onClose={onClose}>
       <div className="flex flex-col gap-4">
@@ -184,17 +195,21 @@ export function EditAccountModal({
         <button
           type="button"
           onClick={onClose}
-          className="h-12 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          disabled={saving}
+          className="h-12 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           Cancel
         </button>
         <button
           type="button"
-          disabled={!canSave}
-          onClick={() => canSave && onSave({ bankCode, bankName, accountNumber })}
-          className="h-12 flex-1 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          disabled={!canSave || saving}
+          onClick={save}
+          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          Save account
+          {saving && (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          )}
+          {saving ? "Saving…" : "Save account"}
         </button>
       </div>
     </Modal>

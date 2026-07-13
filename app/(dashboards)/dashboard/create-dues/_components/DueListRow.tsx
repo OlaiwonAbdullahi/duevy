@@ -3,6 +3,7 @@ import {
   PencilEdit01Icon,
   Delete02Icon,
   Clock01Icon,
+  UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import {
   relativeDue,
@@ -16,10 +17,12 @@ export function DueListRow({
   due,
   onEdit,
   onDelete,
+  onViewCollections,
 }: {
   due: RepDue;
   onEdit: (due: RepDue) => void;
   onDelete: (due: RepDue) => void;
+  onViewCollections: (due: RepDue) => void;
 }) {
   const rel = relativeDue(due.dueDate);
   const status = STATUS_META[due.status];
@@ -75,6 +78,15 @@ export function DueListRow({
           {naira(due.amount)}
         </p>
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onViewCollections(due)}
+            aria-label={`View who paid ${due.title}`}
+            title="Collections"
+            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-brand cursor-pointer"
+          >
+            <HugeiconsIcon icon={UserMultipleIcon} size={16} />
+          </button>
           <button
             type="button"
             onClick={() => onEdit(due)}
