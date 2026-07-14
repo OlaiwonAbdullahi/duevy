@@ -73,37 +73,41 @@ export function DueCollections({
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
+  const [sendingReminders, setSendingReminders] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      console.group(`[collections] ${due.title} (${due.id})`);
-      console.log("request →", { spaceId, dueId: due.id, due });
+      console.log(`[collections] REQUEST ${due.title}`, { spaceId, dueId: due.id });
       try {
         const res = await getCollections(spaceId, due.id, { perPage: 200 });
-        console.log("raw response →", res);
-        console.log("meta →", res.meta);
-        console.log("totals →", res.data?.totals);
-        console.log("students →", res.data?.students);
-        console.table(res.data?.students ?? []);
+        console.log(`[collections] SUCCESS ${due.title}`, {
+          totals: res.data?.totals,
+          students: res.data?.students,
+          meta: res.meta,
+          raw: res,
+        });
         if (cancelled) return;
         const { data } = res;
         setStudents((data.students ?? []).map(adaptStudent));
         setTotals(data.totals ? adaptTotals(data.totals) : EMPTY_TOTALS);
       } catch (err) {
+        console.error(`[collections] FAILED ${due.title}`, {
+          status: err instanceof ApiError ? err.status : undefined,
+          code: err instanceof ApiError ? err.code : undefined,
+          message: err instanceof Error ? err.message : String(err),
+          err,
+        });
         if (cancelled) return;
         // No roster yet (e.g. a fresh/draft due) can 404 — show it as empty.
         if (err instanceof ApiError && err.status === 404) {
-          console.warn("404 — no roster yet, treating as empty");
           setStudents([]);
           setTotals(EMPTY_TOTALS);
         } else {
-          console.error("getCollections failed →", err);
           toast.error("Couldn't load the collection roster.");
         }
       } finally {
-        console.groupEnd();
         if (!cancelled) setLoading(false);
       }
     })();
@@ -157,6 +161,7 @@ export function DueCollections({
       });
       return;
     }
+    setSendingReminders(true);
     try {
       await remindUnpaid(spaceId, due.id);
       toast.success("Reminders sent", {
@@ -166,6 +171,8 @@ export function DueCollections({
       });
     } catch {
       toast.error("Couldn't send reminders. They may be rate-limited (once per day).");
+    } finally {
+      setSendingReminders(false);
     }
   };
 
@@ -191,9 +198,18 @@ export function DueCollections({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="brand-outline" size="pill" onClick={handleReminders}>
-            <HugeiconsIcon icon={Notification03Icon} size={15} />
-            Remind unpaid
+          <Button
+            variant="brand-outline"
+            size="pill"
+            onClick={handleReminders}
+            disabled={sendingReminders}
+          >
+            {sendingReminders ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+            ) : (
+              <HugeiconsIcon icon={Notification03Icon} size={15} />
+            )}
+            {sendingReminders ? "Sending…" : "Remind unpaid"}
           </Button>
           <Button
             variant="brand-outline"
