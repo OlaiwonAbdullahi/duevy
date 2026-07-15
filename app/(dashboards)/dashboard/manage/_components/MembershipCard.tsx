@@ -1,63 +1,64 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
-import { UserGroup03Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UserGroup03Icon, Clock01Icon } from "@hugeicons/core-free-icons";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
-import { ToggleRow } from "../../settings/_components/Toggle";
+import { Toggle } from "../../settings/_components/Toggle";
 
-type Prefs = {
-  codeOpen: boolean;
-  requireMatric: boolean;
-  allowGuests: boolean;
-  listInDirectory: boolean;
-};
+const ROWS = [
+  {
+    title: "Allow joining with code",
+    description:
+      "Students who enter your join code become members instantly. Manage the code from Circle.",
+    checked: true,
+  },
+  {
+    title: "Require matric to join",
+    description: "Ask for a matric number when joining, and only accept ones on your class list.",
+    checked: false,
+  },
+  {
+    title: "Allow guest payments",
+    description: "Non-members can pay dues you mark as open to guests.",
+    checked: false,
+  },
+  {
+    title: "List in student directory",
+    description: "Show this department when students search for spaces to join.",
+    checked: true,
+  },
+];
 
-/** How students get into the department space and pay. Applies instantly. */
+/**
+ * Preview of upcoming membership controls — there's no backend endpoint for
+ * these yet (only name/short/about/hue/theme are settable via `PATCH
+ * /spaces/{id}`), so every row is shown locked rather than silently no-op
+ * "saving" a preference that never reaches the server.
+ */
 export function MembershipCard() {
-  const [prefs, setPrefs] = useState<Prefs>({
-    codeOpen: true,
-    requireMatric: false,
-    allowGuests: false,
-    listInDirectory: true,
-  });
-
-  const set = (key: keyof Prefs, label: string) => (value: boolean) => {
-    setPrefs((p) => ({ ...p, [key]: value }));
-    toast.success(`${label} ${value ? "on" : "off"}`);
-  };
-
   return (
     <SettingsCard
       icon={UserGroup03Icon}
       title="Membership & access"
       description="Control how students join and who can pay your dues."
     >
-      <div className="flex flex-col">
-        <ToggleRow
-          title="Allow joining with code"
-          description="Students who enter your join code become members instantly. Manage the code from Circle."
-          checked={prefs.codeOpen}
-          onChange={set("codeOpen", "Code joining")}
-        />
-        <ToggleRow
-          title="Require matric to join"
-          description="Ask for a matric number when joining, and only accept ones on your class list."
-          checked={prefs.requireMatric}
-          onChange={set("requireMatric", "Matric check")}
-        />
-        <ToggleRow
-          title="Allow guest payments"
-          description="Non-members can pay dues you mark as open to guests."
-          checked={prefs.allowGuests}
-          onChange={set("allowGuests", "Guest payments")}
-        />
-        <ToggleRow
-          title="List in student directory"
-          description="Show this department when students search for spaces to join."
-          checked={prefs.listInDirectory}
-          onChange={set("listInDirectory", "Directory listing")}
-        />
+      <div className="mb-4 flex items-center gap-2 rounded-2xl bg-paper px-4 py-2.5 text-xs text-ink-soft">
+        <HugeiconsIcon icon={Clock01Icon} size={14} className="shrink-0" />
+        Coming soon — these controls aren&apos;t live yet.
+      </div>
+      <div className="flex flex-col opacity-60">
+        {ROWS.map((row) => (
+          <div
+            key={row.title}
+            className="flex items-center justify-between gap-4 border-t border-cloud py-4 first:border-t-0 first:pt-0"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink">{row.title}</p>
+              <p className="mt-0.5 text-xs text-ink-soft">{row.description}</p>
+            </div>
+            <Toggle checked={row.checked} onChange={() => {}} label={row.title} disabled />
+          </div>
+        ))}
       </div>
     </SettingsCard>
   );

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { newCategory, newNominee } from "./data";
-import type { Nominee, PollCategory } from "./types";
+import type { EditorCategory, EditorNominee } from "./types";
 
 /**
  * The poll form builder: a rep adds award categories, and inside each, the
@@ -22,10 +22,10 @@ export function CategoriesEditor({
   categories,
   onChange,
 }: {
-  categories: PollCategory[];
-  onChange: (next: PollCategory[]) => void;
+  categories: EditorCategory[];
+  onChange: (next: EditorCategory[]) => void;
 }) {
-  const patchCategory = (id: string, patch: Partial<PollCategory>) =>
+  const patchCategory = (id: string, patch: Partial<EditorCategory>) =>
     onChange(categories.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
   const removeCategory = (id: string) =>
@@ -33,7 +33,7 @@ export function CategoriesEditor({
 
   const addCategory = () => onChange([...categories, newCategory()]);
 
-  const setNominees = (categoryId: string, nominees: Nominee[]) =>
+  const setNominees = (categoryId: string, nominees: EditorNominee[]) =>
     patchCategory(categoryId, { nominees });
 
   return (
@@ -94,8 +94,8 @@ function NomineeList({
   nominees,
   onChange,
 }: {
-  nominees: Nominee[];
-  onChange: (next: Nominee[]) => void;
+  nominees: EditorNominee[];
+  onChange: (next: EditorNominee[]) => void;
 }) {
   const setName = (id: string, name: string) =>
     onChange(nominees.map((n) => (n.id === id ? { ...n, name } : n)));

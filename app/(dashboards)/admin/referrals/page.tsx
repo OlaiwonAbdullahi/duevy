@@ -31,6 +31,18 @@ const RISK_TONES: Record<RiskTier, StatusTone> = {
   high: "bad",
 };
 
+const RESOLVE_STATUS: Record<"approve" | "void" | "claw_back", ReferralFlagStatus> = {
+  approve: "paid",
+  void: "voided",
+  claw_back: "clawed_back",
+};
+
+const RESOLVE_LABEL: Record<"approve" | "void" | "claw_back", string> = {
+  approve: "approved",
+  void: "voided",
+  claw_back: "clawed back",
+};
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-NG", {
     day: "numeric",
@@ -82,13 +94,13 @@ export default function AdminReferralsPage() {
     );
   }, [summaries, search, riskFilter]);
 
-  async function settleFlag(flag: ReferralFlag, action: "void" | "claw_back") {
+  async function settleFlag(flag: ReferralFlag, action: "approve" | "void" | "claw_back") {
     setBusyFlagId(flag.id);
     try {
       await resolveReferralFlag(flag.id, { action });
-      const nextStatus: ReferralFlagStatus = action === "void" ? "voided" : "clawed_back";
+      const nextStatus = RESOLVE_STATUS[action];
       setFlags((prev) => prev.map((f) => (f.id === flag.id ? { ...f, status: nextStatus } : f)));
-      toast.success(`${flag.id} ${action === "void" ? "voided" : "clawed back"}.`);
+      toast.success(`${flag.id} ${RESOLVE_LABEL[action]}.`);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't settle this flag.");
     } finally {
@@ -246,6 +258,14 @@ export default function AdminReferralsPage() {
                   </div>
                   {flag.status === "pending" && (
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="brand"
+                        size="pill"
+                        disabled={busyFlagId === flag.id}
+                        onClick={() => settleFlag(flag, "approve")}
+                      >
+                        Approve
+                      </Button>
                       <Button
                         variant="brand-outline"
                         size="pill"

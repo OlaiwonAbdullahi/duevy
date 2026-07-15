@@ -25,17 +25,23 @@ export function DatePicker({
   value,
   onChange,
   placeholder = "Pick a date",
+  min,
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  /** yyyy-mm-dd floor for selectable dates. Defaults to today (no past dates). */
+  min?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = value ? new Date(`${value}T00:00:00`) : undefined;
 
-  // Deadlines can't be in the past.
+  // Deadlines can't be in the past — or, for an active poll being extended,
+  // can't be earlier than its current deadline.
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const floor = min ? new Date(`${min}T00:00:00`) : today;
+  const earliest = floor > today ? floor : today;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,7 +71,7 @@ export function DatePicker({
           mode="single"
           selected={selected}
           defaultMonth={selected}
-          disabled={{ before: today }}
+          disabled={{ before: earliest }}
           onSelect={(date) => {
             onChange(date ? toISODate(date) : "");
             setOpen(false);

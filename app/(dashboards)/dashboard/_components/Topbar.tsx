@@ -79,7 +79,7 @@ export default function Topbar({
               aria-label="Account menu"
               className="grid place-items-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              <UserAvatar name={user?.name ?? ""} size={36} />
+              <UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} size={36} />
             </button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-56 p-1.5">

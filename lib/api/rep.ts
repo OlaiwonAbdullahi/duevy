@@ -141,3 +141,23 @@ export type SpaceProfilePatch = {
 export function updateSpaceProfile(spaceId: string, payload: SpaceProfilePatch) {
   return apiClient.patch<Space>(`/spaces/${spaceId}`, payload);
 }
+
+/**
+ * Hand off lead rep to an existing co-rep. Security-sensitive — re-verifies the
+ * caller's password. `400 INVALID_CREDENTIALS` if wrong, `409` if the target
+ * isn't already a co-rep of the space (invite them first).
+ */
+export function transferLead(spaceId: string, payload: { userId: string; password: string }) {
+  return apiClient.post<{ spaceId: string; newLeadId: string }>(
+    `/spaces/${spaceId}/transfer-lead`,
+    payload,
+  );
+}
+
+/**
+ * Permanently retires the space (hides it from student search/join). Payouts
+ * must be fully cleared first — `409 PENDING_PAYOUT` / `409 HELD_BALANCE`.
+ */
+export function archiveSpace(spaceId: string, payload: { password: string; reason?: string }) {
+  return apiClient.post<void>(`/spaces/${spaceId}/archive`, payload);
+}

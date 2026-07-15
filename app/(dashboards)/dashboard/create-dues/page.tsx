@@ -18,6 +18,7 @@ import { DueForm } from "./_components/DueForm";
 import { DueCollections } from "./_components/DueCollections";
 import { EmptyState } from "../_components/EmptyState";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
+import { ListSkeleton, StatRowSkeleton } from "../_components/Skeleton";
 import { useRepSpace } from "../_components/use-rep-space";
 import {
   listRepDues,
@@ -61,6 +62,7 @@ export default function CreateDuesPage() {
   const spaceId = repSpace?.id;
 
   const [dues, setDues] = useState<RepDue[]>([]);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"list" | "form" | "collections">("list");
   const [editing, setEditing] = useState<RepDue | null>(null);
   const [viewingDue, setViewingDue] = useState<RepDue | null>(null);
@@ -75,6 +77,8 @@ export default function CreateDuesPage() {
         if (!cancelled) setDues(apiDues.map(adaptRepDue));
       } catch {
         if (!cancelled) toast.error("Couldn't load your dues.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -154,6 +158,7 @@ export default function CreateDuesPage() {
           >
             <DueForm
               initial={editing}
+              spaceName={repSpace?.name ?? "your department"}
               onCancel={() => setMode("list")}
               onSave={save}
             />
@@ -202,56 +207,67 @@ export default function CreateDuesPage() {
               </button>
             </header>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <StatCard
-                icon={Invoice01Icon}
-                label="Active dues"
-                value={String(totals.activeCount)}
-              />
-              <StatCard
-                icon={Wallet01Icon}
-                label="Collected"
-                value={naira(totals.collected)}
-                tone="brand"
-              />
-              <StatCard
-                icon={UserMultipleIcon}
-                label="Outstanding"
-                value={naira(totals.outstanding)}
-              />
-            </div>
+            {loading ? (
+              <div className="mt-6">
+                <StatRowSkeleton />
+                <div className="mt-4">
+                  <ListSkeleton />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <StatCard
+                    icon={Invoice01Icon}
+                    label="Active dues"
+                    value={String(totals.activeCount)}
+                  />
+                  <StatCard
+                    icon={Wallet01Icon}
+                    label="Collected"
+                    value={naira(totals.collected)}
+                    tone="brand"
+                  />
+                  <StatCard
+                    icon={UserMultipleIcon}
+                    label="Outstanding"
+                    value={naira(totals.outstanding)}
+                  />
+                </div>
 
-            <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
-              {dues.length === 0 ? (
-                <EmptyState
-                  icon={Invoice01Icon}
-                  title="No dues yet"
-                  description="Raise your first due for the department and start tracking payments."
-                  action={
-                    <button
-                      type="button"
-                      onClick={openCreate}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                    >
-                      <HugeiconsIcon icon={Add01Icon} size={15} />
-                      Create due
-                    </button>
-                  }
-                />
-              ) : (
-                <ul className="flex flex-col">
-                  {dues.map((due) => (
-                    <DueListRow
-                      key={due.id}
-                      due={due}
-                      onEdit={openEdit}
-                      onDelete={setToDelete}
-                      onViewCollections={openCollections}
+                <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+                  {dues.length === 0 ? (
+                    <EmptyState
+                      icon={Invoice01Icon}
+                      title="No dues yet"
+                      description="Raise your first due for the department and start tracking payments."
+                      action={
+                        <button
+                          type="button"
+                          onClick={openCreate}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                        >
+                          <HugeiconsIcon icon={Add01Icon} size={15} />
+                          Create due
+                        </button>
+                      }
                     />
-                  ))}
-                </ul>
-              )}
-            </div>
+                  ) : (
+                    <ul className="flex flex-col">
+                      {dues.map((due) => (
+                        <DueListRow
+                          key={due.id}
+                          due={due}
+                          onEdit={openEdit}
+                          onDelete={setToDelete}
+                          onViewCollections={openCollections}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

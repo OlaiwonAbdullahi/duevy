@@ -9,6 +9,7 @@ import {
   InformationCircleIcon,
   Megaphone01Icon,
   PencilEdit01Icon,
+  LockIcon,
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,21 +17,32 @@ import { BRAND_INPUT } from "../../_components/form-styles";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { ToggleRow } from "../../settings/_components/Toggle";
 import { DatePicker } from "../../create-dues/_components/DatePicker";
-import { REP_SPACE } from "../../create-dues/_components/data";
 import { CategoriesEditor } from "./CategoriesEditor";
 import { naira, newCategory } from "./data";
-import type { Poll, PollCategory, PollDraft } from "./types";
+import type { EditorCategory, Poll } from "./types";
+import type { PollDraft, PollPatch } from "@/lib/api/polls";
 
 export function PollForm({
   initial,
+  spaceName,
+  submitting,
   onCancel,
-  onSave,
+  onCreate,
+  onUpdate,
 }: {
   initial: Poll | null;
+  spaceName: string;
+  submitting: boolean;
   onCancel: () => void;
-  onSave: (draft: PollDraft) => void;
+  onCreate: (draft: PollDraft, publish: boolean) => void;
+  onUpdate: (patch: PollPatch) => void;
 }) {
   const editing = !!initial;
+  // Once active, structure (membersOnly/paid/amountPerVote) is locked and the
+  // deadline can only be extended. Categories can never be edited after
+  // creation at all — the API has no endpoint for it.
+  const locked = initial?.status === "active";
+
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [deadline, setDeadline] = useState(initial?.deadline ?? "");
@@ -39,14 +51,11 @@ export function PollForm({
   const [amountDigits, setAmountDigits] = useState(
     initial?.amountPerVote ? String(initial.amountPerVote) : "",
   );
-  const [categories, setCategories] = useState<PollCategory[]>(
-    initial?.categories ?? [newCategory()],
-  );
+  const [categories, setCategories] = useState<EditorCategory[]>([newCategory()]);
 
   const amountPerVote = Number(amountDigits || 0);
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 7);
-  const formatDigits = (d: string) =>
-    d ? Number(d).toLocaleString("en-NG") : "";
+  const formatDigits = (d: string) => (d ? Number(d).toLocaleString("en-NG") : "");
 
   // A category counts as ready when it has a title and at least two named
   // nominees — those are the ones students actually get to vote between.
@@ -61,18 +70,21 @@ export function PollForm({
   );
   const nomineeCount = useMemo(
     () =>
-      categories.reduce(
-        (sum, c) => sum + c.nominees.filter((n) => n.name.trim() !== "").length,
-        0,
-      ),
-    [categories],
+      editing
+        ? initial!.categories.reduce((sum, c) => sum + c.nominees.length, 0)
+        : categories.reduce(
+            (sum, c) => sum + c.nominees.filter((n) => n.name.trim() !== "").length,
+            0,
+          ),
+    [editing, initial, categories],
   );
 
   const validAmount = !paid || amountPerVote > 0;
-  const valid =
-    title.trim().length > 1 && readyCategories.length >= 1 && validAmount;
+  const valid = editing
+    ? title.trim().length > 1
+    : title.trim().length > 1 && readyCategories.length >= 1 && validAmount;
 
-  const submit = () => {
+  const submit = (publish?: boolean) => {
     if (!valid) {
       toast.error(
         paid && amountPerVote <= 0
@@ -81,20 +93,48 @@ export function PollForm({
       );
       return;
     }
-    // Persist only the fleshed-out categories/nominees.
+
+    if (editing) {
+      const patch: PollPatch = {};
+      if (title.trim() !== initial!.title) patch.title = title.trim();
+      if (description.trim() !== (initial!.description ?? "")) {
+        patch.description = description.trim();
+      }
+      if (deadline !== initial!.deadline) patch.deadline = deadline;
+      if (!locked) {
+        if (membersOnly !== initial!.membersOnly) patch.membersOnly = membersOnly;
+        if (paid !== initial!.paid) patch.paid = paid;
+        if (paid && amountPerVote !== initial!.amountPerVote) {
+          patch.amountPerVote = amountPerVote;
+        }
+      }
+      if (Object.keys(patch).length === 0) {
+        toast.info("No changes to save");
+        return;
+      }
+      onUpdate(patch);
+      return;
+    }
+
+    // Persist only the fleshed-out categories/nominees; strip client-side ids.
     const cleaned = readyCategories.map((c) => ({
-      ...c,
-      nominees: c.nominees.filter((n) => n.name.trim() !== ""),
+      title: c.title.trim(),
+      nominees: c.nominees
+        .filter((n) => n.name.trim() !== "")
+        .map((n) => ({ name: n.name.trim() })),
     }));
-    onSave({
-      title: title.trim(),
-      description: description.trim(),
-      deadline,
-      membersOnly,
-      paid,
-      amountPerVote: paid ? amountPerVote : 0,
-      categories: cleaned,
-    });
+    onCreate(
+      {
+        title: title.trim(),
+        description: description.trim(),
+        deadline,
+        membersOnly,
+        paid,
+        amountPerVote: paid ? amountPerVote : 0,
+        categories: cleaned,
+      },
+      publish ?? true,
+    );
   };
 
   return (
@@ -119,7 +159,7 @@ export function PollForm({
           <h1 className="text-xl font-semibold tracking-tight text-ink">
             {editing ? "Edit poll" : "Create a vote poll"}
           </h1>
-          <p className="text-[13px] text-ink-soft">For {REP_SPACE.name}</p>
+          <p className="text-[13px] text-ink-soft">For {spaceName}</p>
         </div>
       </div>
 
@@ -158,25 +198,39 @@ export function PollForm({
 
               <div>
                 <Label className="block text-xs font-medium text-ink-soft">
-                  Voting deadline
+                  Voting deadline {locked && "(extend only)"}
                 </Label>
                 <div className="mt-1.5">
-                  <DatePicker value={deadline} onChange={setDeadline} />
+                  <DatePicker
+                    value={deadline}
+                    onChange={setDeadline}
+                    min={locked ? initial!.deadline : undefined}
+                  />
                 </div>
               </div>
 
               <div className="border-t border-cloud pt-1">
                 <ToggleRow
                   title="Members only"
-                  description="Only verified department students can vote "
+                  description={
+                    locked
+                      ? "Locked once the poll is live."
+                      : "Only verified department students can vote "
+                  }
                   checked={membersOnly}
                   onChange={setMembersOnly}
+                  disabled={locked}
                 />
                 <ToggleRow
                   title="Paid voting"
-                  description="Each vote must be paid for before it counts."
+                  description={
+                    locked
+                      ? "Locked once the poll is live."
+                      : "Each vote must be paid for before it counts."
+                  }
                   checked={paid}
                   onChange={setPaid}
+                  disabled={locked}
                 />
               </div>
 
@@ -191,12 +245,13 @@ export function PollForm({
                     </span>
                     <Input
                       inputMode="numeric"
+                      disabled={locked}
                       value={formatDigits(amountDigits)}
                       onChange={(e) =>
                         setAmountDigits(onlyDigits(e.target.value))
                       }
                       placeholder="100"
-                      className="h-11 border-0 bg-transparent px-1 text-sm text-ink shadow-none focus-visible:ring-0 placeholder:text-ink-soft"
+                      className="h-11 border-0 bg-transparent px-1 text-sm text-ink shadow-none focus-visible:ring-0 placeholder:text-ink-soft disabled:opacity-60"
                     />
                   </div>
                   <p className="mt-1 text-[11px] text-ink-soft">
@@ -210,12 +265,32 @@ export function PollForm({
           <SettingsCard
             icon={Award01Icon}
             title="Awards & nominees"
-            description="Add each award category and the nominees students vote between."
+            description={
+              editing
+                ? "Locked after creation — nominees can't be added or removed once a poll exists."
+                : "Add each award category and the nominees students vote between."
+            }
           >
-            <CategoriesEditor
-              categories={categories}
-              onChange={setCategories}
-            />
+            {editing ? (
+              <div className="flex flex-col gap-3">
+                {initial!.categories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="rounded-2xl border border-cloud bg-paper p-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <HugeiconsIcon icon={LockIcon} size={13} className="text-ink-soft" />
+                      <p className="text-sm font-semibold text-ink">{category.title}</p>
+                    </div>
+                    <p className="mt-1.5 text-xs text-ink-soft">
+                      {category.nominees.map((n) => n.name).join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <CategoriesEditor categories={categories} onChange={setCategories} />
+            )}
           </SettingsCard>
         </div>
 
@@ -228,7 +303,7 @@ export function PollForm({
             <dl className="mt-4 flex flex-col gap-3">
               <SummaryRow
                 label="Awards"
-                value={String(readyCategories.length)}
+                value={String(editing ? initial!.categories.length : readyCategories.length)}
               />
               <SummaryRow label="Nominees" value={String(nomineeCount)} />
               <SummaryRow
@@ -247,12 +322,22 @@ export function PollForm({
           <div className="rounded-3xl border border-cloud bg-canvas p-4">
             <button
               type="button"
-              onClick={submit}
-              disabled={!valid}
+              onClick={() => submit(editing ? undefined : true)}
+              disabled={!valid || submitting}
               className="inline-flex h-12 w-full items-center justify-center rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              {editing ? "Save changes" : "Publish poll"}
+              {submitting ? "Saving…" : editing ? "Save changes" : "Publish poll"}
             </button>
+            {!editing && (
+              <button
+                type="button"
+                onClick={() => submit(false)}
+                disabled={!valid || submitting}
+                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-full bg-paper text-sm font-semibold text-ink transition-colors duration-300 hover:bg-cloud disabled:opacity-50 cursor-pointer"
+              >
+                Save as draft
+              </button>
+            )}
             <button
               type="button"
               onClick={onCancel}
@@ -266,8 +351,9 @@ export function PollForm({
                 size={13}
                 className="mt-px shrink-0"
               />
-              Publishing generates a shareable voting link you can send to
-              students.
+              {editing
+                ? "Categories and nominees can't be changed once a poll exists."
+                : "Publishing generates a shareable voting link you can send to students."}
             </p>
           </div>
         </aside>

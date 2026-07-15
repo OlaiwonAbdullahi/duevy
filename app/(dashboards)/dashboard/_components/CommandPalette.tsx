@@ -26,9 +26,10 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { HugeIcon } from "./nav-config";
 import { REP_LINKS, STUDENT_LINKS } from "./nav-config";
-import { INITIAL_REP_DUES } from "../create-dues/_components/data";
-import { INITIAL_STUDENTS } from "../circle/_components/data";
-import { INITIAL_POLLS } from "../polls/_components/data";
+import { useRepSpace } from "./use-rep-space";
+import { listRepDues, listMembers } from "@/lib/api/rep";
+import { listPolls } from "@/lib/api/polls";
+import type { RepDue, SpaceMember, Poll } from "@/lib/api/types";
 
 type CommandItem = {
   id: string;
@@ -190,7 +191,10 @@ function withIds(items: Omit<CommandItem, "id">[], prefix: string): CommandItem[
   return items.map((item, i) => ({ ...item, id: `${prefix}-${i}` }));
 }
 
-function buildIndex(isRep: boolean): CommandItem[] {
+function buildIndex(
+  isRep: boolean,
+  repData: { dues: RepDue[]; students: SpaceMember[]; polls: Poll[] },
+): CommandItem[] {
   const pages = (isRep ? [...STUDENT_LINKS, ...REP_LINKS] : STUDENT_LINKS)
     // De-dupe the shared Overview link.
     .filter(
@@ -214,27 +218,27 @@ function buildIndex(isRep: boolean): CommandItem[] {
 
   if (!isRep) return [...actions, ...pages, ...help];
 
-  const dues: CommandItem[] = INITIAL_REP_DUES.map((due) => ({
+  const dues: CommandItem[] = repData.dues.map((due) => ({
     id: `due-${due.id}`,
     group: "Dues",
     icon: Invoice01Icon,
     label: due.title,
-    sublabel: `₦${due.amount.toLocaleString("en-NG")}`,
+    sublabel: `₦${(due.amount / 100).toLocaleString("en-NG")}`,
     href: "/dashboard/create-dues",
     keywords: `${due.title} ${due.category}`.toLowerCase(),
   }));
 
-  const students: CommandItem[] = INITIAL_STUDENTS.map((student) => ({
+  const students: CommandItem[] = repData.students.map((student) => ({
     id: `student-${student.id}`,
     group: "Students",
     icon: UserGroup03Icon,
     label: student.name,
-    sublabel: `${student.matricNo} · ${student.level}`,
+    sublabel: `${student.matricNo} · ${student.level ?? ""}`,
     href: "/dashboard/circle",
     keywords: `${student.name} ${student.matricNo} ${student.email}`.toLowerCase(),
   }));
 
-  const polls: CommandItem[] = INITIAL_POLLS.map((poll) => ({
+  const polls: CommandItem[] = repData.polls.map((poll) => ({
     id: `poll-${poll.id}`,
     group: "Polls",
     icon: Award01Icon,
@@ -257,17 +261,38 @@ export function CommandPalette({
   isRep: boolean;
 }) {
   const router = useRouter();
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [repData, setRepData] = useState<{
+    dues: RepDue[];
+    students: SpaceMember[];
+    polls: Poll[];
+  }>({ dues: [], students: [], polls: [] });
   const listRef = useRef<HTMLUListElement>(null);
 
-  const index = useMemo(() => buildIndex(isRep), [isRep]);
+  const index = useMemo(() => buildIndex(isRep, repData), [isRep, repData]);
 
-  // Reset query + selection whenever the palette opens (no effect needed).
+  // Reset query + selection whenever the palette opens, and refresh the rep's
+  // dues/students/polls so search results aren't stale from last time it was open.
   const handleOpenChange = (next: boolean) => {
     if (next) {
       setQuery("");
       setActive(0);
+      if (isRep && spaceId) {
+        Promise.all([
+          listRepDues(spaceId),
+          listMembers(spaceId, { perPage: 50 }),
+          listPolls(spaceId),
+        ])
+          .then(([dues, students, polls]) =>
+            setRepData({ dues, students: students.data, polls }),
+          )
+          .catch(() => {
+            // Non-fatal — the palette still works with pages/actions only.
+          });
+      }
     }
     onOpenChange(next);
   };

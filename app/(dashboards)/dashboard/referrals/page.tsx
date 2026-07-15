@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -15,44 +15,65 @@ import {
 } from "@hugeicons/core-free-icons";
 import { StatCard } from "../_components/StatCard";
 import { IconChip } from "../_components/IconChip";
+import { Skeleton } from "../_components/Skeleton";
 import type { HugeIcon } from "../_components/nav-config";
-import {
-  REFERRAL_CODE,
-  REWARD_PER_REFERRAL,
-  referralLink,
-  naira,
-  REFERRALS,
-  STATUS_META,
-  summarizeReferrals,
-  formatDate,
-} from "./_components/data";
+import { naira, STATUS_META, summarizeReferrals, formatDate, initials } from "./_components/data";
 import { EmptyState } from "../_components/EmptyState";
+import { getReferrals } from "@/lib/api/referrals";
+import type { ReferralsResponse } from "@/lib/api/types";
 
-const STEPS: { icon: HugeIcon; title: string; body: string }[] = [
-  {
-    icon: Share08Icon,
-    title: "Share your link",
-    body: "Send your code to coursemates and friends on other campuses.",
-  },
-  {
-    icon: UserAdd01Icon,
-    title: "They join Duevy",
-    body: "They sign up with your link and set up their wallet.",
-  },
-  {
-    icon: Coins01Icon,
-    title: "You both earn",
-    body: `You each get ${naira(REWARD_PER_REFERRAL)} once they pay their first due.`,
-  },
-];
+function buildSteps(rewardPerReferral: number): { icon: HugeIcon; title: string; body: string }[] {
+  return [
+    {
+      icon: Share08Icon,
+      title: "Share your link",
+      body: "Send your code to coursemates and friends on other campuses.",
+    },
+    {
+      icon: UserAdd01Icon,
+      title: "They join Duevy",
+      body: "They sign up with your link and set up their wallet.",
+    },
+    {
+      icon: Coins01Icon,
+      title: "You both earn",
+      body: `You each get ${naira(rewardPerReferral)} once they pay their first due.`,
+    },
+  ];
+}
 
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
-  const stats = summarizeReferrals();
+  const [data, setData] = useState<ReferralsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        const res = await getReferrals();
+        if (!cancelled) setData(res);
+      } catch {
+        if (!cancelled) {
+          setError(true);
+          toast.error("Couldn't load your referrals.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const copy = async () => {
+    if (!data) return;
     try {
-      await navigator.clipboard.writeText(referralLink);
+      await navigator.clipboard.writeText(data.link);
       setCopied(true);
       toast.success("Referral link copied");
       setTimeout(() => setCopied(false), 2000);
@@ -62,17 +83,18 @@ export default function ReferralsPage() {
   };
 
   const share = async () => {
-    const data = {
+    if (!data) return;
+    const shareData = {
       title: "Join me on Duevy",
-      text: `Pay your campus dues the easy way. Use my code ${REFERRAL_CODE} and we both earn ${naira(
-        REWARD_PER_REFERRAL,
+      text: `Pay your campus dues the easy way. Use my code ${data.code} and we both earn ${naira(
+        data.rewardPerReferral,
       )}.`,
-      url: referralLink,
+      url: data.link,
     };
     // Native share sheet on mobile; fall back to copying the link elsewhere.
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share(data);
+        await navigator.share(shareData);
       } catch {
         // user cancelled the share sheet — nothing to do
       }
@@ -80,6 +102,13 @@ export default function ReferralsPage() {
       await copy();
     }
   };
+
+  // The API's amounts are kobo; the summary rows carry over in whatever unit
+  // `getReferrals` returned, so convert once here.
+  const rewardPerReferral = data ? data.rewardPerReferral / 100 : 0;
+  const referrals = data?.referrals ?? [];
+  const stats = summarizeReferrals(referrals);
+  const steps = buildSteps(rewardPerReferral);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -123,11 +152,11 @@ export default function ReferralsPage() {
           <span className="text-xs font-medium">Referral rewards</span>
         </div>
         <p className="relative mt-3 max-w-md text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          Give {naira(REWARD_PER_REFERRAL)}, get {naira(REWARD_PER_REFERRAL)}
+          Give {naira(rewardPerReferral)}, get {naira(rewardPerReferral)}
         </p>
         <p className="relative mt-2 max-w-md text-sm text-white/80">
           Share your code. When a friend joins and pays their first due, you both
-          earn {naira(REWARD_PER_REFERRAL)}.
+          earn {naira(rewardPerReferral)}.
         </p>
 
         {/* Code + actions. */}
@@ -137,14 +166,19 @@ export default function ReferralsPage() {
               <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">
                 Your code
               </p>
-              <p className="truncate text-lg font-semibold tracking-tight text-white">
-                {REFERRAL_CODE}
-              </p>
+              {loading ? (
+                <div className="mt-1 h-6 w-28 animate-pulse rounded bg-white/20" />
+              ) : (
+                <p className="truncate text-lg font-semibold tracking-tight text-white">
+                  {data?.code ?? "—"}
+                </p>
+              )}
             </div>
             <button
               type="button"
               onClick={copy}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-4 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-white/25 cursor-pointer"
+              disabled={!data}
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-4 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={15} />
               {copied ? "Copied" : "Copy"}
@@ -153,7 +187,8 @@ export default function ReferralsPage() {
           <button
             type="button"
             onClick={share}
-            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud cursor-pointer"
+            disabled={!data}
+            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           >
             <HugeiconsIcon icon={Share08Icon} size={16} />
             Share invite
@@ -162,16 +197,24 @@ export default function ReferralsPage() {
       </div>
 
       {/* Stats. */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <StatCard icon={AddTeamIcon} label="Friends invited" value={String(stats.invited)} />
-        <StatCard icon={UserAdd01Icon} label="Signed up" value={String(stats.joined)} />
-        <StatCard
-          icon={Coins01Icon}
-          label="Total earned"
-          value={naira(stats.earned)}
-          tone="brand"
-        />
-      </div>
+      {loading ? (
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-24 rounded-3xl" />
+          <Skeleton className="h-24 rounded-3xl" />
+          <Skeleton className="h-24 rounded-3xl" />
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <StatCard icon={AddTeamIcon} label="Friends invited" value={String(stats.invited)} />
+          <StatCard icon={UserAdd01Icon} label="Signed up" value={String(stats.joined)} />
+          <StatCard
+            icon={Coins01Icon}
+            label="Total earned"
+            value={naira(stats.earned / 100)}
+            tone="brand"
+          />
+        </div>
+      )}
 
       {/* How it works. */}
       <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
@@ -179,7 +222,7 @@ export default function ReferralsPage() {
           How it works
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <div key={step.title} className="rounded-2xl border border-cloud bg-paper/50 p-4">
               <div className="flex items-center gap-2">
                 <IconChip icon={step.icon} />
@@ -200,12 +243,26 @@ export default function ReferralsPage() {
           <h2 className="text-base font-semibold tracking-tight text-ink">
             Your referrals
           </h2>
-          <span className="rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand">
-            {naira(stats.earned)} earned
-          </span>
+          {!loading && (
+            <span className="rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand">
+              {naira(stats.earned / 100)} earned
+            </span>
+          )}
         </div>
 
-        {REFERRALS.length === 0 ? (
+        {loading ? (
+          <ul className="mt-3 flex animate-pulse flex-col gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <li key={i} className="h-14 rounded-2xl bg-paper" />
+            ))}
+          </ul>
+        ) : error ? (
+          <EmptyState
+            icon={UserAdd01Icon}
+            title="Couldn't load referrals"
+            description="Something went wrong reaching the server. Refresh the page to try again."
+          />
+        ) : referrals.length === 0 ? (
           <EmptyState
             icon={UserAdd01Icon}
             title="No referrals yet"
@@ -213,7 +270,7 @@ export default function ReferralsPage() {
           />
         ) : (
           <ul className="mt-3 flex flex-col">
-            {REFERRALS.map((r) => {
+            {referrals.map((r) => {
               const status = STATUS_META[r.status];
               return (
                 <li
@@ -221,7 +278,7 @@ export default function ReferralsPage() {
                   className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0 sm:gap-4"
                 >
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-[13px] font-semibold text-ink-soft">
-                    {r.initials}
+                    {initials(r.name)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">
@@ -235,7 +292,7 @@ export default function ReferralsPage() {
                     {r.reward > 0 ? (
                       <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
                         <HugeiconsIcon icon={Coins01Icon} size={14} />+
-                        {naira(r.reward)}
+                        {naira(r.reward / 100)}
                       </span>
                     ) : (
                       <span className="text-sm font-semibold text-ink-soft">

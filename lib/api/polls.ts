@@ -19,10 +19,49 @@ export type PollDraft = {
   amountPerVote?: number;
   membersOnly?: boolean;
   categories: Array<{ title: string; nominees: Array<{ name: string }> }>;
+  /** Defaults `false` (draft). Set `true` to publish immediately on creation. */
+  publish?: boolean;
 };
 
 export function createPoll(spaceId: string, payload: PollDraft) {
   return apiClient.post<Poll>(`/spaces/${spaceId}/polls`, payload);
+}
+
+/**
+ * While `draft`, everything except `categories` is editable. Once `active`,
+ * `membersOnly`/`paid`/`amountPerVote` are locked and `deadline` may only be
+ * extended — the server rejects otherwise with `409 POLL_STRUCTURE_LOCKED`.
+ * `409 POLL_CLOSED` once closed. There is no endpoint to edit categories/nominees
+ * after creation.
+ */
+export type PollPatch = Partial<
+  Pick<PollDraft, "title" | "description" | "deadline" | "membersOnly" | "paid" | "amountPerVote">
+>;
+
+export function updatePoll(spaceId: string, pollId: string, payload: PollPatch) {
+  return apiClient.patch<Poll>(`/spaces/${spaceId}/polls/${pollId}`, payload);
+}
+
+/** draft → active. Makes the poll's public link live and votable. */
+export function publishPoll(spaceId: string, pollId: string) {
+  return apiClient.post<Poll>(`/spaces/${spaceId}/polls/${pollId}/publish`);
+}
+
+/** active → closed. Stops new votes and reveals tallies. Idempotent. */
+export function closePoll(spaceId: string, pollId: string) {
+  return apiClient.post<Poll>(`/spaces/${spaceId}/polls/${pollId}/close`);
+}
+
+export type PollResults = {
+  poll: Pick<Poll, "id" | "title" | "status">;
+  totalVotes: number;
+  revenue: number;
+  categories: Poll["categories"];
+};
+
+/** Results/analytics screen for a poll. */
+export function getPollResults(spaceId: string, pollId: string) {
+  return apiClient.get<PollResults>(`/spaces/${spaceId}/polls/${pollId}/results`);
 }
 
 export type VoteSelection = { categoryId: string; nomineeId: string; quantity: number };

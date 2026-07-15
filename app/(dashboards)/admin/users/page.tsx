@@ -60,7 +60,6 @@ export default function AdminUsersPage() {
         q: debouncedSearch || undefined,
         perPage: 100,
       });
-      console.log(data);
       setUsers(data);
     } catch {
       toast.error("Couldn't load users.");

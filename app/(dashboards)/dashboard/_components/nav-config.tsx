@@ -46,13 +46,14 @@ export const STUDENT_LINKS: NavLink[] = [
     href: "/dashboard/transactions",
     icon: ReceiptDollarIcon,
   },
-  { label: "Referrals", href: "/dashboard/referrals", icon: GiftIcon },
   { label: "Settings", href: "/dashboard/settings", icon: Settings02Icon },
 ];
 
 /**
  * Rep-only tools. Shown *in addition* to the student links when the viewer is a
  * rep — a rep runs the department's collections on top of their own wallet.
+ * Referrals lives here (not in STUDENT_LINKS) because the backend restricts
+ * the referral program to reps/admins — a plain student gets a 403.
  */
 export const REP_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard", icon: Home01Icon },
@@ -68,6 +69,7 @@ export const REP_LINKS: NavLink[] = [
     icon: CheckmarkSquare01Icon,
   },
   { label: "Payout", href: "/dashboard/payout", icon: MoneySend01Icon },
+  { label: "Referrals", href: "/dashboard/referrals", icon: GiftIcon },
   { label: "Manage dept.", href: "/dashboard/manage", icon: Building03Icon },
 ];
 

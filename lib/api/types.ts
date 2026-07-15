@@ -151,6 +151,27 @@ export type Card = {
   isDefault: boolean;
 };
 
+/** Returned by `POST /wallet/cards` — a hosted checkout to verify + tokenize the card. */
+export type SaveCardResult = {
+  checkoutUrl: string;
+  reference: string;
+};
+
+export type NotificationPreferences = {
+  email: { dueReminders: boolean; paymentReceipts: boolean };
+  push: { dueReminders: boolean; payments: boolean; circleActivity: boolean };
+};
+
+/** A signed-in device/browser session, for the "manage devices" screen. */
+export type Session = {
+  id: string;
+  device: string;
+  ip: string;
+  lastSeenAt: string;
+  /** The session tied to the cookie on the request that fetched this list. */
+  current: boolean;
+};
+
 export type NotificationTone = "brand" | "amber" | "rose";
 
 export type NotificationItem = {

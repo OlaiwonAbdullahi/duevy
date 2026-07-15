@@ -1,44 +1,15 @@
-export type PollStatus = "active" | "draft" | "closed";
+export type { Poll, PollCategory, PollNominee, PollStatus } from "@/lib/api/types";
 
-export type Nominee = {
+/** A nominee row while it's still being built in the form — has a client-side
+ *  id for React keys/edits, but no server id or vote count yet. */
+export type EditorNominee = {
   id: string;
   name: string;
-  votes: number;
 };
 
-/** One award being voted on, e.g. "Best Dressed", with its nominees. */
-export type PollCategory = {
+/** A category row while it's still being built in the form. */
+export type EditorCategory = {
   id: string;
   title: string;
-  nominees: Nominee[];
+  nominees: EditorNominee[];
 };
-
-export type Poll = {
-  id: string;
-  title: string;
-  description: string;
-  /** yyyy-mm-dd voting deadline. */
-  deadline: string;
-  status: PollStatus;
-  /** When true, only verified department members can vote (one vote each). */
-  membersOnly: boolean;
-  /** When true, each vote must be paid for before it counts. */
-  paid: boolean;
-  /** Price of a single vote, in naira. Only meaningful when `paid` is true. */
-  amountPerVote: number;
-  categories: PollCategory[];
-  /** Slug used in the shareable voting link. */
-  slug: string;
-};
-
-/** The editable slice a rep fills in when building or editing a poll. */
-export type PollDraft = Pick<
-  Poll,
-  | "title"
-  | "description"
-  | "deadline"
-  | "membersOnly"
-  | "paid"
-  | "amountPerVote"
-  | "categories"
->;

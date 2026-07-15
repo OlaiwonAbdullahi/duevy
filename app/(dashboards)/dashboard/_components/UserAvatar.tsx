@@ -5,20 +5,31 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
- * A user's avatar, generated from their name by tapback.co. Falls back to the
- * name's initials on a brand plate if the image can't load. `unoptimized` sends
- * the webp straight through, so no remote-image config is needed.
+ * A user's avatar. Prefers a real uploaded `src` (from `/me/avatar`); otherwise
+ * falls back to one generated from their name by tapback.co, and finally to the
+ * name's initials on a brand plate if neither image can load. `unoptimized`
+ * sends the webp straight through, so no remote-image config is needed.
  */
 export function UserAvatar({
   name,
+  src,
   size = 36,
   className,
 }: {
   name: string;
+  /** A real avatar URL (`user.avatarUrl`), when the user has uploaded one. */
+  src?: string | null;
   size?: number;
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  // A new src (e.g. right after an upload) deserves a fresh attempt even if a
+  // previous one failed.
+  const [trackedSrc, setTrackedSrc] = useState(src);
+  if (src !== trackedSrc) {
+    setTrackedSrc(src);
+    setFailed(false);
+  }
 
   const initials =
     name
@@ -46,7 +57,7 @@ export function UserAvatar({
 
   return (
     <Image
-      src={`https://tapback.co/api/avatar/${encodeURIComponent(name)}.webp`}
+      src={src || `https://tapback.co/api/avatar/${encodeURIComponent(name)}.webp`}
       alt={name}
       width={size}
       height={size}

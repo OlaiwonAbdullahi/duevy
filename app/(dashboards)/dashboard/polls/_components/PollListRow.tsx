@@ -3,33 +3,40 @@ import {
   Analytics01Icon,
   Award01Icon,
   Clock01Icon,
-  Delete02Icon,
   Link01Icon,
   PencilEdit01Icon,
+  SentIcon,
+  StopCircleIcon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons";
 import { relativeDue } from "../../dues/_components/data";
-import { naira, POLL_STATUS_META, pollRevenue, totalVotes } from "./data";
+import { naira, POLL_STATUS_META } from "./data";
 import type { Poll } from "./types";
 
 export function PollListRow({
   poll,
+  busy,
   onAnalytics,
   onEdit,
   onShare,
-  onDelete,
+  onPublish,
+  onClose,
 }: {
   poll: Poll;
+  /** True while a publish/close action is in flight for this row. */
+  busy: boolean;
   onAnalytics: (poll: Poll) => void;
   onEdit: (poll: Poll) => void;
   onShare: (poll: Poll) => void;
-  onDelete: (poll: Poll) => void;
+  onPublish: (poll: Poll) => void;
+  onClose: (poll: Poll) => void;
 }) {
   const rel = relativeDue(poll.deadline);
   const status = POLL_STATUS_META[poll.status];
-  const votes = totalVotes(poll);
-  const revenue = pollRevenue(poll);
+  const votes = poll.totalVotes;
+  const revenue = poll.revenue;
   const isDraft = poll.status === "draft";
+  const isActive = poll.status === "active";
 
   return (
     <li className="flex flex-col gap-4 border-t border-cloud py-4 first:border-t-0 sm:flex-row sm:items-center">
@@ -103,19 +110,34 @@ export function PollListRow({
         <button
           type="button"
           onClick={() => onEdit(poll)}
+          disabled={poll.status === "closed"}
           aria-label={`Edit ${poll.title}`}
-          className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
         </button>
-        <button
-          type="button"
-          onClick={() => onDelete(poll)}
-          aria-label={`Delete ${poll.title}`}
-          className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
-          <HugeiconsIcon icon={Delete02Icon} size={16} />
-        </button>
+        {isDraft && (
+          <button
+            type="button"
+            onClick={() => onPublish(poll)}
+            disabled={busy}
+            aria-label={`Publish ${poll.title}`}
+            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-cloud hover:text-brand disabled:cursor-wait disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            <HugeiconsIcon icon={SentIcon} size={16} />
+          </button>
+        )}
+        {isActive && (
+          <button
+            type="button"
+            onClick={() => onClose(poll)}
+            disabled={busy}
+            aria-label={`Close ${poll.title}`}
+            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-wait disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            <HugeiconsIcon icon={StopCircleIcon} size={16} />
+          </button>
+        )}
       </div>
     </li>
   );

@@ -9,7 +9,7 @@ export function getReferrals() {
   return apiClient.get<ReferralsResponse>("/referrals");
 }
 
-/** Send invite emails carrying the caller's referral code (optional, phase 2). */
+/** Send invite emails (1–20) carrying the caller's referral code/link. */
 export function sendInvites(emails: string[]) {
-  return apiClient.post<void>("/referrals/invites", { emails });
+  return apiClient.post<{ sent: number }>("/referrals/invites", { emails });
 }

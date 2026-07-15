@@ -10,6 +10,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { SettingsCard } from "./SettingsCard";
 import { Toggle } from "./Toggle";
+import { ChangePasswordModal } from "./ChangePasswordModal";
+import { SessionsModal } from "./SessionsModal";
 
 /** A tappable row that runs an action — change password, sign out everywhere. */
 function ActionRow({
@@ -47,6 +49,8 @@ type HugeIconType = typeof Shield01Icon;
 
 export function SecurityCard() {
   const [twoFactor, setTwoFactor] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
 
   return (
     <SettingsCard
@@ -82,23 +86,22 @@ export function SecurityCard() {
           description="Change the password you use to sign in."
           cta="Change"
           icon={ArrowRight01Icon}
-          onClick={() =>
-            toast.success("Password reset link sent", {
-              description: "Check your email to set a new password.",
-            })
-          }
+          onClick={() => setPasswordOpen(true)}
         />
 
         <ActionRow
           title="Active sessions"
-          description="Sign out of Duevy everywhere except this device."
-          cta="Sign out all"
+          description="See where you're signed in and sign out other devices."
+          cta="Manage"
           icon={Logout01Icon}
-          onClick={() =>
-            toast.success("Signed out of all other devices")
-          }
+          onClick={() => setSessionsOpen(true)}
         />
       </div>
+
+      {passwordOpen && (
+        <ChangePasswordModal onClose={() => setPasswordOpen(false)} />
+      )}
+      {sessionsOpen && <SessionsModal onClose={() => setSessionsOpen(false)} />}
     </SettingsCard>
   );
 }

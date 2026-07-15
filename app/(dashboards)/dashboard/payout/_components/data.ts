@@ -1,7 +1,7 @@
-import { naira, REP_SPACE } from "../../create-dues/_components/data";
+import { naira } from "../../create-dues/_components/data";
 import type { BankAccount, PayoutStatus } from "./types";
 
-export { naira, REP_SPACE };
+export { naira };
 
 /** Mask all but the last four digits of an account number. */
 export function maskAccount(number: string) {
@@ -23,15 +23,3 @@ export const PAYOUT_STATUS_META: Record<
   processing: { label: "Processing", className: "bg-amber-100 text-amber-700" },
   failed: { label: "Failed", className: "bg-rose-100 text-rose-600" },
 };
-
-/** Nigerian banks offered when editing the payout account. */
-export const BANK_OPTIONS = [
-  "Guaranty Trust Bank",
-  "Access Bank",
-  "Zenith Bank",
-  "First Bank of Nigeria",
-  "United Bank for Africa",
-  "Kuda Microfinance Bank",
-  "Opay",
-  "Moniepoint",
-];

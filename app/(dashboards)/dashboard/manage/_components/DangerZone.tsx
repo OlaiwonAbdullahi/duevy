@@ -1,36 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "../../_components/ConfirmDialog";
 import { DangerCard } from "../../_components/DangerCard";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useRepSpace } from "../../_components/use-rep-space";
+import { TransferLeadModal } from "./TransferLeadModal";
+import { ArchiveSpaceModal } from "./ArchiveSpaceModal";
 
 type PendingAction = "transfer" | "archive" | null;
 
 /**
  * Irreversible department actions in the shared rose danger shell. Each
- * routes through a confirm step.
+ * routes through its own password-confirmed modal.
  */
 export function DangerZone() {
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+  const { refreshUser } = useAuth();
+  const router = useRouter();
   const [pending, setPending] = useState<PendingAction>(null);
 
-  const confirmText =
-    pending === "transfer"
-      ? {
-          title: "Transfer lead role?",
-          description:
-            "The new lead takes over department ownership and you become a co-rep. This can't be undone by you.",
-          confirmLabel: "Transfer role",
-          done: "Lead role transfer started",
-        }
-      : {
-          title: "Archive department?",
-          description:
-            "New dues, join requests and votes stop immediately. Existing records stay available to view.",
-          confirmLabel: "Archive department",
-          done: "Department archived",
-        };
+  const afterTransfer = async () => {
+    setPending(null);
+    await refreshUser();
+    router.push("/dashboard");
+  };
+
+  const afterArchive = async () => {
+    setPending(null);
+    await refreshUser();
+    router.push("/dashboard");
+  };
 
   return (
     <DangerCard
@@ -42,27 +44,32 @@ export function DangerZone() {
           title="Transfer lead role"
           description="Hand over department ownership to another rep. You'll become a co-rep."
           action="Transfer"
+          disabled={!spaceId}
           onClick={() => setPending("transfer")}
         />
         <Row
           title="Archive department"
           description="Stop new dues and join requests. Existing records stay available."
           action="Archive"
+          disabled={!spaceId}
           onClick={() => setPending("archive")}
         />
       </div>
 
-      <ConfirmDialog
-        open={pending !== null}
-        title={confirmText.title}
-        description={confirmText.description}
-        confirmLabel={confirmText.confirmLabel}
-        onConfirm={() => {
-          toast.success(confirmText.done);
-          setPending(null);
-        }}
-        onClose={() => setPending(null)}
-      />
+      {pending === "transfer" && spaceId && (
+        <TransferLeadModal
+          spaceId={spaceId}
+          onClose={() => setPending(null)}
+          onDone={afterTransfer}
+        />
+      )}
+      {pending === "archive" && spaceId && (
+        <ArchiveSpaceModal
+          spaceId={spaceId}
+          onClose={() => setPending(null)}
+          onDone={afterArchive}
+        />
+      )}
     </DangerCard>
   );
 }
@@ -71,11 +78,13 @@ function Row({
   title,
   description,
   action,
+  disabled,
   onClick,
 }: {
   title: string;
   description: string;
   action: string;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -88,6 +97,7 @@ function Row({
         variant="danger-outline"
         size="pill-lg"
         onClick={onClick}
+        disabled={disabled}
         className="h-10 px-5 text-xs"
       >
         {action}

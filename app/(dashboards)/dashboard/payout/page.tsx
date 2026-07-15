@@ -15,6 +15,7 @@ import { EditAccountModal } from "./_components/EditAccountModal";
 import { useRepSpace } from "../_components/use-rep-space";
 import { fromKobo } from "../_components/format";
 import { timeAgo } from "../_components/notifications-data";
+import { Skeleton } from "../_components/Skeleton";
 import {
   getPayoutSummary,
   getPayoutAccount,
@@ -50,6 +51,7 @@ export default function PayoutPage() {
   const [collected, setCollected] = useState(0);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   async function refresh(id: string) {
     const [summary, acct, history] = await Promise.all([
@@ -76,7 +78,9 @@ export default function PayoutPage() {
 
   useEffect(() => {
     if (!spaceId) return;
-    refresh(spaceId).catch(() => toast.error("Couldn't load your payout details."));
+    refresh(spaceId)
+      .catch(() => toast.error("Couldn't load your payout details."))
+      .finally(() => setLoading(false));
   }, [spaceId]);
 
   const handleWithdraw = async (amount: number) => {
@@ -139,22 +143,33 @@ export default function PayoutPage() {
         </p>
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <PayoutBalanceCard
-          available={available}
-          collected={collected}
-          pending={pending}
-          onWithdraw={() => setWithdrawOpen(true)}
-        />
-        <PayoutAccountCard
-          account={account}
-          hasAccount={hasAccount}
-          onEdit={() => setEditOpen(true)}
-        />
-      </div>
+      {loading ? (
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+          <Skeleton className="h-48 rounded-3xl" />
+          <Skeleton className="h-48 rounded-3xl" />
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+          <PayoutBalanceCard
+            available={available}
+            collected={collected}
+            pending={pending}
+            onWithdraw={() => setWithdrawOpen(true)}
+          />
+          <PayoutAccountCard
+            account={account}
+            hasAccount={hasAccount}
+            onEdit={() => setEditOpen(true)}
+          />
+        </div>
+      )}
 
       <div className="mt-6">
-        <PayoutHistory payouts={payouts} />
+        {loading ? (
+          <Skeleton className="h-64 rounded-3xl" />
+        ) : (
+          <PayoutHistory payouts={payouts} />
+        )}
       </div>
 
       {withdrawOpen && (

@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { ToggleRow } from "../../settings/_components/Toggle";
-import { REP_SPACE } from "./data";
 import type { DueCategory } from "../../dues/_components/types";
 import type { DueDraft, RepDue } from "./types";
 import { CategoryPicker } from "./CategoryPicker";
@@ -34,10 +33,12 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 /** Create or edit a single due. Kept lean — a due always targets the rep's own space. */
 export function DueForm({
   initial,
+  spaceName,
   onCancel,
   onSave,
 }: {
   initial: RepDue | null;
+  spaceName: string;
   onCancel: () => void;
   onSave: (draft: DueDraft) => Promise<void>;
 }) {
@@ -98,7 +99,7 @@ export function DueForm({
             {editing ? "Edit due" : "Create a due"}
           </h1>
           <p className="text-[13px] text-ink-soft">
-            For {REP_SPACE.name}
+            For {spaceName}
           </p>
         </div>
       </div>

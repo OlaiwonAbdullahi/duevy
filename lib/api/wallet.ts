@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Card, Transaction, Wallet } from "./types";
+import type { Card, SaveCardResult, Transaction, Wallet } from "./types";
 
 /** Current wallet balance + pending (top-ups awaiting webhook confirmation). */
 export function getWallet() {
@@ -42,20 +42,20 @@ export function listCards() {
 }
 
 export type SaveCardPayload = {
-  /**
-   * Tokenized card reference from the PSP (Monnify) inline SDK — raw PANs never
-   * touch the API. Attach it here once the inline SDK is integrated.
-   */
-  providerToken?: string;
-  brand: string;
-  last4: string;
-  expiry: string;
+  /** Defaults `false`. Ignored for the very first card ever saved — always forced default. */
   isDefault?: boolean;
 };
 
-/** Save a tokenized card. The first card saved is always forced default. */
-export function saveCard(payload: SaveCardPayload) {
-  return apiClient.post<Card>("/wallet/cards", payload);
+/**
+ * Start the "add card" flow. Raw PANs never touch this API — redirect the user to
+ * `checkoutUrl`, where Monnify runs a ₦50 verification charge and tokenizes the
+ * card. Poll `GET /payments/{reference}/status` on return, then re-fetch
+ * `listCards()` once it's `completed`.
+ */
+export function saveCard(payload: SaveCardPayload = {}) {
+  return apiClient.post<SaveCardResult>("/wallet/cards", payload, {
+    idempotencyKey: crypto.randomUUID(),
+  });
 }
 
 /** Promote a card to default. */

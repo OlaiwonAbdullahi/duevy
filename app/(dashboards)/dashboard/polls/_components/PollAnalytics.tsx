@@ -13,13 +13,7 @@ import {
 import { StatCard } from "../../_components/StatCard";
 import { EmptyState } from "../../_components/EmptyState";
 import { relativeDue } from "../../dues/_components/data";
-import {
-  naira,
-  POLL_STATUS_META,
-  pollLeaderboard,
-  pollRevenue,
-  totalVotes,
-} from "./data";
+import { naira, POLL_STATUS_META, pollLeaderboard } from "./data";
 import type { LeaderboardEntry } from "./data";
 import type { Poll, PollCategory } from "./types";
 
@@ -32,8 +26,8 @@ export function PollAnalytics({
   onBack: () => void;
   onShare: (poll: Poll) => void;
 }) {
-  const votes = totalVotes(poll);
-  const revenue = pollRevenue(poll);
+  const votes = poll.totalVotes;
+  const revenue = poll.revenue;
   const status = POLL_STATUS_META[poll.status];
   const rel = relativeDue(poll.deadline);
   const nomineeCount = poll.categories.reduce(
@@ -206,8 +200,8 @@ function LeaderboardRow({
 }
 
 function CategoryResult({ category }: { category: PollCategory }) {
-  const ranked = [...category.nominees].sort((a, b) => b.votes - a.votes);
-  const total = ranked.reduce((sum, n) => sum + n.votes, 0);
+  const ranked = [...category.nominees].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0));
+  const total = ranked.reduce((sum, n) => sum + (n.votes ?? 0), 0);
   const leaderVotes = ranked[0]?.votes ?? 0;
   // A clear leader only when someone is strictly ahead.
   const hasLeader = total > 0 && leaderVotes > (ranked[1]?.votes ?? 0);
@@ -230,7 +224,7 @@ function CategoryResult({ category }: { category: PollCategory }) {
 
       <ul className="mt-4 flex flex-col gap-3">
         {ranked.map((nominee, index) => {
-          const share = total > 0 ? Math.round((nominee.votes / total) * 100) : 0;
+          const share = total > 0 ? Math.round(((nominee.votes ?? 0) / total) * 100) : 0;
           const isLeader = hasLeader && index === 0;
           return (
             <li key={nominee.id}>
@@ -261,7 +255,7 @@ function CategoryResult({ category }: { category: PollCategory }) {
                   )}
                 </div>
                 <span className="shrink-0 text-xs text-ink-soft tabular-nums">
-                  {nominee.votes} · {share}%
+                  {nominee.votes ?? 0} · {share}%
                 </span>
               </div>
               <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-paper">

@@ -26,9 +26,11 @@ import { listDues, payDue } from "@/lib/api/dues";
 import { getWallet, listCards } from "@/lib/api/wallet";
 import { fromKobo } from "../_components/format";
 import { useRole } from "../_components/role-context";
+import { useAuth } from "@/lib/auth/auth-context";
 
 export default function DuesPage() {
   const { isPendingRep } = useRole();
+  const { user } = useAuth();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [dues, setDues] = useState<Due[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -149,8 +151,16 @@ export default function DuesPage() {
       if (method === "wallet") setBalance((b) => b - total);
       setPendingIds([]);
       setPayDues([]);
-      // One receipt per due settled — surfaced together for download.
-      setReceipts(buildReceipts(targetDues, space, method, card));
+      // One receipt per due settled — surfaced together for download. Each
+      // ref comes from that due's own payDue() response, in the same order.
+      const refs = results.map((r) => r.transaction?.reference ?? r.reference ?? "");
+      const payer = {
+        name: user?.name ?? "",
+        detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
+          .filter(Boolean)
+          .join(" · "),
+      };
+      setReceipts(buildReceipts(targetDues, space, method, payer, refs, card));
       toast.success(`${naira(total)} paid`, {
         description:
           targetDues.length === 1

@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { UserIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UserIcon, Camera01Icon } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/auth-context";
-import { updateProfile } from "@/lib/api/me";
+import { updateProfile, uploadAvatar } from "@/lib/api/me";
 import { ApiError } from "@/lib/api/errors";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { SettingsCard } from "./SettingsCard";
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 function Field({
   label,
@@ -49,6 +53,8 @@ export function ProfileCard() {
   const [phone, setPhone] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Seed the form from the signed-in user (GET /auth/me).
   useEffect(() => {
@@ -62,6 +68,36 @@ export function ProfileCard() {
   const edit = (setter: (v: string) => void) => (v: string) => {
     setter(v);
     setDirty(true);
+  };
+
+  const pickAvatar = () => fileInputRef.current?.click();
+
+  const onAvatarSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
+      toast.error("Use a JPEG, PNG or WebP image.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error("That image is too large.", { description: "Max size is 2 MB." });
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      await uploadAvatar(file);
+      await refreshUser();
+      toast.success("Avatar updated");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Couldn't upload that image.",
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const save = async () => {
@@ -99,7 +135,34 @@ export function ProfileCard() {
     >
       {/* Avatar + identity. */}
       <div className="flex items-center gap-4 border-b border-cloud pb-5">
-        <UserAvatar name={name || "?"} size={56} />
+        <button
+          type="button"
+          onClick={pickAvatar}
+          disabled={uploadingAvatar}
+          aria-label="Change avatar"
+          className="group relative shrink-0 cursor-pointer rounded-full disabled:cursor-wait"
+        >
+          <UserAvatar name={name || "?"} src={user?.avatarUrl} size={56} />
+          <span
+            className={cn(
+              "absolute inset-0 grid place-items-center rounded-full bg-black/40 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100",
+              uploadingAvatar && "opacity-100",
+            )}
+          >
+            {uploadingAvatar ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <HugeiconsIcon icon={Camera01Icon} size={18} />
+            )}
+          </span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={onAvatarSelected}
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
           <p className="truncate text-xs text-ink-soft">

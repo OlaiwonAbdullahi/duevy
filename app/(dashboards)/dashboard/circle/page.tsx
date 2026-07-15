@@ -8,6 +8,7 @@ import { CircleStats } from "./_components/CircleStats";
 import { StudentsTable } from "./_components/StudentsTable";
 import { useRepSpace } from "../_components/use-rep-space";
 import { timeAgo } from "../_components/notifications-data";
+import { StatRowSkeleton, ListSkeleton } from "../_components/Skeleton";
 import { listMembers, getRepOverview, regenerateJoinCode } from "@/lib/api/rep";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -20,6 +21,7 @@ export default function CirclePage() {
   const [recentCount, setRecentCount] = useState(0);
   const [code, setCode] = useState("—");
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -41,6 +43,8 @@ export default function CirclePage() {
         setCode(overview.joinCode);
       } catch {
         if (!cancelled) toast.error("Couldn't load your circle.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -76,21 +80,32 @@ export default function CirclePage() {
     <div className="mx-auto max-w-6xl">
       <CircleHeader />
 
-      <CircleStats
-        studentCount={students.length}
-        recentCount={recentCount}
-        code={code}
-        spaceName={repSpace?.name ?? "your department"}
-        onRegenerate={regenerateCode}
-      />
+      {loading ? (
+        <div className="mt-6">
+          <StatRowSkeleton />
+          <div className="mt-4">
+            <ListSkeleton />
+          </div>
+        </div>
+      ) : (
+        <>
+          <CircleStats
+            studentCount={students.length}
+            recentCount={recentCount}
+            code={code}
+            spaceName={repSpace?.name ?? "your department"}
+            onRegenerate={regenerateCode}
+          />
 
-      {/* Members who joined with the code. */}
-      <StudentsTable
-        students={filteredStudents}
-        totalCount={students.length}
-        query={query}
-        onQueryChange={setQuery}
-      />
+          {/* Members who joined with the code. */}
+          <StudentsTable
+            students={filteredStudents}
+            totalCount={students.length}
+            query={query}
+            onQueryChange={setQuery}
+          />
+        </>
+      )}
     </div>
   );
 }
