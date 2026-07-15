@@ -1,9 +1,14 @@
 import { apiClient } from "./client";
-import type { Poll, Transaction } from "./types";
+import type { Poll, PollCategory, PollNominee, Transaction } from "./types";
 
-/** Public — a poll by its share slug (`/vote/{slug}`). */
+/**
+ * Public — a poll by its share slug (`/vote/{slug}`). Auth is optional (an
+ * anonymous visitor can view a non-members-only poll), but attach the token
+ * when one is available — an authenticated caller gets back the members-only
+ * gate and their per-category `remaining` vote count, an anonymous one won't.
+ */
 export function getPoll(slug: string) {
-  return apiClient.get<Poll>(`/polls/${slug}`, { auth: false });
+  return apiClient.get<Poll>(`/polls/${slug}`);
 }
 
 /** Rep — polls for a space. */
@@ -18,13 +23,73 @@ export type PollDraft = {
   paid: boolean;
   amountPerVote?: number;
   membersOnly?: boolean;
-  categories: Array<{ title: string; nominees: Array<{ name: string }> }>;
+  /** Hero banner for the public voting page. Proposed — not yet backed by the API. */
+  coverImageUrl?: string;
+  categories: Array<{
+    title: string;
+    imageUrl?: string;
+    nominees: Array<{
+      name: string;
+      imageUrl?: string;
+      /** Proposed — not yet backed by the API. */
+      bio?: string;
+      /** Proposed — not yet backed by the API. */
+      code?: string;
+    }>;
+  }>;
   /** Defaults `false` (draft). Set `true` to publish immediately on creation. */
   publish?: boolean;
 };
 
 export function createPoll(spaceId: string, payload: PollDraft) {
   return apiClient.post<Poll>(`/spaces/${spaceId}/polls`, payload);
+}
+
+/**
+ * Upload a category/nominee photo (JPEG/PNG/WebP, ≤2MB). Returns a plain URL —
+ * stash it in local form state (new poll) or attach it with
+ * `updatePollCategoryImage`/`updatePollNominee` (existing poll).
+ */
+export function uploadPollImage(spaceId: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return apiClient.post<{ imageUrl: string }>(`/spaces/${spaceId}/polls/image`, form);
+}
+
+/**
+ * Attach/replace/remove (`imageUrl: null`) a category's photo on an existing
+ * poll. Cosmetic — works at any poll status, no `POLL_STRUCTURE_LOCKED`.
+ */
+export function updatePollCategoryImage(
+  spaceId: string,
+  pollId: string,
+  categoryId: string,
+  imageUrl: string | null,
+) {
+  return apiClient.patch<PollCategory>(
+    `/spaces/${spaceId}/polls/${pollId}/categories/${categoryId}`,
+    { imageUrl },
+  );
+}
+
+/**
+ * Update a nominee on an existing poll — photo, and (proposed) bio/code.
+ * Cosmetic, like the category photo PATCH: works at any poll status. Today
+ * the API only documents `imageUrl` here; `bio`/`code` need the endpoint
+ * widened to accept them (see the poll-fields writeup).
+ */
+export type PollNomineePatch = { imageUrl?: string | null; bio?: string | null; code?: string | null };
+
+export function updatePollNominee(
+  spaceId: string,
+  pollId: string,
+  nomineeId: string,
+  payload: PollNomineePatch,
+) {
+  return apiClient.patch<PollNominee>(
+    `/spaces/${spaceId}/polls/${pollId}/nominees/${nomineeId}`,
+    payload,
+  );
 }
 
 /**
@@ -35,8 +100,14 @@ export function createPoll(spaceId: string, payload: PollDraft) {
  * after creation.
  */
 export type PollPatch = Partial<
-  Pick<PollDraft, "title" | "description" | "deadline" | "membersOnly" | "paid" | "amountPerVote">
->;
+  Pick<
+    PollDraft,
+    "title" | "description" | "deadline" | "membersOnly" | "paid" | "amountPerVote"
+  >
+> & {
+  /** `null` removes the cover. Proposed — not yet backed by the API. */
+  coverImageUrl?: string | null;
+};
 
 export function updatePoll(spaceId: string, pollId: string, payload: PollPatch) {
   return apiClient.patch<Poll>(`/spaces/${spaceId}/polls/${pollId}`, payload);
@@ -66,8 +137,9 @@ export function getPollResults(spaceId: string, pollId: string) {
 
 export type VoteSelection = { categoryId: string; nomineeId: string; quantity: number };
 
+/** Free polls omit `method` entirely — only paid votes name a payment method. */
 export type CastVotePayload =
-  | { selections: VoteSelection[]; method: "free" }
+  | { selections: VoteSelection[] }
   | { selections: VoteSelection[]; method: "wallet" }
   | { selections: VoteSelection[]; method: "card"; cardId: string }
   | { selections: VoteSelection[]; method: "online" };
@@ -81,8 +153,8 @@ export type CastVoteResult = {
   reference?: string;
 };
 
-/** Cast one or more votes. Paid polls attach an Idempotency-Key. */
+/** Cast one or more votes. Paid votes require an Idempotency-Key. */
 export function castVote(slug: string, payload: CastVotePayload) {
-  const idempotencyKey = payload.method === "free" ? undefined : crypto.randomUUID();
+  const idempotencyKey = "method" in payload ? crypto.randomUUID() : undefined;
   return apiClient.post<CastVoteResult>(`/polls/${slug}/votes`, payload, { idempotencyKey });
 }

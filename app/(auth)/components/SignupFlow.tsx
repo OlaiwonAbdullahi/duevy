@@ -47,10 +47,24 @@ const EMPTY_SPACE: SpaceDetails = {
   faculty: "",
 };
 
+/** Only ever follow an internal path — never let `next` redirect off-site. */
+function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 export default function SignupFlow() {
   const router = useRouter();
   const { register } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
+  // Read once on mount rather than via `useSearchParams()`, which would force
+  // this route into a Suspense boundary just for a value we only need at submit time.
+  const [next] = useState(() =>
+    typeof window === "undefined"
+      ? null
+      : safeNext(new URLSearchParams(window.location.search).get("next")),
+  );
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
   const [role, setRole] = useState<SignupRole>("student");
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,7 +117,7 @@ export default function SignupFlow() {
         acceptedTerms: nextAccount.acceptedTerms,
       });
       toast.success("Account created", { description: "Sign in to continue." });
-      router.push("/login");
+      router.push(loginHref);
     } catch (err) {
       toast.error(
         err instanceof ApiError
@@ -138,7 +152,7 @@ export default function SignupFlow() {
       toast.success("Application submitted", {
         description: "Sign in to track your review.",
       });
-      router.push("/login");
+      router.push(loginHref);
     } catch (err) {
       toast.error(
         err instanceof ApiError

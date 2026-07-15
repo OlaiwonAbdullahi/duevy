@@ -18,31 +18,48 @@ import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { ToggleRow } from "../../settings/_components/Toggle";
 import { DatePicker } from "../../create-dues/_components/DatePicker";
 import { CategoriesEditor } from "./CategoriesEditor";
+import { PhotoPicker } from "./PhotoPicker";
+import { CoverPicker } from "./CoverPicker";
 import { naira, newCategory } from "./data";
-import type { EditorCategory, Poll } from "./types";
-import type { PollDraft, PollPatch } from "@/lib/api/polls";
+import type { EditorCategory, Poll, PollCategory } from "./types";
+import {
+  uploadPollImage,
+  updatePollCategoryImage,
+  updatePollNominee,
+  type PollDraft,
+  type PollPatch,
+} from "@/lib/api/polls";
 
 export function PollForm({
   initial,
+  spaceId,
   spaceName,
   submitting,
   onCancel,
   onCreate,
   onUpdate,
+  onImageChange,
 }: {
   initial: Poll | null;
+  spaceId: string;
   spaceName: string;
   submitting: boolean;
   onCancel: () => void;
   onCreate: (draft: PollDraft, publish: boolean) => void;
   onUpdate: (patch: PollPatch) => void;
+  /** Bubbles up a category/nominee photo change so the poll list/analytics stay in sync. */
+  onImageChange: (categories: PollCategory[]) => void;
 }) {
   const editing = !!initial;
   // Once active, structure (membersOnly/paid/amountPerVote) is locked and the
-  // deadline can only be extended. Categories can never be edited after
-  // creation at all — the API has no endpoint for it.
+  // deadline can only be extended. Categories/nominees can never be added or
+  // removed after creation — but their photos aren't locked at all (cosmetic,
+  // editable at any poll status via a targeted PATCH).
   const locked = initial?.status === "active";
 
+  const [coverImageUrl, setCoverImageUrl] = useState<string | undefined>(
+    initial?.coverImageUrl ?? undefined,
+  );
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [deadline, setDeadline] = useState(initial?.deadline ?? "");
@@ -52,6 +69,48 @@ export function PollForm({
     initial?.amountPerVote ? String(initial.amountPerVote) : "",
   );
   const [categories, setCategories] = useState<EditorCategory[]>([newCategory()]);
+  // Editing an existing poll shows its real categories, kept in sync as photos change.
+  const [existingCategories, setExistingCategories] = useState<PollCategory[]>(
+    initial?.categories ?? [],
+  );
+
+  const patchExistingCategory = (categoryId: string, patch: Partial<PollCategory>) => {
+    const next = existingCategories.map((c) => (c.id === categoryId ? { ...c, ...patch } : c));
+    setExistingCategories(next);
+    onImageChange(next);
+  };
+
+  const patchExistingNominee = (
+    categoryId: string,
+    nomineeId: string,
+    patch: Partial<PollCategory["nominees"][number]>,
+  ) => {
+    const next = existingCategories.map((c) =>
+      c.id === categoryId
+        ? { ...c, nominees: c.nominees.map((n) => (n.id === nomineeId ? { ...n, ...patch } : n)) }
+        : c,
+    );
+    setExistingCategories(next);
+    onImageChange(next);
+  };
+
+  // Bio/code are proposed fields — save on blur via the same nominee PATCH the
+  // photo picker uses, once the backend accepts them there too.
+  const saveNomineeField = async (
+    categoryId: string,
+    nomineeId: string,
+    patch: { bio?: string; code?: string },
+  ) => {
+    try {
+      const updated = await updatePollNominee(spaceId, initial!.id, nomineeId, patch);
+      patchExistingNominee(categoryId, nomineeId, {
+        bio: updated.bio,
+        code: updated.code,
+      });
+    } catch {
+      toast.error("Couldn't save that yet — needs backend support.");
+    }
+  };
 
   const amountPerVote = Number(amountDigits || 0);
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 7);
@@ -71,12 +130,12 @@ export function PollForm({
   const nomineeCount = useMemo(
     () =>
       editing
-        ? initial!.categories.reduce((sum, c) => sum + c.nominees.length, 0)
+        ? existingCategories.reduce((sum, c) => sum + c.nominees.length, 0)
         : categories.reduce(
             (sum, c) => sum + c.nominees.filter((n) => n.name.trim() !== "").length,
             0,
           ),
-    [editing, initial, categories],
+    [editing, existingCategories, categories],
   );
 
   const validAmount = !paid || amountPerVote > 0;
@@ -101,6 +160,9 @@ export function PollForm({
         patch.description = description.trim();
       }
       if (deadline !== initial!.deadline) patch.deadline = deadline;
+      if (coverImageUrl !== (initial!.coverImageUrl ?? undefined)) {
+        patch.coverImageUrl = coverImageUrl ?? null;
+      }
       if (!locked) {
         if (membersOnly !== initial!.membersOnly) patch.membersOnly = membersOnly;
         if (paid !== initial!.paid) patch.paid = paid;
@@ -119,9 +181,15 @@ export function PollForm({
     // Persist only the fleshed-out categories/nominees; strip client-side ids.
     const cleaned = readyCategories.map((c) => ({
       title: c.title.trim(),
+      imageUrl: c.imageUrl,
       nominees: c.nominees
         .filter((n) => n.name.trim() !== "")
-        .map((n) => ({ name: n.name.trim() })),
+        .map((n) => ({
+          name: n.name.trim(),
+          imageUrl: n.imageUrl,
+          bio: n.bio?.trim() || undefined,
+          code: n.code?.trim() || undefined,
+        })),
     }));
     onCreate(
       {
@@ -131,6 +199,7 @@ export function PollForm({
         membersOnly,
         paid,
         amountPerVote: paid ? amountPerVote : 0,
+        coverImageUrl,
         categories: cleaned,
       },
       publish ?? true,
@@ -171,6 +240,25 @@ export function PollForm({
             description="What's this vote for, and when does it close?"
           >
             <div className="flex flex-col gap-4">
+              <div>
+                <Label className="block text-xs font-medium text-ink-soft">
+                  Cover photo
+                </Label>
+                <div className="mt-1.5">
+                  <CoverPicker
+                    imageUrl={coverImageUrl}
+                    onUpload={async (file) => {
+                      const { imageUrl } = await uploadPollImage(spaceId, file);
+                      setCoverImageUrl(imageUrl);
+                    }}
+                    onRemove={() => setCoverImageUrl(undefined)}
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-ink-soft">
+                  Shown as the banner on the public voting page.
+                </p>
+              </div>
+
               <div>
                 <Label className="block text-xs font-medium text-ink-soft">
                   Title
@@ -267,29 +355,99 @@ export function PollForm({
             title="Awards & nominees"
             description={
               editing
-                ? "Locked after creation — nominees can't be added or removed once a poll exists."
+                ? "Names are locked after creation, but photos aren't — add or change one any time."
                 : "Add each award category and the nominees students vote between."
             }
           >
             {editing ? (
               <div className="flex flex-col gap-3">
-                {initial!.categories.map((category) => (
+                {existingCategories.map((category) => (
                   <div
                     key={category.id}
                     className="rounded-2xl border border-cloud bg-paper p-4"
                   >
-                    <div className="flex items-center gap-2">
-                      <HugeiconsIcon icon={LockIcon} size={13} className="text-ink-soft" />
-                      <p className="text-sm font-semibold text-ink">{category.title}</p>
+                    <div className="flex items-center gap-3">
+                      <PhotoPicker
+                        size={40}
+                        label={category.title || "award"}
+                        imageUrl={category.imageUrl}
+                        onUpload={async (file) => {
+                          const { imageUrl } = await uploadPollImage(spaceId, file);
+                          const updated = await updatePollCategoryImage(
+                            spaceId,
+                            initial!.id,
+                            category.id,
+                            imageUrl,
+                          );
+                          patchExistingCategory(category.id, { imageUrl: updated.imageUrl });
+                        }}
+                        onRemove={async () => {
+                          await updatePollCategoryImage(spaceId, initial!.id, category.id, null);
+                          patchExistingCategory(category.id, { imageUrl: null });
+                        }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <HugeiconsIcon icon={LockIcon} size={12} className="shrink-0 text-ink-soft" />
+                          <p className="truncate text-sm font-semibold text-ink">{category.title}</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="mt-1.5 text-xs text-ink-soft">
-                      {category.nominees.map((n) => n.name).join(" · ")}
-                    </p>
+                    <ul className="mt-3 flex flex-col gap-2 pl-13">
+                      {category.nominees.map((nominee) => (
+                        <li key={nominee.id} className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2.5">
+                            <PhotoPicker
+                              size={28}
+                              label={nominee.name || "nominee"}
+                              imageUrl={nominee.imageUrl}
+                              onUpload={async (file) => {
+                                const { imageUrl } = await uploadPollImage(spaceId, file);
+                                const updated = await updatePollNominee(
+                                  spaceId,
+                                  initial!.id,
+                                  nominee.id,
+                                  { imageUrl },
+                                );
+                                patchExistingNominee(category.id, nominee.id, {
+                                  imageUrl: updated.imageUrl,
+                                });
+                              }}
+                              onRemove={async () => {
+                                await updatePollNominee(spaceId, initial!.id, nominee.id, {
+                                  imageUrl: null,
+                                });
+                                patchExistingNominee(category.id, nominee.id, { imageUrl: null });
+                              }}
+                            />
+                            <p className="truncate text-xs text-ink-soft">{nominee.name}</p>
+                          </div>
+                          <div className="grid grid-cols-[1fr_auto] gap-1.5 pl-[38px]">
+                            <input
+                              defaultValue={nominee.bio ?? ""}
+                              placeholder="Short bio (optional)"
+                              onBlur={(e) =>
+                                saveNomineeField(category.id, nominee.id, { bio: e.target.value })
+                              }
+                              className="h-7 min-w-0 rounded-lg border border-cloud bg-canvas px-2 text-[11px] text-ink outline-none focus:border-brand placeholder:text-ink-soft/70"
+                            />
+                            <input
+                              defaultValue={nominee.code ?? ""}
+                              placeholder="Vote code"
+                              onBlur={(e) =>
+                                saveNomineeField(category.id, nominee.id, { code: e.target.value })
+                              }
+                              className="h-7 w-20 rounded-lg border border-cloud bg-canvas px-2 text-[11px] text-ink outline-none focus:border-brand placeholder:text-ink-soft/70"
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 ))}
               </div>
             ) : (
-              <CategoriesEditor categories={categories} onChange={setCategories} />
+              <CategoriesEditor spaceId={spaceId} categories={categories} onChange={setCategories} />
             )}
           </SettingsCard>
         </div>

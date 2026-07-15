@@ -183,7 +183,7 @@ export default function PollsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <AnimatePresence mode="wait" initial={false}>
-        {mode === "form" ? (
+        {mode === "form" && spaceId ? (
           <motion.div
             key="form"
             initial={{ opacity: 0, x: 16 }}
@@ -193,11 +193,20 @@ export default function PollsPage() {
           >
             <PollForm
               initial={editing}
+              spaceId={spaceId}
               spaceName={repSpace?.name ?? "your department"}
               submitting={saving}
               onCancel={() => setMode("list")}
               onCreate={create}
               onUpdate={update}
+              onImageChange={(categoriesNext) => {
+                if (!editing) return;
+                setPolls((list) =>
+                  list.map((p) =>
+                    p.id === editing.id ? { ...p, categories: categoriesNext } : p,
+                  ),
+                );
+              }}
             />
           </motion.div>
         ) : mode === "analytics" && viewing ? (

@@ -9,8 +9,21 @@ import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import { ArrowRightIcon } from "../../components/icons";
 
+/** Only ever follow an internal path — never let `next` redirect off-site. */
+function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 export default function LoginForm() {
   const router = useRouter();
+  // Read once on mount rather than via `useSearchParams()`, which would force
+  // this route into a Suspense boundary just for a value we only need at submit time.
+  const [next] = useState(() =>
+    typeof window === "undefined"
+      ? null
+      : safeNext(new URLSearchParams(window.location.search).get("next")),
+  );
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +39,7 @@ export default function LoginForm() {
       toast.success("Welcome back", {
         description: `Signed in as ${user.name.split(" ")[0]}.`,
       });
-      router.push(user.role === "admin" ? "/admin" : "/dashboard");
+      router.push(next ?? (user.role === "admin" ? "/admin" : "/dashboard"));
     } catch (err) {
       toast.error(
         err instanceof ApiError

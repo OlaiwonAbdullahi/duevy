@@ -289,8 +289,24 @@ export type BankAccount = {
 
 export type PollStatus = "draft" | "active" | "closed";
 
-export type PollNominee = { id: string; name: string; votes?: number };
-export type PollCategory = { id: string; title: string; nominees: PollNominee[] };
+export type PollNominee = {
+  id: string;
+  name: string;
+  votes?: number;
+  imageUrl?: string | null;
+  /** Short one-line tagline, e.g. "300L Computer Science". Proposed — not yet backed by the API. */
+  bio?: string | null;
+  /** Short memorable vote code, e.g. "04". Proposed — not yet backed by the API. */
+  code?: string | null;
+};
+export type PollCategory = {
+  id: string;
+  title: string;
+  nominees: PollNominee[];
+  imageUrl?: string | null;
+  /** Public voter view only: votes left in this category for the caller (1/0, or null if uncapped). */
+  remaining?: number | null;
+};
 
 export type Poll = {
   id: string;
@@ -310,6 +326,8 @@ export type Poll = {
   totalVotes: number;
   /** Kobo collected (paid polls). */
   revenue: number;
+  /** Hero banner for the public voting page. Proposed — not yet backed by the API. */
+  coverImageUrl?: string | null;
 };
 
 // ---- Disputes (§13) -------------------------------------------------------

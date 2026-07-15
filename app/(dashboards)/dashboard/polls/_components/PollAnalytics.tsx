@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
@@ -210,8 +211,12 @@ function CategoryResult({ category }: { category: PollCategory }) {
     <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-2xl bg-cloud text-brand">
-            <HugeiconsIcon icon={Award01Icon} size={16} />
+          <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-2xl bg-cloud text-brand">
+            {category.imageUrl ? (
+              <Image src={category.imageUrl} alt="" fill unoptimized className="object-cover" />
+            ) : (
+              <HugeiconsIcon icon={Award01Icon} size={16} />
+            )}
           </span>
           <h2 className="text-base font-semibold tracking-tight text-ink">
             {category.title}
@@ -230,7 +235,11 @@ function CategoryResult({ category }: { category: PollCategory }) {
             <li key={nominee.id}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  {isLeader ? (
+                  {nominee.imageUrl ? (
+                    <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-paper">
+                      <Image src={nominee.imageUrl} alt="" fill unoptimized className="object-cover" />
+                    </span>
+                  ) : isLeader ? (
                     <HugeiconsIcon
                       icon={Medal01Icon}
                       size={15}
