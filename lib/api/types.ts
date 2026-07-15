@@ -328,6 +328,11 @@ export type Poll = {
   revenue: number;
   /** Hero banner for the public voting page. Proposed — not yet backed by the API. */
   coverImageUrl?: string | null;
+  /**
+   * One of the space's `SpaceThemeId`s ("emerald" | "ocean" | "royal" | "crimson" |
+   * "tangerine") — re-tints the public voting page. Proposed — not yet backed by the API.
+   */
+  themeColor?: string | null;
 };
 
 // ---- Disputes (§13) -------------------------------------------------------

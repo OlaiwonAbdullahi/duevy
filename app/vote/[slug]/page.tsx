@@ -14,6 +14,7 @@ import {
   SquareLock02Icon,
   Megaphone01Icon,
   CheckmarkCircle02Icon,
+  ArrowLeft01Icon,
 } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -30,6 +31,8 @@ import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState"
 import { Skeleton } from "@/app/(dashboards)/dashboard/_components/Skeleton";
 import { UserAvatar } from "@/app/(dashboards)/dashboard/_components/UserAvatar";
 import type { Card, Poll } from "@/lib/api/types";
+import { isSpaceThemeId } from "@/app/(dashboards)/dashboard/_components/space-theme";
+import { CategoryCard } from "./_components/CategoryCard";
 import { CategoryVoter } from "./_components/CategoryVoter";
 import { PayVoteModal, type VoteMethod } from "./_components/PayVoteModal";
 import { useCountdown } from "./_components/useCountdown";
@@ -67,7 +70,6 @@ export default function VotePage() {
       setPoll(p);
       setNotFound(false);
       setMembersOnlyBlocked(false);
-      setActiveCategoryId((prev) => prev ?? p.categories[0]?.id ?? null);
     } catch (err) {
       if (err instanceof ApiError && err.code === "MEMBERS_ONLY") {
         setMembersOnlyBlocked(true);
@@ -83,6 +85,19 @@ export default function VotePage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  // The rep's chosen colour re-tints this page the same way a space theme
+  // re-tints the dashboard — reset on unmount so leaving the page doesn't
+  // leave some other poll's colour stuck on the document.
+  useEffect(() => {
+    const themeColor = poll?.themeColor;
+    if (isSpaceThemeId(themeColor)) {
+      document.documentElement.setAttribute("data-space-theme", themeColor);
+    } else {
+      document.documentElement.removeAttribute("data-space-theme");
+    }
+    return () => document.documentElement.removeAttribute("data-space-theme");
+  }, [poll?.themeColor]);
 
   // On return from Monnify hosted checkout for an "online" vote payment.
   useEffect(() => {
@@ -351,40 +366,40 @@ export default function VotePage() {
           <PollHero poll={poll} onShare={share} onCopy={copyLink} copied={copied} />
 
           <div className="mx-auto max-w-3xl px-4 pb-8 sm:px-8">
-            {poll.categories.length > 1 && (
-              <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-                {poll.categories.map((category) => {
-                  const active = category.id === activeCategoryId;
-                  const done =
-                    !!selections[category.id] ||
-                    (authenticated && typeof category.remaining === "number" && category.remaining <= 0);
-                  return (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => setActiveCategoryId(category.id)}
-                      className={`relative shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-300 cursor-pointer ${
-                        active
-                          ? "bg-brand text-white"
-                          : "bg-paper text-ink-soft hover:bg-cloud hover:text-ink"
-                      }`}
-                    >
-                      {category.title}
-                      {done && (
-                        <span
-                          className={`absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ${
-                            active ? "bg-white" : "bg-brand"
-                          }`}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
             <AnimatePresence mode="wait" initial={false}>
-              {activeCategory && (
+              {!activeCategory ? (
+                <motion.div
+                  key="grid"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="mt-6"
+                >
+                  <p className="text-sm font-medium text-ink-soft">
+                    Tap an award to see the nominees and vote.
+                  </p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    {poll.categories.map((category, index) => (
+                      <CategoryCard
+                        key={category.id}
+                        category={category}
+                        index={index}
+                        paid={poll.paid}
+                        amountPerVote={poll.amountPerVote}
+                        closed={closed}
+                        voted={
+                          authenticated &&
+                          typeof category.remaining === "number" &&
+                          category.remaining <= 0
+                        }
+                        selected={!!selections[category.id]}
+                        onOpen={() => setActiveCategoryId(category.id)}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
                 <motion.div
                   key={activeCategory.id}
                   initial={{ opacity: 0, y: 8 }}
@@ -393,21 +408,31 @@ export default function VotePage() {
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="mt-5"
                 >
-                  <CategoryVoter
-                    category={activeCategory}
-                    closed={closed}
-                    locked={
-                      authenticated &&
-                      typeof activeCategory.remaining === "number" &&
-                      activeCategory.remaining <= 0
-                    }
-                    selectedNomineeId={selections[activeCategory.id]?.nomineeId}
-                    quantity={selections[activeCategory.id]?.quantity ?? 1}
-                    allowQuantity={poll.paid && !poll.membersOnly}
-                    amountPerVote={poll.amountPerVote}
-                    onSelect={(nomineeId) => select(activeCategory.id, nomineeId)}
-                    onQuantityChange={(q) => setQuantity(activeCategory.id, q)}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryId(null)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer"
+                  >
+                    <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+                    All awards
+                  </button>
+                  <div className="mt-4">
+                    <CategoryVoter
+                      category={activeCategory}
+                      closed={closed}
+                      locked={
+                        authenticated &&
+                        typeof activeCategory.remaining === "number" &&
+                        activeCategory.remaining <= 0
+                      }
+                      selectedNomineeId={selections[activeCategory.id]?.nomineeId}
+                      quantity={selections[activeCategory.id]?.quantity ?? 1}
+                      allowQuantity={poll.paid && !poll.membersOnly}
+                      amountPerVote={poll.amountPerVote}
+                      onSelect={(nomineeId) => select(activeCategory.id, nomineeId)}
+                      onQuantityChange={(q) => setQuantity(activeCategory.id, q)}
+                    />
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

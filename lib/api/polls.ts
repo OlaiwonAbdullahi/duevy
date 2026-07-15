@@ -25,6 +25,8 @@ export type PollDraft = {
   membersOnly?: boolean;
   /** Hero banner for the public voting page. Proposed — not yet backed by the API. */
   coverImageUrl?: string;
+  /** A `SpaceThemeId` re-tinting the public voting page. Proposed — not yet backed by the API. */
+  themeColor?: string;
   categories: Array<{
     title: string;
     imageUrl?: string;
@@ -107,6 +109,8 @@ export type PollPatch = Partial<
 > & {
   /** `null` removes the cover. Proposed — not yet backed by the API. */
   coverImageUrl?: string | null;
+  /** `null` resets to the default brand colour. Proposed — not yet backed by the API. */
+  themeColor?: string | null;
 };
 
 export function updatePoll(spaceId: string, pollId: string, payload: PollPatch) {

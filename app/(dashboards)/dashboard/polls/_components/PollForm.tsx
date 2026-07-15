@@ -20,6 +20,7 @@ import { DatePicker } from "../../create-dues/_components/DatePicker";
 import { CategoriesEditor } from "./CategoriesEditor";
 import { PhotoPicker } from "./PhotoPicker";
 import { CoverPicker } from "./CoverPicker";
+import { ThemeColorPicker } from "./ThemeColorPicker";
 import { naira, newCategory } from "./data";
 import type { EditorCategory, Poll, PollCategory } from "./types";
 import {
@@ -59,6 +60,9 @@ export function PollForm({
 
   const [coverImageUrl, setCoverImageUrl] = useState<string | undefined>(
     initial?.coverImageUrl ?? undefined,
+  );
+  const [themeColor, setThemeColor] = useState<string | undefined>(
+    initial?.themeColor ?? undefined,
   );
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -163,6 +167,9 @@ export function PollForm({
       if (coverImageUrl !== (initial!.coverImageUrl ?? undefined)) {
         patch.coverImageUrl = coverImageUrl ?? null;
       }
+      if (themeColor !== (initial!.themeColor ?? undefined)) {
+        patch.themeColor = themeColor ?? null;
+      }
       if (!locked) {
         if (membersOnly !== initial!.membersOnly) patch.membersOnly = membersOnly;
         if (paid !== initial!.paid) patch.paid = paid;
@@ -200,6 +207,7 @@ export function PollForm({
         paid,
         amountPerVote: paid ? amountPerVote : 0,
         coverImageUrl,
+        themeColor,
         categories: cleaned,
       },
       publish ?? true,
@@ -256,6 +264,21 @@ export function PollForm({
                 </div>
                 <p className="mt-1 text-[11px] text-ink-soft">
                   Shown as the banner on the public voting page.
+                </p>
+              </div>
+
+              <div>
+                <Label className="block text-xs font-medium text-ink-soft">
+                  Theme colour
+                </Label>
+                <div className="mt-2">
+                  <ThemeColorPicker
+                    value={themeColor}
+                    onChange={(id) => setThemeColor(id)}
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-ink-soft">
+                  Colours the public voting page — buttons, badges and the hero.
                 </p>
               </div>
 
