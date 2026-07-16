@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, MailAtSign01Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
@@ -33,7 +33,26 @@ function PendingRepBanner() {
   );
 }
 
+/** Shown across the dashboard until the account's email address is confirmed. */
+function VerifyEmailBanner() {
+  return (
+    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700">
+        <HugeiconsIcon icon={MailAtSign01Icon} size={18} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">Verify your email address</p>
+        <p className="mt-0.5 text-xs text-ink-soft">
+          We sent a confirmation link to your inbox when you signed up. Open it to verify your
+          account — some actions may be limited until then.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ShellInner({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const { role, isRep, isPendingRep } = useRole();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -55,6 +74,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         <Topbar onMenu={() => setOpen(true)} onSearch={() => setSearchOpen(true)} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {isPendingRep && <PendingRepBanner />}
+          {!isPendingRep && user && !user.emailVerified && <VerifyEmailBanner />}
           {blocked ? <RepOnlyNotice /> : children}
         </main>
       </div>
