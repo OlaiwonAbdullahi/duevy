@@ -5,6 +5,9 @@ import {
   Analytics01Icon,
   Invoice01Icon,
   Building03Icon,
+  AiChat01Icon,
+  BarChartIcon,
+  GiftIcon,
 } from "@hugeicons/core-free-icons";
 
 const features = [
@@ -28,6 +31,17 @@ const features = [
     title: "Automatic receipts",
     body: "Every payment generates proof for both student and rep.",
   },
+  {
+    icon: AiChat01Icon,
+    title: "Ask Duey",
+    body: "Duevy's built-in assistant answers what you owe, finds your rep, and can even take the payment — right in the chat.",
+  },
+  {
+    icon: BarChartIcon,
+    title: "Paid polls & voting",
+    body: "Run dinner nights, awards, or elections where students pay to vote, and reps watch tallies and funds raised live.",
+  },
+
   {
     icon: Building03Icon,
     title: "Multi-school ready",
