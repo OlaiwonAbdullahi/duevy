@@ -101,7 +101,7 @@ export default function PayoutPage() {
     if (!spaceId) return;
     try {
       // The API strictly takes { bankCode, accountNumber } — the account name is
-      // resolved + verified server-side via Monnify name-enquiry.
+      // resolved + verified server-side via Paystack name-enquiry.
       await setPayoutAccount(spaceId, {
         bankCode: next.bankCode,
         accountNumber: next.accountNumber,

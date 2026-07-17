@@ -11,7 +11,7 @@ export type Transaction = {
   detail: string;
   /** Positive = money into the wallet, negative = money out. */
   amount: number;
-  /** How it moved: "Wallet", "Visa •••• 4242", "Monnify". */
+  /** How it moved: "Wallet", "Visa •••• 4242", "Paystack". */
   method: string;
   /** ISO timestamp the transaction posted. */
   date: string;

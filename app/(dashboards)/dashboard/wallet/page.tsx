@@ -26,7 +26,7 @@ import {
 import { getPaymentStatus } from "@/lib/api/dues";
 import { ApiError } from "@/lib/api/errors";
 
-/** Survives the Monnify round-trip so we can verify the top-up on return. */
+/** Survives the Paystack round-trip so we can verify the top-up on return. */
 const TOPUP_REF_KEY = "duevy-topup-ref";
 /** Same idea, but for a card being verified + tokenized via the add-card flow. */
 const ADDCARD_REF_KEY = "duevy-addcard-ref";
@@ -105,7 +105,7 @@ export default function WalletPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // On return from Monnify hosted checkout (either a top-up or an add-card
+  // On return from Paystack hosted checkout (either a top-up or an add-card
   // verification charge), confirm the payment and reconcile local state. The
   // reference comes back on the URL, with a sessionStorage fallback set before
   // we redirected out.
@@ -206,7 +206,7 @@ export default function WalletPage() {
     try {
       if (via.source === "online") {
         // Hosted checkout — redirect out; verified on return (see effect above),
-        // and ultimately credited by the Monnify webhook.
+        // and ultimately credited by the Paystack webhook.
         const res = await topUp({ amount: amount * 100, method: "online" });
         if (res.reference) sessionStorage.setItem(TOPUP_REF_KEY, res.reference);
         if (res.checkoutUrl) {
@@ -221,7 +221,7 @@ export default function WalletPage() {
         description:
           via.source === "card"
             ? `Paid with ${via.card.brand} •••• ${via.card.last4}`
-            : "Paid via Monnify",
+            : "Paid via Paystack",
       });
       await refresh();
     } catch (err) {
@@ -231,7 +231,7 @@ export default function WalletPage() {
 
   const handleAddCard = async (isDefault: boolean) => {
     try {
-      // No raw card fields ever touch this API — Monnify collects and tokenizes
+      // No raw card fields ever touch this API — Paystack collects and tokenizes
       // the card on its hosted checkout; we only pass the "make default" intent.
       const res = await saveCard({ isDefault });
       if (res.reference) sessionStorage.setItem(ADDCARD_REF_KEY, res.reference);

@@ -213,7 +213,7 @@ export function PayDueModal({
           </span>
           <p className="text-xs leading-relaxed text-ink-soft">
             You&apos;ll be securely redirected to{" "}
-            <span className="font-semibold text-ink">Monnify</span> to finish
+            <span className="font-semibold text-ink">Paystack</span> to finish
             paying by card, bank transfer or USSD.
           </p>
         </div>
@@ -238,7 +238,7 @@ export function PayDueModal({
           {pending
             ? "Processing…"
             : method === "online"
-              ? "Continue to Monnify"
+              ? "Continue to Paystack"
               : `Pay ${naira(total)}`}
           {method === "online" && !pending && (
             <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />

@@ -50,7 +50,7 @@ const exampleQuestions = [
   "Who is my department rep?",
 ];
 
-/** Online payments redirect to Monnify's hosted checkout. */
+/** Online payments redirect to Paystack's hosted checkout. */
 function redirectToCheckout(url: string) {
   window.location.href = url;
 }
