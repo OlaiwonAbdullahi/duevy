@@ -30,8 +30,8 @@ const TABS: { value: TxnFilter; label: string }[] = [
 
 /** Map an API transaction (kobo, minimal fields) to the ledger row shape. */
 function adapt(t: ApiTransaction): Transaction {
-  const type = t.type as TxnType;
-  const meta = TXN_META[type] ?? TXN_META.due;
+  const type: TxnType = t.type in TXN_META ? (t.type as TxnType) : "due";
+  const meta = TXN_META[type];
   return {
     id: t.id,
     type,
