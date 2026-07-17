@@ -3,6 +3,7 @@ import { ShieldIcon } from "./icons";
 const rails = [
   { name: "Monnify", domain: "monnify.com" },
   { name: "Nomba", domain: "nomba.com" },
+  { name: "Google Gemma", domain: "deepmind.google" },
 ];
 
 export default function TrustBar() {

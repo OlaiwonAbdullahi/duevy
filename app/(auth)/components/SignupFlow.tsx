@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -17,6 +16,7 @@ import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
 import CoRepsStep from "./CoRepsStep";
 import SpaceSettingsStep, { type SpaceSettings } from "./SpaceSettingsStep";
+import { CheckEmailNotice } from "./CheckEmailNotice";
 
 type StepId = "role" | "account" | "space" | "coReps" | "settings";
 
@@ -54,7 +54,6 @@ function safeNext(raw: string | null): string | null {
 }
 
 export default function SignupFlow() {
-  const router = useRouter();
   const { register } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   // Read once on mount rather than via `useSearchParams()`, which would force
@@ -67,6 +66,7 @@ export default function SignupFlow() {
   const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
   const [role, setRole] = useState<SignupRole>("student");
   const [submitting, setSubmitting] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const [account, setAccount] = useState<Account>({
     name: "",
@@ -116,8 +116,7 @@ export default function SignupFlow() {
         password: nextAccount.password,
         acceptedTerms: nextAccount.acceptedTerms,
       });
-      toast.success("Account created", { description: "Sign in to continue." });
-      router.push(loginHref);
+      setSubmittedEmail(nextAccount.email);
     } catch (err) {
       toast.error(
         err instanceof ApiError
@@ -149,10 +148,7 @@ export default function SignupFlow() {
           theme: data.theme,
         },
       });
-      toast.success("Application submitted", {
-        description: "Sign in to track your review.",
-      });
-      router.push(loginHref);
+      setSubmittedEmail(account.email);
     } catch (err) {
       toast.error(
         err instanceof ApiError
@@ -166,6 +162,10 @@ export default function SignupFlow() {
 
   const RoleIcon = ROLE_META[role].icon;
   const { title, subtitle } = headerFor(currentId, role, space.spaceName);
+
+  if (submittedEmail) {
+    return <CheckEmailNotice email={submittedEmail} loginHref={loginHref} />;
+  }
 
   return (
     <div className="flex flex-col">

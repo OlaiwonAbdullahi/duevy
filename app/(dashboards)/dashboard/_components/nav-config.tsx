@@ -14,6 +14,7 @@ import {
   GiftIcon,
   UserGroup03Icon,
   Megaphone01Icon,
+  AiChat01Icon,
 } from "@hugeicons/core-free-icons";
 
 /** The icon-data shape exported by @hugeicons/core-free-icons. */
@@ -46,6 +47,7 @@ export const STUDENT_LINKS: NavLink[] = [
     href: "/dashboard/transactions",
     icon: ReceiptDollarIcon,
   },
+  { label: "Assistant", href: "/dashboard/assistant", icon: AiChat01Icon },
   { label: "Settings", href: "/dashboard/settings", icon: Settings02Icon },
 ];
 

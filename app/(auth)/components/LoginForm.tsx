@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import { ArrowRightIcon } from "../../components/icons";
+import { EmailUnverifiedNotice } from "./EmailUnverifiedNotice";
 
 /** Only ever follow an internal path — never let `next` redirect off-site. */
 function safeNext(raw: string | null): string | null {
@@ -24,8 +25,9 @@ export default function LoginForm() {
       ? null
       : safeNext(new URLSearchParams(window.location.search).get("next")),
   );
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,6 +38,10 @@ export default function LoginForm() {
     setLoading(true);
     try {
       const user = await login(email, password);
+      if (!user.emailVerified) {
+        setUnverifiedEmail(email);
+        return;
+      }
       toast.success("Welcome back", {
         description: `Signed in as ${user.name.split(" ")[0]}.`,
       });
@@ -49,6 +55,18 @@ export default function LoginForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (unverifiedEmail) {
+    return (
+      <EmailUnverifiedNotice
+        email={unverifiedEmail}
+        onBack={() => {
+          void logout();
+          setUnverifiedEmail(null);
+        }}
+      />
+    );
   }
 
   return (
