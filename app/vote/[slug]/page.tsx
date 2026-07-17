@@ -24,7 +24,6 @@ import {
   type CastVotePayload,
 } from "@/lib/api/polls";
 import { getWallet, listCards } from "@/lib/api/wallet";
-import { getPaymentStatus } from "@/lib/api/dues";
 import { ApiError } from "@/lib/api/errors";
 import { nairaFromKobo } from "@/app/(dashboards)/dashboard/_components/format";
 import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState";
@@ -36,8 +35,7 @@ import { CategoryCard } from "./_components/CategoryCard";
 import { CategoryVoter } from "./_components/CategoryVoter";
 import { PayVoteModal, type VoteMethod } from "./_components/PayVoteModal";
 import { useCountdown } from "./_components/useCountdown";
-
-const voteRefKey = (slug: string) => `duevy-vote-ref-${slug}`;
+import { savePendingVoteCheckout } from "../pending-checkout";
 
 type Selection = { nomineeId: string; quantity: number };
 
@@ -99,75 +97,6 @@ export default function VotePage() {
     return () => document.documentElement.removeAttribute("data-space-theme");
   }, [poll?.themeColor]);
 
-  // On return from Monnify hosted checkout for an "online" vote payment.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlRef =
-      params.get("reference") ||
-      params.get("paymentReference") ||
-      params.get("transactionReference");
-    const ref = urlRef || sessionStorage.getItem(voteRefKey(slug));
-    if (!ref) return;
-
-    let cancelled = false;
-    let attempts = 0;
-
-    const finish = () => {
-      sessionStorage.removeItem(voteRefKey(slug));
-      const url = new URL(window.location.href);
-      for (const k of ["reference", "paymentReference", "transactionReference", "status"]) {
-        url.searchParams.delete(k);
-      }
-      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
-    };
-
-    const verifying = toast.loading("Confirming your vote…");
-
-    const checkStatus = async () => {
-      try {
-        const res = await getPaymentStatus(ref);
-        if (cancelled) return;
-        if (res.status === "completed") {
-          toast.dismiss(verifying);
-          setLastReceiptId(ref);
-          setSuccessOpen(true);
-          setSelections({});
-          await load();
-          finish();
-          return;
-        }
-        if (res.status === "failed") {
-          toast.error("Payment failed", {
-            id: verifying,
-            description: "You were not charged — your vote wasn't counted.",
-          });
-          finish();
-          return;
-        }
-        if (attempts++ < 8) {
-          setTimeout(checkStatus, 2500);
-        } else {
-          toast.info("Still processing", {
-            id: verifying,
-            description: "We'll update this once it clears.",
-          });
-          finish();
-        }
-      } catch {
-        if (!cancelled) {
-          toast.dismiss(verifying);
-          finish();
-        }
-      }
-    };
-
-    checkStatus();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-
   const select = (categoryId: string, nomineeId: string) => {
     setSelections((prev) => {
       const current = prev[categoryId];
@@ -204,7 +133,7 @@ export default function VotePage() {
     try {
       const res = await castVote(slug, payload);
       if (res.checkoutUrl) {
-        if (res.reference) sessionStorage.setItem(voteRefKey(slug), res.reference);
+        if (res.reference) savePendingVoteCheckout({ slug, reference: res.reference });
         window.location.href = res.checkoutUrl;
         return;
       }

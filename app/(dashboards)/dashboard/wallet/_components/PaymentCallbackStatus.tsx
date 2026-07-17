@@ -3,11 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowRight01Icon,
+  Alert01Icon,
+  CheckmarkBadge01Icon,
+} from "@hugeicons/core-free-icons";
 import { getPaymentStatus, type PaymentStatus } from "@/lib/api/dues";
 import { ApiError } from "@/lib/api/errors";
-import { nairaFromKobo } from "../../(dashboards)/dashboard/_components/format";
-import { ArrowRightIcon, CheckIcon } from "../../components/icons";
+import { IconChip } from "../../_components/IconChip";
+import { nairaFromKobo } from "../../_components/format";
+import type { HugeIcon } from "../../_components/nav-config";
 
 type State = "verifying" | "completed" | "failed" | "timeout" | "signin" | "missing";
 
@@ -24,11 +29,7 @@ const NEXT_STEP: Record<string, { href: string; label: string }> = {
 };
 const DEFAULT_NEXT = { href: "/dashboard", label: "Go to dashboard" };
 
-export default function PaymentCallbackStatus({
-  reference,
-}: {
-  reference: string | null;
-}) {
+export function PaymentCallbackStatus({ reference }: { reference: string | null }) {
   const [state, setState] = useState<State>(reference ? "verifying" : "missing");
   const [result, setResult] = useState<PaymentStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -82,9 +83,26 @@ export default function PaymentCallbackStatus({
     };
   }, [reference]);
 
+  if (state === "verifying") {
+    return (
+      <Card>
+        <span className="mx-auto mb-4 h-14 w-14 animate-pulse rounded-full bg-cloud" />
+        <h1 className="text-lg font-semibold tracking-tight text-ink">
+          Confirming your payment
+        </h1>
+        <p className="mt-1.5 text-sm text-ink-soft">
+          Hang tight — we&apos;re checking with your bank. This only takes a
+          moment.
+        </p>
+      </Card>
+    );
+  }
+
   if (state === "missing") {
     return (
-      <StatusShell
+      <ResultCard
+        tone="danger"
+        icon={Alert01Icon}
         title="Missing payment reference"
         description="This link doesn't include a payment reference to check. If you just completed a payment, check your transactions instead."
         ctaHref="/dashboard/transactions"
@@ -93,24 +111,14 @@ export default function PaymentCallbackStatus({
     );
   }
 
-  if (state === "verifying") {
-    return (
-      <div className="flex flex-col items-center text-center">
-        <span className="mx-auto mb-6 h-14 w-14 animate-pulse rounded-2xl bg-[#e6f2ec]" />
-        <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
-          Confirming your payment
-        </h1>
-        <p className="text-[#7a847f] text-[15px] leading-relaxed">
-          Hang tight — we&apos;re checking with your bank. This only takes a moment.
-        </p>
-      </div>
-    );
-  }
-
   if (state === "signin") {
-    const next = reference ? `/wallet/callback?reference=${encodeURIComponent(reference)}` : "/wallet/callback";
+    const next = reference
+      ? `/dashboard/wallet/callback?reference=${encodeURIComponent(reference)}`
+      : "/dashboard/wallet/callback";
     return (
-      <StatusShell
+      <ResultCard
+        tone="danger"
+        icon={Alert01Icon}
         title="Sign in to view this payment"
         description="Your session expired while you were away. Sign back in and we'll pick up right where you left off."
         ctaHref={`/login?next=${encodeURIComponent(next)}`}
@@ -121,7 +129,9 @@ export default function PaymentCallbackStatus({
 
   if (state === "timeout") {
     return (
-      <StatusShell
+      <ResultCard
+        tone="danger"
+        icon={Alert01Icon}
         title="Still processing"
         description="This is taking longer than usual. Your payment may still complete — check your transactions in a few minutes."
         ctaHref="/dashboard/transactions"
@@ -132,7 +142,9 @@ export default function PaymentCallbackStatus({
 
   if (state === "failed") {
     return (
-      <StatusShell
+      <ResultCard
+        tone="danger"
+        icon={Alert01Icon}
         title="Payment didn't go through"
         description={
           errorMessage ??
@@ -149,22 +161,19 @@ export default function PaymentCallbackStatus({
   const next = (txn && NEXT_STEP[txn.type]) || DEFAULT_NEXT;
 
   return (
-    <div className="flex flex-col text-center">
-      <span className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-2xl bg-[#e6f2ec] text-[#0b6e4f]">
-        <CheckIcon size={22} />
-      </span>
-
-      <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
+    <Card>
+      <IconChip icon={CheckmarkBadge01Icon} size="lg" tone="brand" className="mx-auto" />
+      <h1 className="mt-4 text-lg font-semibold tracking-tight text-ink">
         Payment confirmed
       </h1>
-      <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">
+      <p className="mt-1.5 text-sm text-ink-soft">
         {txn
           ? `${nairaFromKobo(Math.abs(txn.amount))} — ${txn.title ?? "your payment"} went through successfully.`
           : "Your payment went through successfully."}
       </p>
 
       {txn && (
-        <div className="mb-8 rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] p-5 text-left">
+        <div className="mt-5 rounded-2xl border border-cloud bg-paper/50 p-4 text-left">
           <Row label="Reference" value={txn.reference} />
           {txn.method && <Row label="Method" value={txn.method} />}
           <Row
@@ -182,59 +191,64 @@ export default function PaymentCallbackStatus({
 
       <Link
         href={next.href}
-        className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
+        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         {next.label}
-        <ArrowRightIcon
-          size={16}
-          className="transition-transform duration-500 group-hover:translate-x-1"
-        />
+        <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
       </Link>
-    </div>
+    </Card>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5 first:pt-0 last:pb-0">
-      <span className="text-[#7a847f] text-[13px]">{label}</span>
-      <span className="text-[#1b2520] text-[13px] font-medium">{value}</span>
+    <div className="mx-auto max-w-md">
+      <div className="rounded-3xl border border-cloud bg-canvas p-6 text-center sm:p-8">
+        {children}
+      </div>
     </div>
   );
 }
 
-function StatusShell({
+function ResultCard({
+  icon,
+  tone,
   title,
   description,
   ctaHref,
   ctaLabel,
 }: {
+  icon: HugeIcon;
+  tone: "danger";
   title: string;
   description: string;
   ctaHref: string;
   ctaLabel: string;
 }) {
   return (
-    <div className="flex flex-col text-center">
-      <span className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-2xl bg-[#fdeceb] text-[#c0362c]">
-        <HugeiconsIcon icon={Alert01Icon} size={26} />
-      </span>
-
-      <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
+    <Card>
+      <IconChip icon={icon} size="lg" tone={tone} className="mx-auto" />
+      <h1 className="mt-4 text-lg font-semibold tracking-tight text-ink">
         {title}
       </h1>
-      <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">{description}</p>
+      <p className="mt-1.5 text-sm text-ink-soft">{description}</p>
 
       <Link
         href={ctaHref}
-        className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
+        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         {ctaLabel}
-        <ArrowRightIcon
-          size={16}
-          className="transition-transform duration-500 group-hover:translate-x-1"
-        />
+        <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
       </Link>
+    </Card>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5 first:pt-0 last:pb-0">
+      <span className="text-xs text-ink-soft">{label}</span>
+      <span className="text-xs font-medium text-ink">{value}</span>
     </div>
   );
 }
