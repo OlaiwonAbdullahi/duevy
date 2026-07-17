@@ -17,6 +17,7 @@ import {
   SquareLock01Icon,
   Wallet01Icon,
   Alert01Icon,
+  AiChat01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { getRepOverview } from "@/lib/api/rep";
@@ -156,6 +157,12 @@ export function RepOverview() {
               icon={CheckmarkSquare01Icon}
               label="Create a poll"
               hint="Set up award votes"
+            />
+            <QuickAction
+              href="/dashboard/assistant"
+              icon={AiChat01Icon}
+              label="Chat with Duey"
+              hint="Ask about your dues"
             />
           </div>
 

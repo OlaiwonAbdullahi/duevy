@@ -2,7 +2,7 @@ import { ShieldIcon } from "./icons";
 
 const rails = [
   { name: "Monnify", domain: "monnify.com" },
-  { name: "Nomba", domain: "nomba.com" },
+  { name: "Paystack", domain: "paystack.com" },
   { name: "Google Gemma", domain: "deepmind.google" },
 ];
 

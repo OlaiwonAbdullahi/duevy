@@ -1,133 +1,242 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AiChat01Icon,
-  CheckmarkCircle02Icon,
   Message01Icon,
   SentIcon,
+  Add01Icon,
 } from "@hugeicons/core-free-icons";
-
-type QuickReply = {
-  label: string;
-  action: "due" | "confirm";
-};
+import {
+  sendAssistantMessage,
+  confirmAssistantJoin,
+  type AssistantAction,
+  type AssistantQuickReply,
+} from "@/lib/api/assistant";
+import { getDue, payDue as payDueApi } from "@/lib/api/dues";
+import { getSpace } from "@/lib/api/spaces";
+import { getWallet, listCards } from "@/lib/api/wallet";
+import { ApiError } from "@/lib/api/errors";
+import { useAuth } from "@/lib/auth/auth-context";
+import { adaptDue, adaptSpace } from "../dues/_components/adapt";
+import type { Due, PayMethod, Space } from "../dues/_components/types";
+import type { Card } from "../wallet/_components/types";
+import { PayDueModal } from "../dues/_components/PayDueModal";
+import { ReceiptModal } from "../dues/_components/ReceiptModal";
+import { buildReceipts, type Receipt } from "../dues/_components/receipt";
+import { naira, fromKobo } from "../_components/format";
 
 type ChatMessage = {
   id: number;
   sender: "user" | "bot";
   content: string;
-  quickReplies?: QuickReply[];
+  quickReplies?: AssistantQuickReply[];
+  action?: AssistantAction;
 };
-
-const dueOptions: QuickReply[] = [
-  { label: "Handout Fee - ₦1,500", action: "due" },
-  { label: "Association Due - ₦2,000", action: "due" },
-];
 
 const starterMessage: ChatMessage = {
   id: 1,
   sender: "bot",
   content:
-    "Hi! I'm Duevy Assistant. I can help you pay dues, join a department, or check what you owe.",
+    "Hi! I'm Duey. I can help you pay dues, join a department, check your balance, view your payment history, or find your department rep.",
 };
 
 const exampleQuestions = [
   "How much do I owe?",
-  "I want to pay my handout fee",
+  "Pay my handout fee",
   "Show my payment history",
-  "Add me to 2CS4-DEPT",
+  "Who is my department rep?",
 ];
 
-/**
- * A UI-only assistant. It deliberately keeps all state in memory, so it can
- * be dropped in without backend configuration.
- */
+/** Online payments redirect to Monnify's hosted checkout. */
+function redirectToCheckout(url: string) {
+  window.location.href = url;
+}
+
 export default function AssistantPage() {
-  const [input, setInput] = useState("");
+  const { user } = useAuth();
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([starterMessage]);
-  const [isTyping, setIsTyping] = useState(false);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [joiningId, setJoiningId] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messageId = useRef(2);
 
-  const showExamples = messages.length === 1 && !isTyping;
+  // Payment-modal state, populated when Duey resolves an `open_payment_modal` action.
+  const [payDue, setPayDue] = useState<Due | null>(null);
+  const [paySpace, setPaySpace] = useState<Space | null>(null);
+  const [payBalance, setPayBalance] = useState(0);
+  const [payCards, setPayCards] = useState<Card[]>([]);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payPending, setPayPending] = useState(false);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+
+  const showExamples = messages.length === 1 && !sending;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, sending]);
 
-  function nextMessage(
+  const pushMessage = (
     sender: ChatMessage["sender"],
     content: string,
-    quickReplies?: QuickReply[],
-  ) {
-    return { id: messageId.current++, sender, content, quickReplies };
-  }
+    quickReplies?: AssistantQuickReply[],
+    action?: AssistantAction,
+  ) => {
+    setMessages((current) => [
+      ...current,
+      { id: messageId.current++, sender, content, quickReplies, action },
+    ]);
+  };
 
-  function addBotReply(content: string, quickReplies?: QuickReply[]) {
-    setIsTyping(true);
-    window.setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        nextMessage("bot", content, quickReplies),
-      ]);
-      setIsTyping(false);
-    }, 600);
-  }
-
-  function respondTo(text: string) {
-    const normalized = text.toLowerCase();
-    const hasJoinCode = /\b[a-z0-9]{4,}-[a-z0-9]{4,}\b/i.test(text);
-
-    if (normalized.includes("pay")) {
-      addBotReply("Sure — which due would you like to pay?", dueOptions);
-    } else if (normalized.includes("add me") || hasJoinCode) {
-      addBotReply("You've joined Dummy Dept Space ✅");
-    } else if (normalized.includes("owe") || normalized.includes("balance")) {
-      addBotReply("You owe ₦3,500 across 2 items.");
-    } else if (normalized.includes("history")) {
-      addBotReply(
-        "Here's your recent payment history:\n• Faculty Levy — ₦1,000 · 12 Jun 2026\n• Departmental Dues — ₦2,500 · 04 May 2026\n• SUG Due — ₦1,500 · 19 Mar 2026",
-      );
-    } else {
-      addBotReply(
-        "I can help you pay dues, join a department, or check your balance. Try one of those!",
-      );
-    }
-  }
-
-  function sendMessage(text = input) {
-    const trimmed = text.trim();
-    if (!trimmed || isTyping) return;
-
-    setMessages((current) => [...current, nextMessage("user", trimmed)]);
-    setInput("");
-    respondTo(trimmed);
-  }
-
-  function handleQuickReply(reply: QuickReply) {
-    if (isTyping) return;
+  const clearQuickReplies = () => {
     setMessages((current) =>
       current.map((message) =>
         message.quickReplies ? { ...message, quickReplies: undefined } : message,
       ),
     );
+  };
 
-    if (reply.action === "due") {
-      setMessages((current) => [...current, nextMessage("user", reply.label)]);
-      addBotReply(
-        `Great choice. ${reply.label} is ready for payment. Would you like to continue?`,
-        [{ label: "Confirm payment", action: "confirm" }],
+  const sendMessage = async (text = input) => {
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+
+    clearQuickReplies();
+    pushMessage("user", trimmed);
+    setInput("");
+    setSending(true);
+    try {
+      const res = await sendAssistantMessage({
+        message: trimmed,
+        conversationId: conversationId ?? undefined,
+      });
+      setConversationId(res.conversationId);
+      pushMessage("bot", res.reply, res.quickReplies, res.action);
+
+      if (res.action?.type === "open_payment_modal") {
+        void openPaymentModal(res.action.dueId);
+      }
+    } catch (err) {
+      pushMessage(
+        "bot",
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't reach Duey right now. Please try again.",
       );
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleQuickReply = async (message: ChatMessage, reply: AssistantQuickReply) => {
+    if (sending || joiningId !== null) return;
+
+    if (message.action?.type === "confirm_join_department") {
+      const action = message.action;
+      clearQuickReplies();
+      pushMessage("user", reply.label);
+      setJoiningId(message.id);
+      try {
+        const res = await confirmAssistantJoin({
+          conversationId: conversationId ?? "",
+          spaceId: action.spaceId,
+          inviteCode: action.inviteCode,
+        });
+        pushMessage(
+          "bot",
+          res.status === "joined"
+            ? `You've joined ${res.spaceName} ✅`
+            : `You're already a member of ${res.spaceName}.`,
+        );
+      } catch (err) {
+        pushMessage(
+          "bot",
+          err instanceof ApiError
+            ? err.message
+            : "Couldn't join that department right now. Please try again.",
+        );
+      } finally {
+        setJoiningId(null);
+      }
       return;
     }
 
-    setMessages((current) => [...current, nextMessage("user", reply.label)]);
-    addBotReply(
-      "Payment confirmed! 🎉 In a live dashboard, I'd now take you to the secure payment page.",
-    );
-  }
+    await sendMessage(reply.value);
+  };
+
+  const openPaymentModal = async (dueId: string) => {
+    setPayLoading(true);
+    try {
+      const due = await getDue(dueId);
+      const [space, wallet, cards] = await Promise.all([
+        getSpace(due.spaceId),
+        getWallet(),
+        listCards(),
+      ]);
+      setPayDue(adaptDue(due));
+      setPaySpace(adaptSpace(space));
+      setPayBalance(fromKobo(wallet.balance));
+      setPayCards(cards);
+    } catch {
+      toast.error("Couldn't open payment for this due.");
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const confirmPay = async (method: PayMethod, card?: Card) => {
+    if (!payDue || !paySpace) return;
+    setPayPending(true);
+    try {
+      const result = await payDueApi(
+        payDue.id,
+        method === "card" && card
+          ? { method: "card", cardId: card.id }
+          : method === "online"
+            ? { method: "online" }
+            : { method: "wallet" },
+      );
+
+      if (method === "online" && result.checkoutUrl) {
+        redirectToCheckout(result.checkoutUrl);
+        return;
+      }
+
+      const ref = result.transaction?.reference ?? result.reference ?? "";
+      const payer = {
+        name: user?.name ?? "",
+        detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
+          .filter(Boolean)
+          .join(" · "),
+      };
+      setReceipts(buildReceipts([payDue], paySpace, method, payer, [ref], card));
+      pushMessage(
+        "bot",
+        `Payment confirmed! ${naira(payDue.amount)} for ${payDue.title} is settled. 🎉`,
+      );
+      setPayDue(null);
+      setPaySpace(null);
+    } catch {
+      toast.error("Payment failed. Please try again.");
+    } finally {
+      setPayPending(false);
+    }
+  };
+
+  const closePaymentModal = () => {
+    if (payPending) return;
+    setPayDue(null);
+    setPaySpace(null);
+  };
+
+  const startNewChat = () => {
+    setConversationId(null);
+    setMessages([starterMessage]);
+    messageId.current = 2;
+  };
 
   return (
     <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col lg:h-[calc(100vh-6rem)]">
@@ -136,20 +245,28 @@ export default function AssistantPage() {
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand text-white">
           <HugeiconsIcon icon={AiChat01Icon} size={22} />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-            Duevy Assistant
+            Duey
           </h1>
           <p className="mt-0.5 text-[13px] text-ink-soft">
-            Here to make dues simple — ask about payments, balances, or joining a
+            Your dues assistant — ask about payments, balances, or joining a
             department.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={startNewChat}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-cloud px-3.5 py-2 text-[13px] font-semibold text-ink-soft transition-colors duration-300 hover:border-brand/40 hover:text-brand cursor-pointer"
+        >
+          <HugeiconsIcon icon={Add01Icon} size={15} />
+          New chat
+        </button>
       </header>
 
       {/* Chat panel */}
       <section
-        aria-label="Duevy Assistant chat"
+        aria-label="Duey chat"
         className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-cloud bg-canvas shadow-sm"
       >
         <div className="flex-1 space-y-4 overflow-y-auto bg-paper/45 px-4 py-5 sm:px-6">
@@ -183,23 +300,17 @@ export default function AssistantPage() {
                 >
                   {message.content}
                 </p>
-                {message.quickReplies && (
+                {message.quickReplies && message.quickReplies.length > 0 && (
                   <div className="mt-2.5 flex flex-wrap gap-2">
                     {message.quickReplies.map((reply) => (
                       <button
                         key={reply.label}
                         type="button"
-                        onClick={() => handleQuickReply(reply)}
-                        className="inline-flex items-center rounded-full border border-brand/25 bg-brand/5 px-3.5 py-1.5 text-xs font-semibold text-brand transition-colors duration-300 hover:bg-brand hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
+                        disabled={joiningId !== null || sending}
+                        onClick={() => handleQuickReply(message, reply)}
+                        className="inline-flex items-center rounded-full border border-brand/25 bg-brand/5 px-3.5 py-1.5 text-xs font-semibold text-brand transition-colors duration-300 hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
                       >
-                        {reply.action === "confirm" && (
-                          <HugeiconsIcon
-                            icon={CheckmarkCircle02Icon}
-                            size={14}
-                            className="mr-1"
-                          />
-                        )}
-                        {reply.label}
+                        {joiningId === message.id ? "Joining…" : reply.label}
                       </button>
                     ))}
                   </div>
@@ -208,7 +319,7 @@ export default function AssistantPage() {
             </div>
           ))}
 
-          {isTyping && (
+          {sending && (
             <div className="flex items-center gap-2.5">
               <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand/10 text-brand">
                 <HugeiconsIcon icon={Message01Icon} size={16} />
@@ -227,7 +338,7 @@ export default function AssistantPage() {
 
           {/* Example prompts — shown until the visitor sends their first message. */}
           {showExamples && (
-            <div className="pl-[42px]">
+            <div className="pl-10.5">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
                 Try asking
               </p>
@@ -252,7 +363,7 @@ export default function AssistantPage() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            sendMessage();
+            void sendMessage();
           }}
           className="flex items-center gap-3 border-t border-cloud bg-canvas p-4"
         >
@@ -260,12 +371,13 @@ export default function AssistantPage() {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder="Ask about your dues..."
-            aria-label="Message Duevy Assistant"
-            className="min-w-0 flex-1 rounded-xl border border-cloud bg-paper px-4 py-3 text-sm text-ink outline-none transition-colors duration-300 placeholder:text-ink-soft/70 focus:border-brand focus:ring-2 focus:ring-brand/15"
+            aria-label="Message Duey"
+            disabled={sending}
+            className="min-w-0 flex-1 rounded-xl border border-cloud bg-paper px-4 py-3 text-sm text-ink outline-none transition-colors duration-300 placeholder:text-ink-soft/70 focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
           />
           <button
             type="submit"
-            disabled={!input.trim() || isTyping}
+            disabled={!input.trim() || sending}
             aria-label="Send message"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand text-white transition-colors duration-300 hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
           >
@@ -273,6 +385,28 @@ export default function AssistantPage() {
           </button>
         </form>
       </section>
+
+      {payLoading && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 backdrop-blur-sm">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />
+        </div>
+      )}
+
+      {payDue && paySpace && (
+        <PayDueModal
+          dues={[payDue]}
+          space={paySpace}
+          balance={payBalance}
+          cards={payCards}
+          pending={payPending}
+          onClose={closePaymentModal}
+          onConfirm={confirmPay}
+        />
+      )}
+
+      {receipts.length > 0 && (
+        <ReceiptModal receipts={receipts} onClose={() => setReceipts([])} />
+      )}
     </div>
   );
 }
