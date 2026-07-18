@@ -24,15 +24,18 @@ import { EmptyState } from "../../_components/EmptyState";
 export function TopUpModal({
   cards,
   defaultCard,
+  defaultAmount,
   onClose,
   onConfirm,
 }: {
   cards: Card[];
   defaultCard: Card | undefined;
+  /** Pre-fills the amount field (whole naira) — e.g. when Duey has already resolved one. */
+  defaultAmount?: number;
   onClose: () => void;
   onConfirm: (amount: number, via: TopUpSource) => Promise<void>;
 }) {
-  const [amount, setAmount] = useState<number | "">("");
+  const [amount, setAmount] = useState<number | "">(defaultAmount ?? "");
   const [method, setMethod] = useState<TopUpMethod>(
     cards.length ? "card" : "online",
   );

@@ -12,20 +12,23 @@ import {
 import {
   sendAssistantMessage,
   confirmAssistantJoin,
+  confirmAssistantCreateDue,
   type AssistantAction,
   type AssistantQuickReply,
 } from "@/lib/api/assistant";
 import { getDue, payDue as payDueApi } from "@/lib/api/dues";
 import { getSpace } from "@/lib/api/spaces";
-import { getWallet, listCards } from "@/lib/api/wallet";
+import { getWallet, listCards, topUp } from "@/lib/api/wallet";
 import { ApiError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
 import { adaptDue, adaptSpace } from "../dues/_components/adapt";
 import type { Due, PayMethod, Space } from "../dues/_components/types";
 import type { Card } from "../wallet/_components/types";
+import type { TopUpSource } from "../wallet/_components/types";
 import { PayDueModal } from "../dues/_components/PayDueModal";
 import { ReceiptModal } from "../dues/_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "../dues/_components/receipt";
+import { TopUpModal } from "../wallet/_components/TopUpModal";
 import { naira, fromKobo } from "../_components/format";
 
 type ChatMessage = {
@@ -73,6 +76,15 @@ export default function AssistantPage() {
   const [payLoading, setPayLoading] = useState(false);
   const [payPending, setPayPending] = useState(false);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+
+  // Top-up modal state, populated when Duey resolves an `open_topup_modal` action.
+  const [topUpAmount, setTopUpAmount] = useState<number | null>(null);
+  const [topUpCards, setTopUpCards] = useState<Card[]>([]);
+  const [topUpLoading, setTopUpLoading] = useState(false);
+  const [topUpPending, setTopUpPending] = useState(false);
+
+  // Create-due confirm state (rep-only), keyed by the chat message offering it.
+  const [creatingDueId, setCreatingDueId] = useState<number | null>(null);
 
   const showExamples = messages.length === 1 && !sending;
 
@@ -124,6 +136,9 @@ export default function AssistantPage() {
       if (res.action?.type === "open_payment_modal") {
         void openPaymentModal(res.action.dueId);
       }
+      if (res.action?.type === "open_topup_modal") {
+        void openTopUpModal(res.action.amount);
+      }
     } catch (err) {
       console.error("[assistant] FAILED", {
         status: err instanceof ApiError ? err.status : undefined,
@@ -143,7 +158,7 @@ export default function AssistantPage() {
   };
 
   const handleQuickReply = async (message: ChatMessage, reply: AssistantQuickReply) => {
-    if (sending || joiningId !== null) return;
+    if (sending || joiningId !== null || creatingDueId !== null) return;
 
     if (message.action?.type === "confirm_join_department") {
       const action = message.action;
@@ -172,6 +187,49 @@ export default function AssistantPage() {
       } finally {
         setJoiningId(null);
       }
+      return;
+    }
+
+    if (message.action?.type === "confirm_create_due") {
+      const action = message.action;
+      clearQuickReplies();
+      pushMessage("user", reply.label);
+      setCreatingDueId(message.id);
+      try {
+        const res = await confirmAssistantCreateDue({
+          conversationId: conversationId ?? "",
+          spaceId: action.spaceId,
+          title: action.title,
+          amount: action.amount,
+          dueDate: action.dueDate,
+          category: action.category,
+        });
+        pushMessage(
+          "bot",
+          `"${res.title}" was created as a draft for ${res.spaceName} — publish it from your dashboard when you're ready.`,
+        );
+      } catch (err) {
+        pushMessage(
+          "bot",
+          err instanceof ApiError
+            ? err.message
+            : "Couldn't create that due right now. Please try again.",
+        );
+      } finally {
+        setCreatingDueId(null);
+      }
+      return;
+    }
+
+    // Duey already resolved this — re-open the modal rather than re-asking the LLM.
+    if (message.action?.type === "open_topup_modal") {
+      clearQuickReplies();
+      await openTopUpModal(message.action.amount);
+      return;
+    }
+    if (message.action?.type === "open_payment_modal") {
+      clearQuickReplies();
+      await openPaymentModal(message.action.dueId);
       return;
     }
 
@@ -241,6 +299,45 @@ export default function AssistantPage() {
     if (payPending) return;
     setPayDue(null);
     setPaySpace(null);
+  };
+
+  const openTopUpModal = async (amountKobo: number) => {
+    setTopUpLoading(true);
+    try {
+      const cards = await listCards();
+      setTopUpCards(cards);
+      setTopUpAmount(fromKobo(amountKobo));
+    } catch {
+      toast.error("Couldn't open the top-up form.");
+    } finally {
+      setTopUpLoading(false);
+    }
+  };
+
+  const confirmTopUp = async (amount: number, via: TopUpSource) => {
+    setTopUpPending(true);
+    try {
+      if (via.source === "online") {
+        const res = await topUp({ amount: amount * 100, method: "online" });
+        if (res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+          return;
+        }
+      } else {
+        await topUp({ amount: amount * 100, method: "card", cardId: via.card.id });
+      }
+      pushMessage("bot", `${naira(amount)} was added to your wallet 🎉`);
+      setTopUpAmount(null);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Top up failed. Please try again.");
+    } finally {
+      setTopUpPending(false);
+    }
+  };
+
+  const closeTopUpModal = () => {
+    if (topUpPending) return;
+    setTopUpAmount(null);
   };
 
   const startNewChat = () => {
@@ -317,11 +414,15 @@ export default function AssistantPage() {
                       <button
                         key={reply.label}
                         type="button"
-                        disabled={joiningId !== null || sending}
+                        disabled={joiningId !== null || creatingDueId !== null || sending}
                         onClick={() => handleQuickReply(message, reply)}
                         className="inline-flex items-center rounded-full border border-brand/25 bg-brand/5 px-3.5 py-1.5 text-xs font-semibold text-brand transition-colors duration-300 hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
                       >
-                        {joiningId === message.id ? "Joining…" : reply.label}
+                        {joiningId === message.id
+                          ? "Joining…"
+                          : creatingDueId === message.id
+                            ? "Creating…"
+                            : reply.label}
                       </button>
                     ))}
                   </div>
@@ -397,7 +498,7 @@ export default function AssistantPage() {
         </form>
       </section>
 
-      {payLoading && (
+      {(payLoading || topUpLoading) && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 backdrop-blur-sm">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />
         </div>
@@ -412,6 +513,16 @@ export default function AssistantPage() {
           pending={payPending}
           onClose={closePaymentModal}
           onConfirm={confirmPay}
+        />
+      )}
+
+      {topUpAmount !== null && (
+        <TopUpModal
+          cards={topUpCards}
+          defaultCard={topUpCards.find((c) => c.isDefault) ?? topUpCards[0]}
+          defaultAmount={topUpAmount}
+          onClose={closeTopUpModal}
+          onConfirm={confirmTopUp}
         />
       )}
 
