@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Menu01Icon, Notification02Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -12,16 +12,18 @@ import { ThemeToggle } from "../../dashboard/_components/ThemeToggle";
 export default function AdminShell({ children }: { children: ReactNode }) {
   const { user, status } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   // The admin console is admin-only — bounce everyone else.
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      const next = pathname + (typeof window === "undefined" ? "" : window.location.search);
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     } else if (status === "authenticated" && user?.role !== "admin") {
       router.replace("/dashboard");
     }
-  }, [status, user, router]);
+  }, [status, user, router, pathname]);
 
   if (status !== "authenticated" || user?.role !== "admin") {
     return (

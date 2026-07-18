@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -60,6 +61,8 @@ function toApiDraft(draft: DueDraft): ApiDueDraft {
 export default function CreateDuesPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  const searchParams = useSearchParams();
+  const dueParam = searchParams.get("due");
 
   const [dues, setDues] = useState<RepDue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +88,16 @@ export default function CreateDuesPage() {
       cancelled = true;
     };
   }, [spaceId]);
+
+  // Deep-link from the dashboard's "Active dues" list straight into collections.
+  useEffect(() => {
+    if (!dueParam || loading) return;
+    const due = dues.find((d) => d.id === dueParam);
+    if (due) {
+      setViewingDue(due);
+      setMode("collections");
+    }
+  }, [dueParam, dues, loading]);
 
   const totals = useMemo(() => {
     const active = dues.filter((d) => d.status === "active");

@@ -60,17 +60,22 @@ export function DueListRow({
         </div>
 
         {/* Collection progress. */}
-        <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onViewCollections(due)}
+          aria-label={`View who paid ${due.title}`}
+          className="group mt-2 flex items-center gap-2 cursor-pointer"
+        >
           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-paper">
             <div
               className="h-full rounded-full bg-brand"
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-[11px] text-ink-soft">
+          <span className="text-[11px] text-ink-soft group-hover:text-brand group-hover:underline">
             {due.paidCount}/{due.memberCount} paid · {naira(collected)}
           </span>
-        </div>
+        </button>
       </div>
 
       <div className="flex items-center justify-between gap-3 sm:justify-end">

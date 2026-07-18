@@ -87,14 +87,16 @@ function ShellInner({ children }: { children: ReactNode }) {
 export default function DashboardShell({ children }: { children: ReactNode }) {
   const { user, status } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      const next = pathname + (typeof window === "undefined" ? "" : window.location.search);
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     } else if (status === "authenticated" && user?.role === "admin") {
       router.replace("/admin");
     }
-  }, [status, user, router]);
+  }, [status, user, router, pathname]);
 
   if (status !== "authenticated" || !user || user.role === "admin") {
     return (
