@@ -108,11 +108,16 @@ export default function AssistantPage() {
     pushMessage("user", trimmed);
     setInput("");
     setSending(true);
+    console.log("[assistant] REQUEST", {
+      message: trimmed,
+      conversationId: conversationId ?? undefined,
+    });
     try {
       const res = await sendAssistantMessage({
         message: trimmed,
         conversationId: conversationId ?? undefined,
       });
+      console.log("[assistant] RESPONSE", res);
       setConversationId(res.conversationId);
       pushMessage("bot", res.reply, res.quickReplies, res.action);
 
@@ -120,6 +125,12 @@ export default function AssistantPage() {
         void openPaymentModal(res.action.dueId);
       }
     } catch (err) {
+      console.error("[assistant] FAILED", {
+        status: err instanceof ApiError ? err.status : undefined,
+        code: err instanceof ApiError ? err.code : undefined,
+        message: err instanceof Error ? err.message : String(err),
+        err,
+      });
       pushMessage(
         "bot",
         err instanceof ApiError
