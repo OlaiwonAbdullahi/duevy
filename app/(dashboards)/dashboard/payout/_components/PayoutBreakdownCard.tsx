@@ -6,13 +6,19 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  Calendar03Icon,
   Cancel01Icon,
   PieChart02Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BRAND_INPUT } from "../../_components/form-styles";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import type { Matcher } from "react-day-picker";
 import { EmptyState } from "../../_components/EmptyState";
 import { ListSkeleton } from "../../_components/Skeleton";
 import { nairaFromKobo } from "../../_components/format";
@@ -27,6 +33,79 @@ const EMPTY_TOTALS: PayoutBreakdown["totals"] = {
   net: 0,
   paidCount: 0,
 };
+
+/** Local-safe yyyy-mm-dd, so picking a day never shifts across a timezone. */
+function toISODate(date: Date) {
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${m}-${d}`;
+}
+
+/** A shadcn calendar in a popover, standing in for a native date input. Value is a yyyy-mm-dd string (or ""). */
+function FilterDateButton({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  /** yyyy-mm-dd bounds — disables dates outside them. */
+  min?: string;
+  max?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? new Date(`${value}T00:00:00`) : undefined;
+
+  const disabled: Matcher[] = [];
+  if (min) disabled.push({ before: new Date(`${min}T00:00:00`) });
+  if (max) disabled.push({ after: new Date(`${max}T00:00:00`) });
+
+  return (
+    <div>
+      <Label className="mb-1.5 block text-xs font-medium text-ink-soft">
+        {label}
+      </Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex h-11 items-center gap-2 rounded-2xl border border-cloud bg-canvas px-4 text-left text-sm outline-none transition-colors duration-300 hover:border-brand/50 focus-visible:border-brand data-[state=open]:border-brand cursor-pointer"
+          >
+            <HugeiconsIcon
+              icon={Calendar03Icon}
+              size={16}
+              className="shrink-0 text-ink-soft"
+            />
+            <span className={selected ? "text-ink" : "text-ink-soft"}>
+              {selected
+                ? selected.toLocaleDateString("en-NG", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "Any"}
+            </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto p-3">
+          <Calendar
+            mode="single"
+            selected={selected}
+            defaultMonth={selected}
+            disabled={disabled.length ? disabled : undefined}
+            onSelect={(date) => {
+              onChange(date ? toISODate(date) : "");
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 /** Per-due breakdown of everything collected — same DuePayment source of truth as the payout summary. */
 export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }) {
@@ -86,38 +165,24 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <Label htmlFor="breakdown-from" className="mb-1.5 block text-xs font-medium text-ink-soft">
-              From
-            </Label>
-            <Input
-              id="breakdown-from"
-              type="date"
-              value={from}
-              max={to || undefined}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                setPage(1);
-              }}
-              className={BRAND_INPUT}
-            />
-          </div>
-          <div>
-            <Label htmlFor="breakdown-to" className="mb-1.5 block text-xs font-medium text-ink-soft">
-              To
-            </Label>
-            <Input
-              id="breakdown-to"
-              type="date"
-              value={to}
-              min={from || undefined}
-              onChange={(e) => {
-                setTo(e.target.value);
-                setPage(1);
-              }}
-              className={BRAND_INPUT}
-            />
-          </div>
+          <FilterDateButton
+            label="From"
+            value={from}
+            max={to || undefined}
+            onChange={(next) => {
+              setFrom(next);
+              setPage(1);
+            }}
+          />
+          <FilterDateButton
+            label="To"
+            value={to}
+            min={from || undefined}
+            onChange={(next) => {
+              setTo(next);
+              setPage(1);
+            }}
+          />
           {hasFilter && (
             <Button variant="brand-outline" size="pill" onClick={clearFilter}>
               <HugeiconsIcon icon={Cancel01Icon} size={14} />
