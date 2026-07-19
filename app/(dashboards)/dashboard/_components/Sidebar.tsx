@@ -14,6 +14,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/auth-context";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { NavGroup } from "./nav-config";
 
 function isActive(pathname: string, href: string) {
@@ -38,6 +39,7 @@ export default function Sidebar({
   const router = useRouter();
   const { logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
   // Which collapsible groups are folded away, keyed by title. A rep lands with
   // the Student group folded so the rep tools are front and centre.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
@@ -47,6 +49,7 @@ export default function Sidebar({
     setCollapsed((c) => ({ ...c, [title]: !c[title] }));
 
   async function handleLogout() {
+    setConfirmingLogout(false);
     setLoggingOut(true);
     try {
       await logout();
@@ -212,7 +215,7 @@ export default function Sidebar({
         <div className="border-t border-cloud p-4">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setConfirmingLogout(true)}
             disabled={loggingOut}
             className="mt-1 flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
           >
@@ -232,6 +235,17 @@ export default function Sidebar({
           </a>
         </div>
       </aside>
+
+      <ConfirmDialog
+        open={confirmingLogout}
+        icon={Logout01Icon}
+        title="Sign out?"
+        description="You'll need to sign in again to access your dashboard."
+        confirmLabel="Sign out"
+        tone="danger"
+        onConfirm={handleLogout}
+        onClose={() => setConfirmingLogout(false)}
+      />
     </>
   );
 }

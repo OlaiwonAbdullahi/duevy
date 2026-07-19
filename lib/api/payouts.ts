@@ -1,5 +1,14 @@
-import { apiClient } from "./client";
-import type { BankAccount, Payout, PayoutSummary } from "./types";
+import { apiClient, type Page } from "./client";
+import type { BankAccount, DueCategory, Payout, PayoutSummary } from "./types";
+
+function toQuery(params: Record<string, string | number | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
 
 export type Bank = { code: string; name: string };
 
@@ -62,4 +71,41 @@ export function requestPayout(
 
 export function listPayouts(spaceId: string) {
   return apiClient.get<Payout[]>(`/spaces/${spaceId}/payouts`);
+}
+
+export type PayoutBreakdownTotals = {
+  /** Kobo. */
+  collected: number;
+  fees: number;
+  net: number;
+  paidCount: number;
+};
+
+export type PayoutBreakdownDue = {
+  dueId: string;
+  title: string;
+  category: DueCategory;
+  paidCount: number;
+  collected: number;
+  fees: number;
+  net: number;
+};
+
+export type PayoutBreakdown = {
+  totals: PayoutBreakdownTotals;
+  /** Sorted by `net`, descending. */
+  byDue: PayoutBreakdownDue[];
+};
+
+/**
+ * Where the payout total comes from, per due — same DuePayment source of truth
+ * as `/payout/summary`. Any rep can view it; only the lead can request a payout.
+ */
+export function getPayoutBreakdown(
+  spaceId: string,
+  query: { from?: string; to?: string; page?: number; perPage?: number } = {},
+): Promise<Page<PayoutBreakdown>> {
+  return apiClient.getPage<PayoutBreakdown>(
+    `/spaces/${spaceId}/payout/breakdown${toQuery(query)}`,
+  );
 }

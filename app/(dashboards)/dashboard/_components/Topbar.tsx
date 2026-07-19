@@ -13,6 +13,7 @@ import {
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { UserAvatar } from "./UserAvatar";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export default function Topbar({
   onMenu,
@@ -24,9 +25,10 @@ export default function Topbar({
   const { user, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   async function handleLogout() {
-    setMenuOpen(false);
+    setConfirmingLogout(false);
     await logout();
     router.push("/login");
   }
@@ -90,7 +92,10 @@ export default function Topbar({
             <div className="my-1 h-px bg-cloud" />
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmingLogout(true);
+              }}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
             >
               <HugeiconsIcon icon={Logout01Icon} size={16} />
@@ -99,6 +104,17 @@ export default function Topbar({
           </PopoverContent>
         </Popover>
       </div>
+
+      <ConfirmDialog
+        open={confirmingLogout}
+        icon={Logout01Icon}
+        title="Sign out?"
+        description="You'll need to sign in again to access your dashboard."
+        confirmLabel="Sign out"
+        tone="danger"
+        onConfirm={handleLogout}
+        onClose={() => setConfirmingLogout(false)}
+      />
     </header>
   );
 }
