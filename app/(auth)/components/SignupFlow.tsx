@@ -146,6 +146,7 @@ export default function SignupFlow() {
           school: space.school,
           faculty: space.faculty || undefined,
           theme: data.theme,
+          coRepInvites: coReps.length > 0 ? coReps : undefined,
         },
       });
       setSubmittedEmail(account.email);

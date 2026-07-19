@@ -9,6 +9,7 @@ import type {
   Space,
   SpaceMember,
   SpaceRep,
+  SpaceThemeId,
 } from "./types";
 
 function toQuery(params: Record<string, string | number | undefined>) {
@@ -128,10 +129,10 @@ export type SpaceProfilePatch = {
   short?: string;
   about?: string;
   hue?: string;
-  theme?: string;
+  theme?: SpaceThemeId;
 };
 
-/** Update the department profile (rep lead). */
+/** Update the department profile. Lead rep only — co-reps get 403. */
 export function updateSpaceProfile(spaceId: string, payload: SpaceProfilePatch) {
   return apiClient.patch<Space>(`/spaces/${spaceId}`, payload);
 }

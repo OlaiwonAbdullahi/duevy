@@ -19,6 +19,7 @@ export type RegisterStudentPayload = BaseRegisterPayload & {
 
 export type RegisterRepPayload = BaseRegisterPayload & {
   role: "rep";
+  referralCode?: string;
   space: {
     name: string;
     short: string;
@@ -26,6 +27,7 @@ export type RegisterRepPayload = BaseRegisterPayload & {
     school: string;
     faculty?: string;
     theme: SpaceThemeId;
+    coRepInvites?: string[];
   };
 };
 

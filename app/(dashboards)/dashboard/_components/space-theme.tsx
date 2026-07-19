@@ -43,10 +43,11 @@ const SpaceThemeContext = createContext<SpaceThemeContextValue | null>(null);
 /**
  * Holds the space's colour theme for the whole dashboard.
  *
- * Persisted to localStorage for now (the pre-paint script in the dashboard
- * layout reads the same key so a hard reload doesn't flash green). Once the
- * API lands this becomes a property of the space, saved by the rep and read
- * by every member — students then see the rep's colour on the space too.
+ * The lead rep's pick is saved server-side via `PATCH /spaces/:id` (see
+ * `SpaceThemeCard`), which is the source of truth. It's mirrored to
+ * localStorage here as a same-browser cache — the pre-paint script in the
+ * dashboard layout reads the same key so a hard reload doesn't flash green
+ * before that PATCH-backed value re-hydrates.
  */
 export function SpaceThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeId] = useState<SpaceThemeId>(() => {

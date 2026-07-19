@@ -5,25 +5,68 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PaintBoardIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
-import { SPACE_THEMES, useSpaceTheme } from "../../_components/space-theme";
+import {
+  SPACE_THEMES,
+  isSpaceThemeId,
+  useSpaceTheme,
+} from "../../_components/space-theme";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
+import { useRepSpace } from "../../_components/use-rep-space";
+import { getSpace } from "@/lib/api/spaces";
+import { updateSpaceProfile } from "@/lib/api/rep";
+import { ApiError } from "@/lib/api/errors";
 
 /**
- * Lets the rep pick the space's colour theme. The pick re-tints this whole
- * dashboard instantly, and it's the colour students will see on the space.
+ * Lets the lead rep pick the space's colour theme, saved via `PATCH
+ * /spaces/:id`. The pick re-tints this whole dashboard instantly and is the
+ * colour students see on the space.
  */
 export function SpaceThemeCard() {
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
   const { themeId, setThemeId } = useSpaceTheme();
 
-  // The saved theme comes from localStorage, which the server can't see —
-  // only mark the selected swatch after hydration to avoid a mismatch.
+  // Only mark the selected swatch after hydration to avoid a mismatch with the
+  // pre-paint script's localStorage read, and once the space's actual saved
+  // theme has loaded (it may differ from this browser's cached value).
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [saving, setSaving] = useState(false);
 
-  const pick = (id: (typeof SPACE_THEMES)[number]["id"], label: string) => {
-    if (id === themeId) return;
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    getSpace(spaceId)
+      .then((space) => {
+        if (cancelled) return;
+        if (isSpaceThemeId(space.theme)) setThemeId(space.theme);
+        setMounted(true);
+      })
+      .catch(() => setMounted(true));
+    return () => {
+      cancelled = true;
+    };
+    // `setThemeId` is stable (context), so this only re-runs when the space changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceId]);
+
+  const pick = async (id: (typeof SPACE_THEMES)[number]["id"], label: string) => {
+    if (id === themeId || saving || !spaceId) return;
+    const previous = themeId;
     setThemeId(id);
-    toast.success("Space theme updated", { description: label });
+    setSaving(true);
+    try {
+      await updateSpaceProfile(spaceId, { theme: id });
+      toast.success("Space theme updated", { description: label });
+    } catch (err) {
+      setThemeId(previous);
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't update the space theme.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -39,10 +82,11 @@ export function SpaceThemeCard() {
             <li key={theme.id}>
               <button
                 type="button"
-                onClick={() => pick(theme.id, theme.label)}
+                onClick={() => void pick(theme.id, theme.label)}
+                disabled={saving}
                 aria-pressed={selected}
                 aria-label={`Use the ${theme.label} theme`}
-                className="group flex cursor-pointer flex-col items-center gap-1.5 focus-visible:outline-none"
+                className="group flex cursor-pointer flex-col items-center gap-1.5 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span
                   // The selection ring matches the swatch, not the active brand.
