@@ -90,6 +90,22 @@ export function PayoutAccountCard({
                 maskPosition: "center",
               }}
             />
+            {/* Punches the D's inner counter back out to the card's own background,
+                so it reads as a true hole instead of solid fill. */}
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundColor: "#101512",
+                WebkitMaskImage: "url(/icons/logo-mark-hole.svg)",
+                maskImage: "url(/icons/logo-mark-hole.svg)",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+              }}
+            />
           </div>
           {/* Brand-tinted glow, ties the card to the space's colour theme */}
           <div
