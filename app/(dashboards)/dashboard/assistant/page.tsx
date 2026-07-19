@@ -57,6 +57,10 @@ const exampleQuestions = [
   "Pay my handout fee",
   "Show my payment history",
   "Who is my department rep?",
+  "What's my wallet balance?",
+  "Fund my wallet",
+  "Join my department",
+  "What dues do I have coming up?",
 ];
 
 /** Online payments redirect to Paystack's hosted checkout. */
@@ -94,9 +98,13 @@ export default function AssistantPage() {
 
   // Conversation history panel.
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [conversations, setConversations] = useState<AssistantConversationSummary[]>([]);
+  const [conversations, setConversations] = useState<
+    AssistantConversationSummary[]
+  >([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
+  const [loadingConversationId, setLoadingConversationId] = useState<
+    string | null
+  >(null);
 
   const showExamples = messages.length === 1 && !sending;
 
@@ -119,7 +127,9 @@ export default function AssistantPage() {
   const clearQuickReplies = () => {
     setMessages((current) =>
       current.map((message) =>
-        message.quickReplies ? { ...message, quickReplies: undefined } : message,
+        message.quickReplies
+          ? { ...message, quickReplies: undefined }
+          : message,
       ),
     );
   };
@@ -169,7 +179,10 @@ export default function AssistantPage() {
     }
   };
 
-  const handleQuickReply = async (message: ChatMessage, reply: AssistantQuickReply) => {
+  const handleQuickReply = async (
+    message: ChatMessage,
+    reply: AssistantQuickReply,
+  ) => {
     if (sending || joiningId !== null || creatingDueId !== null) return;
 
     if (message.action?.type === "confirm_join_department") {
@@ -293,7 +306,9 @@ export default function AssistantPage() {
           .filter(Boolean)
           .join(" · "),
       };
-      setReceipts(buildReceipts([payDue], paySpace, method, payer, [ref], card));
+      setReceipts(
+        buildReceipts([payDue], paySpace, method, payer, [ref], card),
+      );
       pushMessage(
         "bot",
         `Payment confirmed! ${naira(payDue.amount)} for ${payDue.title} is settled. 🎉`,
@@ -336,12 +351,20 @@ export default function AssistantPage() {
           return;
         }
       } else {
-        await topUp({ amount: amount * 100, method: "card", cardId: via.card.id });
+        await topUp({
+          amount: amount * 100,
+          method: "card",
+          cardId: via.card.id,
+        });
       }
       pushMessage("bot", `${naira(amount)} was added to your wallet 🎉`);
       setTopUpAmount(null);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Top up failed. Please try again.");
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Top up failed. Please try again.",
+      );
     } finally {
       setTopUpPending(false);
     }
@@ -371,10 +394,14 @@ export default function AssistantPage() {
     }
   };
 
-  const openConversation = async (conversation: AssistantConversationSummary) => {
+  const openConversation = async (
+    conversation: AssistantConversationSummary,
+  ) => {
     setLoadingConversationId(conversation.id);
     try {
-      const { messages: history } = await getAssistantConversationMessages(conversation.id);
+      const { messages: history } = await getAssistantConversationMessages(
+        conversation.id,
+      );
       messageId.current = 1;
       setMessages(
         history.map((m) => ({
@@ -480,7 +507,11 @@ export default function AssistantPage() {
                       <button
                         key={reply.label}
                         type="button"
-                        disabled={joiningId !== null || creatingDueId !== null || sending}
+                        disabled={
+                          joiningId !== null ||
+                          creatingDueId !== null ||
+                          sending
+                        }
                         onClick={() => handleQuickReply(message, reply)}
                         className="inline-flex items-center rounded-full border border-brand/25 bg-brand/5 px-3.5 py-1.5 text-xs font-semibold text-brand transition-colors duration-300 hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
                       >
@@ -514,29 +545,29 @@ export default function AssistantPage() {
             </div>
           )}
 
-          {/* Example prompts — shown until the visitor sends their first message. */}
-          {showExamples && (
-            <div className="pl-10.5">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
-                Try asking
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {exampleQuestions.map((question) => (
-                  <button
-                    key={question}
-                    type="button"
-                    onClick={() => sendMessage(question)}
-                    className="rounded-full border border-cloud bg-canvas px-3.5 py-1.5 text-xs font-medium text-ink-soft transition-colors duration-300 hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
-                  >
-                    {question}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div ref={bottomRef} />
         </div>
+
+        {/* Example prompts — shown until the visitor sends their first message. */}
+        {showExamples && (
+          <div className="bg-canvas px-4 p-3 sm:px-6">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+              Try asking
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {exampleQuestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => sendMessage(question)}
+                  className="rounded-full border border-cloud bg-paper px-3.5 py-1.5 text-xs font-medium text-ink-soft transition-colors duration-300 hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 cursor-pointer"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form
           onSubmit={(event) => {
@@ -545,14 +576,16 @@ export default function AssistantPage() {
           }}
           className="flex items-center gap-3 border-t border-cloud bg-canvas p-4"
         >
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask about your dues..."
-            aria-label="Message Duey"
-            disabled={sending}
-            className="min-w-0 flex-1 rounded-xl border border-cloud bg-paper px-4 py-3 text-sm text-ink outline-none transition-colors duration-300 placeholder:text-ink-soft/70 focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
-          />
+          <div className="gradient-border-spin min-w-0 flex-1 rounded-2xl p-px">
+            <input
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Ask about your dues..."
+              aria-label="Message Duey"
+              disabled={sending}
+              className="w-full min-w-0 rounded-xl border-0 bg-paper px-4 py-3 text-sm text-ink outline-none transition-colors duration-300 placeholder:text-ink-soft/70 focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
+            />
+          </div>
           <button
             type="submit"
             disabled={!input.trim() || sending}
@@ -597,11 +630,18 @@ export default function AssistantPage() {
       )}
 
       {historyOpen && (
-        <Modal title="Chat history" icon={Clock01Icon} onClose={() => setHistoryOpen(false)}>
+        <Modal
+          title="Chat history"
+          icon={Clock01Icon}
+          onClose={() => setHistoryOpen(false)}
+        >
           {historyLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-16 animate-pulse rounded-2xl bg-paper" />
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-2xl bg-paper"
+                />
               ))}
             </div>
           ) : conversations.length === 0 ? (
