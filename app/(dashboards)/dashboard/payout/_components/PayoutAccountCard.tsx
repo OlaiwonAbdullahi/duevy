@@ -115,8 +115,15 @@ export function PayoutAccountCard({
           <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" />
 
           <div className="relative flex items-start justify-between">
-            {/* EMV-style chip */}
-            <span className="h-8 w-10 rounded-md bg-gradient-to-br from-amber-200 to-amber-400/80" />
+            {/* EMV-style chip, segmented like a real contact pad */}
+            <span className="grid h-8 w-10 grid-cols-3 grid-rows-2 overflow-hidden rounded-md bg-gradient-to-br from-amber-200 to-amber-400/80">
+              <span className="border-r border-b border-amber-700/30" />
+              <span className="border-r border-b border-amber-700/30" />
+              <span className="border-b border-amber-700/30" />
+              <span className="border-r border-amber-700/30" />
+              <span className="border-r border-amber-700/30" />
+              <span />
+            </span>
             <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/80">
               <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} />
               Verified
