@@ -1,4 +1,13 @@
-import { apiClient } from "./client";
+import { apiClient, type Page } from "./client";
+
+function toQuery(params: Record<string, string | number | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
 
 export type AssistantIntent =
   | "pay_dues"
@@ -87,5 +96,42 @@ export function confirmAssistantCreateDue(payload: {
   return apiClient.post<AssistantConfirmCreateDueResult>(
     "/assistant/confirm",
     payload,
+  );
+}
+
+export type AssistantConversationSummary = {
+  id: string;
+  preview: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Past conversations with Duey, most recent first. */
+export function listAssistantConversations(
+  query: { page?: number; perPage?: number } = {},
+): Promise<Page<AssistantConversationSummary[]>> {
+  return apiClient.getPage<AssistantConversationSummary[]>(
+    `/assistant/conversations${toQuery(query)}`,
+  );
+}
+
+export type AssistantMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  intent: AssistantIntent | null;
+  confidence: number | null;
+  createdAt: string;
+};
+
+export type AssistantConversationMessages = {
+  conversationId: string;
+  messages: AssistantMessage[];
+};
+
+/** Full transcript of one conversation. 404s if it doesn't exist or belongs to someone else. */
+export function getAssistantConversationMessages(conversationId: string) {
+  return apiClient.get<AssistantConversationMessages>(
+    `/assistant/conversations/${conversationId}/messages`,
   );
 }

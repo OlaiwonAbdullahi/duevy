@@ -8,14 +8,20 @@ import {
   Message01Icon,
   SentIcon,
   Add01Icon,
+  Clock01Icon,
 } from "@hugeicons/core-free-icons";
 import {
   sendAssistantMessage,
   confirmAssistantJoin,
   confirmAssistantCreateDue,
+  listAssistantConversations,
+  getAssistantConversationMessages,
   type AssistantAction,
   type AssistantQuickReply,
+  type AssistantConversationSummary,
 } from "@/lib/api/assistant";
+import { Modal } from "../_components/Modal";
+import { EmptyState } from "../_components/EmptyState";
 import { getDue, payDue as payDueApi } from "@/lib/api/dues";
 import { getSpace } from "@/lib/api/spaces";
 import { getWallet, listCards, topUp } from "@/lib/api/wallet";
@@ -85,6 +91,12 @@ export default function AssistantPage() {
 
   // Create-due confirm state (rep-only), keyed by the chat message offering it.
   const [creatingDueId, setCreatingDueId] = useState<number | null>(null);
+
+  // Conversation history panel.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversations, setConversations] = useState<AssistantConversationSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
 
   const showExamples = messages.length === 1 && !sending;
 
@@ -346,6 +358,52 @@ export default function AssistantPage() {
     messageId.current = 2;
   };
 
+  const openHistory = async () => {
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const { data } = await listAssistantConversations({ perPage: 50 });
+      setConversations(data);
+    } catch {
+      toast.error("Couldn't load your chat history.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const openConversation = async (conversation: AssistantConversationSummary) => {
+    setLoadingConversationId(conversation.id);
+    try {
+      const { messages: history } = await getAssistantConversationMessages(conversation.id);
+      messageId.current = 1;
+      setMessages(
+        history.map((m) => ({
+          id: messageId.current++,
+          sender: m.role === "user" ? "user" : "bot",
+          content: m.content,
+        })),
+      );
+      setConversationId(conversation.id);
+      setHistoryOpen(false);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError && err.status === 404
+          ? "That conversation no longer exists."
+          : "Couldn't load that conversation.",
+      );
+    } finally {
+      setLoadingConversationId(null);
+    }
+  };
+
+  const formatHistoryDate = (iso: string) =>
+    new Date(iso).toLocaleString("en-NG", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   return (
     <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col lg:h-[calc(100vh-6rem)]">
       {/* Heading */}
@@ -362,6 +420,14 @@ export default function AssistantPage() {
             department.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={openHistory}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-cloud px-3.5 py-2 text-[13px] font-semibold text-ink-soft transition-colors duration-300 hover:border-brand/40 hover:text-brand cursor-pointer"
+        >
+          <HugeiconsIcon icon={Clock01Icon} size={15} />
+          <span className="hidden sm:inline">History</span>
+        </button>
         <button
           type="button"
           onClick={startNewChat}
@@ -528,6 +594,46 @@ export default function AssistantPage() {
 
       {receipts.length > 0 && (
         <ReceiptModal receipts={receipts} onClose={() => setReceipts([])} />
+      )}
+
+      {historyOpen && (
+        <Modal title="Chat history" icon={Clock01Icon} onClose={() => setHistoryOpen(false)}>
+          {historyLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-16 animate-pulse rounded-2xl bg-paper" />
+              ))}
+            </div>
+          ) : conversations.length === 0 ? (
+            <EmptyState
+              icon={Message01Icon}
+              title="No conversations yet"
+              description="Chats you start with Duey will show up here."
+            />
+          ) : (
+            <ul className="space-y-2">
+              {conversations.map((conversation) => (
+                <li key={conversation.id}>
+                  <button
+                    type="button"
+                    disabled={loadingConversationId !== null}
+                    onClick={() => openConversation(conversation)}
+                    className="w-full rounded-2xl border border-cloud bg-paper/40 p-3.5 text-left transition-colors duration-300 hover:border-brand/40 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <p className="line-clamp-2 whitespace-pre-line text-[13px] leading-5 text-ink">
+                      {loadingConversationId === conversation.id
+                        ? "Loading…"
+                        : conversation.preview}
+                    </p>
+                    <p className="mt-1.5 text-[11px] text-ink-soft">
+                      {formatHistoryDate(conversation.updatedAt)}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal>
       )}
     </div>
   );
