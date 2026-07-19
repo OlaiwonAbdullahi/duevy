@@ -18,6 +18,7 @@ import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState"
 import { nairaFromKobo } from "@/app/(dashboards)/dashboard/_components/format";
 import type { HugeIcon } from "@/app/(dashboards)/dashboard/_components/nav-config";
 import type { Card } from "@/lib/api/types";
+import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 
 export type VoteMethod = "wallet" | "card" | "online";
 
@@ -36,6 +37,7 @@ export function PayVoteModal({
   onClose: () => void;
   onConfirm: (method: VoteMethod, card?: Card) => void;
 }) {
+  const gatewayName = useActivePaymentGateway();
   const defaultCard = cards.find((c) => c.isDefault) ?? cards[0];
   const [method, setMethod] = useState<VoteMethod>(
     balanceKobo >= totalKobo ? "wallet" : cards.length ? "card" : "online",
@@ -144,7 +146,7 @@ export function PayVoteModal({
           <IconChip icon={BankIcon} />
           <p className="text-xs leading-relaxed text-ink-soft">
             You&apos;ll be securely redirected to{" "}
-            <span className="font-semibold text-ink">Monnify</span> to finish paying by card,
+            <span className="font-semibold text-ink">{gatewayName}</span> to finish paying by card,
             bank transfer or USSD.
           </p>
         </div>
@@ -159,7 +161,7 @@ export function PayVoteModal({
         {pending
           ? "Processing…"
           : method === "online"
-            ? "Continue to Monnify"
+            ? `Continue to ${gatewayName}`
             : `Pay ${nairaFromKobo(totalKobo)}`}
         {method === "online" && !pending && <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />}
         {method !== "online" && !pending && <HugeiconsIcon icon={ArrowRight01Icon} size={16} />}

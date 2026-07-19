@@ -453,4 +453,29 @@ export function reportDownloadPath(reportId: string) {
   return `/admin/reports/${reportId}/download`;
 }
 
+// ---------------------------------------------------------------------------
+// 14.11 Payment gateway
+// ---------------------------------------------------------------------------
+
+export type PaymentGateway = "paystack" | "monnify";
+
+export type PaymentGatewaySettings = {
+  active: PaymentGateway;
+  gateways: Record<PaymentGateway, { configured: boolean }>;
+};
+
+/** Active payment gateway plus which gateways have credentials configured. Any admin. */
+export function getPaymentGatewaySettings() {
+  return apiClient.get<PaymentGatewaySettings>("/admin/settings/payment-gateway");
+}
+
+/**
+ * Switch the platform's active payment gateway. Super admin only — same gate as
+ * `/admin/roles/:role`, since this redirects all platform money. 409s with
+ * `GATEWAY_NOT_CONFIGURED` if the target gateway's env credentials aren't set.
+ */
+export function updatePaymentGateway(gateway: PaymentGateway) {
+  return apiClient.put<{ active: PaymentGateway }>("/admin/settings/payment-gateway", { gateway });
+}
+
 export type { ApiMeta };

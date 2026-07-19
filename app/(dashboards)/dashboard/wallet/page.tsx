@@ -25,6 +25,7 @@ import {
 } from "@/lib/api/wallet";
 import { getPaymentStatus } from "@/lib/api/dues";
 import { ApiError } from "@/lib/api/errors";
+import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 
 /** Survives the Paystack round-trip so we can verify the top-up on return. */
 const TOPUP_REF_KEY = "duevy-topup-ref";
@@ -79,6 +80,7 @@ function WalletSkeleton() {
 
 export default function WalletPage() {
   const { isPendingRep } = useRole();
+  const gatewayName = useActivePaymentGateway();
   const [balance, setBalance] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -221,7 +223,7 @@ export default function WalletPage() {
         description:
           via.source === "card"
             ? `Paid with ${via.card.brand} •••• ${via.card.last4}`
-            : "Paid via Paystack",
+            : `Paid via ${gatewayName}`,
       });
       await refresh();
     } catch (err) {

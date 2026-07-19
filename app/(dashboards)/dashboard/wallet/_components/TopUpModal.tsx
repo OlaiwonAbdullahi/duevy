@@ -20,6 +20,7 @@ import type { Card, TopUpMethod, TopUpSource } from "./types";
 import { TOP_UP_PRESETS, naira } from "./utils";
 import type { HugeIcon } from "../../_components/nav-config";
 import { EmptyState } from "../../_components/EmptyState";
+import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 
 export function TopUpModal({
   cards,
@@ -35,6 +36,7 @@ export function TopUpModal({
   onClose: () => void;
   onConfirm: (amount: number, via: TopUpSource) => Promise<void>;
 }) {
+  const gatewayName = useActivePaymentGateway();
   const [amount, setAmount] = useState<number | "">(defaultAmount ?? "");
   const [method, setMethod] = useState<TopUpMethod>(
     cards.length ? "card" : "online",
@@ -66,7 +68,7 @@ export function TopUpModal({
       ? "Redirecting…"
       : "Topping up…"
     : method === "online"
-      ? "Continue to Paystack"
+      ? `Continue to ${gatewayName}`
       : amountOk
         ? `Top up ${naira(value)}`
         : "Enter an amount";
@@ -180,7 +182,7 @@ export function TopUpModal({
           </span>
           <p className="text-xs leading-relaxed text-ink-soft">
             You&apos;ll be securely redirected to{" "}
-            <span className="font-semibold text-ink">Paystack</span> to finish
+            <span className="font-semibold text-ink">{gatewayName}</span> to finish
             paying by card, bank transfer or USSD.
           </p>
         </div>

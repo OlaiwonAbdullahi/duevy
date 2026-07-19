@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Modal } from "../../_components/Modal";
+import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 
 export function AddCardModal({
   hasCards,
@@ -22,6 +23,7 @@ export function AddCardModal({
   onClose: () => void;
   onContinue: (isDefault: boolean) => Promise<void>;
 }) {
+  const gatewayName = useActivePaymentGateway();
   const [makeDefault, setMakeDefault] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,7 +44,7 @@ export function AddCardModal({
         </span>
         <p className="text-xs leading-relaxed text-ink-soft">
           You&apos;ll be securely redirected to{" "}
-          <span className="font-semibold text-ink">Paystack</span> to enter your
+          <span className="font-semibold text-ink">{gatewayName}</span> to enter your
           card details. A one-time ₦50 charge verifies the card, then it&apos;s
           saved for future payments — your full card number never touches Duevy.
         </p>
@@ -77,7 +79,7 @@ export function AddCardModal({
         ) : (
           <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
         )}
-        {submitting ? "Redirecting…" : "Continue to Paystack"}
+        {submitting ? "Redirecting…" : `Continue to ${gatewayName}`}
       </Button>
 
       <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-ink-soft">

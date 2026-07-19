@@ -19,6 +19,7 @@ import type { Due, PayMethod, Space } from "./types";
 import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
 import type { HugeIcon } from "../../_components/nav-config";
 import { EmptyState } from "../../_components/EmptyState";
+import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 
 export function PayDueModal({
   dues,
@@ -37,6 +38,7 @@ export function PayDueModal({
   onClose: () => void;
   onConfirm: (method: PayMethod, card?: Card) => void;
 }) {
+  const gatewayName = useActivePaymentGateway();
   const total = dues.reduce((sum, d) => sum + d.amount, 0);
   const multi = dues.length > 1;
   const defaultCard = cards.find((c) => c.isDefault) ?? cards[0];
@@ -213,7 +215,7 @@ export function PayDueModal({
           </span>
           <p className="text-xs leading-relaxed text-ink-soft">
             You&apos;ll be securely redirected to{" "}
-            <span className="font-semibold text-ink">Paystack</span> to finish
+            <span className="font-semibold text-ink">{gatewayName}</span> to finish
             paying by card, bank transfer or USSD.
           </p>
         </div>
@@ -238,7 +240,7 @@ export function PayDueModal({
           {pending
             ? "Processing…"
             : method === "online"
-              ? "Continue to Paystack"
+              ? `Continue to ${gatewayName}`
               : `Pay ${naira(total)}`}
           {method === "online" && !pending && (
             <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />

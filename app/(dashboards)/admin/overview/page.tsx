@@ -7,6 +7,7 @@ import {
   AlertCircleIcon,
   Building03Icon,
   CheckmarkCircle02Icon,
+  CreditCardIcon,
   ReceiptDollarIcon,
   UserGroup03Icon,
   UserMultipleIcon,
@@ -19,7 +20,18 @@ import PageHeader from "../_components/PageHeader";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { nairaFromKobo, formatPercent01 } from "../_components/format";
-import { getAdminOverview, listAdminSpaces, type AdminOverview } from "@/lib/api/admin";
+import {
+  getAdminOverview,
+  listAdminSpaces,
+  getPaymentGatewaySettings,
+  type AdminOverview,
+  type PaymentGateway,
+} from "@/lib/api/admin";
+
+const GATEWAY_LABELS: Record<PaymentGateway, string> = {
+  paystack: "Paystack",
+  monnify: "Monnify",
+};
 
 /** API attention tone → admin badge tone. */
 function toneOf(tone: string): StatusTone {
@@ -32,6 +44,7 @@ function toneOf(tone: string): StatusTone {
 export default function AdminOverviewPage() {
   const [data, setData] = useState<AdminOverview | null>(null);
   const [spaceCount, setSpaceCount] = useState<number | null>(null);
+  const [activeGateway, setActiveGateway] = useState<PaymentGateway | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -41,13 +54,15 @@ export default function AdminOverviewPage() {
       setLoading(true);
       setError(false);
       try {
-        const [overview, spaces] = await Promise.all([
+        const [overview, spaces, gateway] = await Promise.all([
           getAdminOverview(),
           listAdminSpaces({ perPage: 1 }), // meta.total is the space count
+          getPaymentGatewaySettings(),
         ]);
         if (cancelled) return;
         setData(overview);
         setSpaceCount(spaces.meta?.total ?? spaces.data.length);
+        setActiveGateway(gateway.active);
       } catch {
         if (!cancelled) {
           setError(true);
@@ -77,7 +92,7 @@ export default function AdminOverviewPage() {
         </TableCard>
       ) : loading ? (
         <div className="grid animate-pulse grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="h-28 rounded-3xl border border-cloud bg-canvas" />
           ))}
         </div>
@@ -122,6 +137,12 @@ export default function AdminOverviewPage() {
               label="Overdue dues"
               value={nairaFromKobo(data?.overdue.amount ?? 0)}
               hint={`${data?.overdue.count ?? 0} accounts overdue`}
+            />
+            <StatCard
+              icon={CreditCardIcon}
+              label="Payment gateway"
+              value={activeGateway ? GATEWAY_LABELS[activeGateway] : "—"}
+              hint="Manage in Settings"
             />
           </div>
 

@@ -66,3 +66,8 @@ export function setDefaultCard(cardId: string) {
 export function deleteCard(cardId: string) {
   return apiClient.delete<void>(`/wallet/cards/${cardId}`);
 }
+
+/** Display label ("Paystack"/"Monnify") of the platform's active payment gateway. */
+export function getActivePaymentGateway() {
+  return apiClient.get<{ active: string }>("/wallet/payment-gateway");
+}
