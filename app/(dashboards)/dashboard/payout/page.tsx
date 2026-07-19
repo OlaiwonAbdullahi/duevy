@@ -10,7 +10,6 @@ const EMPTY_ACCOUNT: BankAccount = { bankName: "", accountName: "", accountNumbe
 import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { PayoutAccountCard } from "./_components/PayoutAccountCard";
 import { PayoutHistory } from "./_components/PayoutHistory";
-import { PayoutBreakdownCard } from "./_components/PayoutBreakdownCard";
 import { WithdrawModal } from "./_components/WithdrawModal";
 import { EditAccountModal } from "./_components/EditAccountModal";
 import { useRepSpace } from "../_components/use-rep-space";
@@ -171,10 +170,6 @@ export default function PayoutPage() {
         ) : (
           <PayoutHistory payouts={payouts} />
         )}
-      </div>
-
-      <div className="mt-6">
-        <PayoutBreakdownCard spaceId={spaceId} />
       </div>
 
       {withdrawOpen && (

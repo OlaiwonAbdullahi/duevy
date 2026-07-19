@@ -1,5 +1,10 @@
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MoneySend01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import {
+  ChartLineData01Icon,
+  MoneySend01Icon,
+  Wallet01Icon,
+} from "@hugeicons/core-free-icons";
 import { naira } from "./data";
 
 /**
@@ -56,7 +61,7 @@ export function PayoutBalanceCard({
         <Chip label="Pending clearance" value={naira(pending)} />
       </div>
 
-      <div className="relative mt-8">
+      <div className="relative mt-8 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={onWithdraw}
@@ -66,6 +71,13 @@ export function PayoutBalanceCard({
           <HugeiconsIcon icon={MoneySend01Icon} size={16} />
           Withdraw funds
         </button>
+        <Link
+          href="/dashboard/payout/breakdown"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/30 px-7 text-sm font-semibold text-white transition-colors duration-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        >
+          <HugeiconsIcon icon={ChartLineData01Icon} size={16} />
+          View breakdown
+        </Link>
       </div>
     </div>
   );
