@@ -81,7 +81,7 @@ export function DueCollections({
       setLoading(true);
       console.log(`[collections] REQUEST ${due.title}`, { spaceId, dueId: due.id });
       try {
-        const res = await getCollections(spaceId, due.id, { perPage: 200 });
+        const res = await getCollections(spaceId, due.id);
         console.log(`[collections] SUCCESS ${due.title}`, {
           totals: res.data?.totals,
           students: res.data?.students,

@@ -69,14 +69,8 @@ export type CollectionsResponse = {
 };
 
 /** Per-student payment roster for a due. */
-export function getCollections(
-  spaceId: string,
-  dueId: string,
-  query: { status?: "all" | "paid" | "unpaid"; q?: string; page?: number; perPage?: number } = {},
-): Promise<Page<CollectionsResponse>> {
-  return apiClient.getPage<CollectionsResponse>(
-    `/spaces/${spaceId}/dues/${dueId}/collections${toQuery(query)}`,
-  );
+export function getCollections(spaceId: string, dueId: string): Promise<Page<CollectionsResponse>> {
+  return apiClient.getPage<CollectionsResponse>(`/spaces/${spaceId}/dues/${dueId}/collections`);
 }
 
 /** Nudge unpaid members. Omit `userIds` to remind all unpaid. */
