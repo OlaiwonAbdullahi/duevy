@@ -70,7 +70,7 @@ export function PollForm({
   const [membersOnly, setMembersOnly] = useState(initial?.membersOnly ?? true);
   const [paid, setPaid] = useState(initial?.paid ?? false);
   const [amountDigits, setAmountDigits] = useState(
-    initial?.amountPerVote ? String(initial.amountPerVote) : "",
+    initial?.amountPerVote ? String(initial.amountPerVote / 100) : "",
   );
   const [categories, setCategories] = useState<EditorCategory[]>([newCategory()]);
   // Editing an existing poll shows its real categories, kept in sync as photos change.
@@ -98,8 +98,6 @@ export function PollForm({
     onImageChange(next);
   };
 
-  // Bio/code are proposed fields — save on blur via the same nominee PATCH the
-  // photo picker uses, once the backend accepts them there too.
   const saveNomineeField = async (
     categoryId: string,
     nomineeId: string,
@@ -112,11 +110,14 @@ export function PollForm({
         code: updated.code,
       });
     } catch {
-      toast.error("Couldn't save that yet — needs backend support.");
+      toast.error("Couldn't save that change.");
     }
   };
 
-  const amountPerVote = Number(amountDigits || 0);
+  // The price field is expressed in naira, while the API stores money in kobo.
+  // Convert only at the request boundary so entering 500 always means ₦500.
+  const amountNaira = Number(amountDigits || 0);
+  const amountPerVote = amountNaira * 100;
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 7);
   const formatDigits = (d: string) => (d ? Number(d).toLocaleString("en-NG") : "");
 
@@ -142,7 +143,7 @@ export function PollForm({
     [editing, existingCategories, categories],
   );
 
-  const validAmount = !paid || amountPerVote > 0;
+  const validAmount = !paid || amountNaira > 0;
   const valid = editing
     ? title.trim().length > 1
     : title.trim().length > 1 && readyCategories.length >= 1 && validAmount;
@@ -150,7 +151,7 @@ export function PollForm({
   const submit = (publish?: boolean) => {
     if (!valid) {
       toast.error(
-        paid && amountPerVote <= 0
+        paid && amountNaira <= 0
           ? "Set a price per vote, or turn off paid voting"
           : "Add a title and at least one award with two nominees",
       );
@@ -494,7 +495,7 @@ export function PollForm({
               <SummaryRow
                 label="Price per vote"
                 value={
-                  paid && amountPerVote > 0 ? naira(amountPerVote) : "Free"
+                  paid && amountNaira > 0 ? naira(amountNaira) : "Free"
                 }
               />
             </dl>

@@ -14,7 +14,7 @@ import {
   SquareLock02Icon,
   Megaphone01Icon,
   CheckmarkCircle02Icon,
-  ArrowLeft01Icon,
+  Award01Icon,
 } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -28,7 +28,6 @@ import { ApiError } from "@/lib/api/errors";
 import { nairaFromKobo } from "@/app/(dashboards)/dashboard/_components/format";
 import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState";
 import { Skeleton } from "@/app/(dashboards)/dashboard/_components/Skeleton";
-import { UserAvatar } from "@/app/(dashboards)/dashboard/_components/UserAvatar";
 import type { Card, Poll } from "@/lib/api/types";
 import { isSpaceThemeId } from "@/app/(dashboards)/dashboard/_components/space-theme";
 import { CategoryCard } from "./_components/CategoryCard";
@@ -36,6 +35,13 @@ import { CategoryVoter } from "./_components/CategoryVoter";
 import { PayVoteModal, type VoteMethod } from "./_components/PayVoteModal";
 import { useCountdown } from "./_components/useCountdown";
 import { savePendingVoteCheckout } from "../pending-checkout";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Selection = { nomineeId: string; quantity: number };
 
@@ -43,7 +49,7 @@ export default function VotePage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const router = useRouter();
-  const { user, status } = useAuth();
+  const { status } = useAuth();
   const authenticated = status === "authenticated";
 
   const [poll, setPoll] = useState<Poll | null>(null);
@@ -105,19 +111,27 @@ export default function VotePage() {
         delete next[categoryId];
         return next;
       }
-      return { ...prev, [categoryId]: { nomineeId, quantity: current?.quantity ?? 1 } };
+      return {
+        ...prev,
+        [categoryId]: { nomineeId, quantity: current?.quantity ?? 1 },
+      };
     });
   };
 
   const setQuantity = (categoryId: string, quantity: number) => {
     setSelections((prev) =>
-      prev[categoryId] ? { ...prev, [categoryId]: { ...prev[categoryId], quantity } } : prev,
+      prev[categoryId]
+        ? { ...prev, [categoryId]: { ...prev[categoryId], quantity } }
+        : prev,
     );
   };
 
   const selectionCount = Object.keys(selections).length;
   const totalKobo = poll?.paid
-    ? Object.values(selections).reduce((sum, s) => sum + poll.amountPerVote * s.quantity, 0)
+    ? Object.values(selections).reduce(
+        (sum, s) => sum + poll.amountPerVote * s.quantity,
+        0,
+      )
     : 0;
 
   function buildVoteSelections(): VoteSelection[] {
@@ -133,7 +147,8 @@ export default function VotePage() {
     try {
       const res = await castVote(slug, payload);
       if (res.checkoutUrl) {
-        if (res.reference) savePendingVoteCheckout({ slug, reference: res.reference });
+        if (res.reference)
+          savePendingVoteCheckout({ slug, reference: res.reference });
         window.location.href = res.checkoutUrl;
         return;
       }
@@ -175,7 +190,10 @@ export default function VotePage() {
     // Paid — fetch wallet/cards on demand, then open the method picker.
     setPayLoading(true);
     try {
-      const [wallet, savedCards] = await Promise.all([getWallet(), listCards()]);
+      const [wallet, savedCards] = await Promise.all([
+        getWallet(),
+        listCards(),
+      ]);
       setWalletKobo(wallet.balance);
       setCards(savedCards);
       setPayOpen(true);
@@ -189,7 +207,11 @@ export default function VotePage() {
   const confirmPay = async (method: VoteMethod, card?: Card) => {
     const voteSelections = buildVoteSelections();
     if (method === "card" && card) {
-      await submitVote({ selections: voteSelections, method: "card", cardId: card.id });
+      await submitVote({
+        selections: voteSelections,
+        method: "card",
+        cardId: card.id,
+      });
     } else if (method === "wallet") {
       await submitVote({ selections: voteSelections, method: "wallet" });
     } else {
@@ -225,34 +247,11 @@ export default function VotePage() {
   };
 
   const closed = poll?.status === "closed";
-  const activeCategory = poll?.categories.find((c) => c.id === activeCategoryId) ?? null;
+  const activeCategory =
+    poll?.categories.find((c) => c.id === activeCategoryId) ?? null;
 
   return (
     <main className="min-h-screen bg-canvas pb-28">
-      <header className="relative z-10 bg-brand px-4 py-4 sm:px-8">
-        <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <Link href="/" className="text-xl font-semibold tracking-tight text-white cursor-pointer">
-            Duevy.
-          </Link>
-          {authenticated ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 rounded-full bg-black/20 py-1 pl-1 pr-3 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/30 cursor-pointer"
-            >
-              <UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} size={26} />
-              Dashboard
-            </Link>
-          ) : (
-            <Link
-              href={`/login?next=${encodeURIComponent(`/vote/${slug}`)}`}
-              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud cursor-pointer"
-            >
-              Sign in
-            </Link>
-          )}
-        </div>
-      </header>
-
       {loading ? (
         <div className="mx-auto max-w-3xl px-4 pt-4 sm:px-8">
           <div className="flex flex-col gap-5">
@@ -292,82 +291,65 @@ export default function VotePage() {
         </div>
       ) : poll ? (
         <>
-          <PollHero poll={poll} onShare={share} onCopy={copyLink} copied={copied} />
+          <PollHero
+            poll={poll}
+            onShare={share}
+            onCopy={copyLink}
+            copied={copied}
+          />
 
           <div className="mx-auto max-w-3xl px-4 pb-8 sm:px-8">
-            <AnimatePresence mode="wait" initial={false}>
-              {!activeCategory ? (
-                <motion.div
-                  key="grid"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="mt-6"
-                >
-                  <p className="text-sm font-medium text-ink-soft">
-                    Tap an award to see the nominees and vote.
+            <section className="mt-7">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">
+                    Official ballot
                   </p>
-                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                    {poll.categories.map((category, index) => (
-                      <CategoryCard
-                        key={category.id}
-                        category={category}
-                        index={index}
-                        paid={poll.paid}
-                        amountPerVote={poll.amountPerVote}
-                        closed={closed}
-                        voted={
-                          authenticated &&
-                          typeof category.remaining === "number" &&
-                          category.remaining <= 0
-                        }
-                        selected={!!selections[category.id]}
-                        onOpen={() => setActiveCategoryId(category.id)}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={activeCategory.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="mt-5"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActiveCategoryId(null)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer"
-                  >
-                    <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-                    All awards
-                  </button>
-                  <div className="mt-4">
-                    <CategoryVoter
-                      category={activeCategory}
-                      closed={closed}
-                      locked={
-                        authenticated &&
-                        typeof activeCategory.remaining === "number" &&
-                        activeCategory.remaining <= 0
-                      }
-                      selectedNomineeId={selections[activeCategory.id]?.nomineeId}
-                      quantity={selections[activeCategory.id]?.quantity ?? 1}
-                      allowQuantity={poll.paid && !poll.membersOnly}
-                      amountPerVote={poll.amountPerVote}
-                      onSelect={(nomineeId) => select(activeCategory.id, nomineeId)}
-                      onQuantityChange={(q) => setQuantity(activeCategory.id, q)}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+                    Choose an award category
+                  </h2>
+                </div>
+                <p className="text-sm text-ink-soft">
+                  {poll.categories.length} categories available
+                </p>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                Open a category to review its nominees and make your selection.
+              </p>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {poll.categories.map((category, index) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    index={index}
+                    paid={poll.paid}
+                    amountPerVote={poll.amountPerVote}
+                    closed={closed}
+                    voted={
+                      authenticated &&
+                      typeof category.remaining === "number" &&
+                      category.remaining <= 0
+                    }
+                    selected={!!selections[category.id]}
+                    onOpen={() => setActiveCategoryId(category.id)}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
         </>
       ) : null}
+
+      {poll && (
+        <footer className="mx-auto max-w-3xl px-4 pb-8 pt-4 text-center sm:px-8">
+          <Link
+            href="/"
+            className="text-xs font-medium text-ink-soft transition-colors hover:text-brand"
+          >
+            Powered by <span className="font-semibold text-ink">Duevy</span>
+          </Link>
+        </footer>
+      )}
 
       {poll && poll.status === "active" && selectionCount > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-3 sm:px-6 sm:pb-6">
@@ -377,7 +359,9 @@ export default function VotePage() {
                 {selectionCount} award{selectionCount === 1 ? "" : "s"} selected
               </p>
               {poll.paid && (
-                <p className="text-xs text-ink-soft">{nairaFromKobo(totalKobo)} total</p>
+                <p className="text-xs text-ink-soft">
+                  {nairaFromKobo(totalKobo)} total
+                </p>
               )}
             </div>
             <button
@@ -408,6 +392,50 @@ export default function VotePage() {
           onConfirm={confirmPay}
         />
       )}
+
+      <Dialog
+        open={!!activeCategory}
+        onOpenChange={(open) => !open && setActiveCategoryId(null)}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[28px] border-cloud bg-canvas p-0 sm:max-w-2xl">
+          {activeCategory && (
+            <>
+              <DialogHeader className="border-b border-cloud bg-paper/60 px-6 py-5 pr-14">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-2xl bg-brand text-white">
+                    <HugeiconsIcon icon={Award01Icon} size={20} />
+                  </span>
+                  <div>
+                    <DialogTitle className="text-left text-lg font-semibold tracking-tight text-ink">
+                      {activeCategory.title}
+                    </DialogTitle>
+                    <DialogDescription className="mt-0.5 text-left text-sm text-ink-soft">
+                      Select one nominee for this award.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className="p-5 sm:p-6">
+                <CategoryVoter
+                  category={activeCategory}
+                  closed={closed}
+                  locked={
+                    authenticated &&
+                    typeof activeCategory.remaining === "number" &&
+                    activeCategory.remaining <= 0
+                  }
+                  selectedNomineeId={selections[activeCategory.id]?.nomineeId}
+                  quantity={selections[activeCategory.id]?.quantity ?? 1}
+                  allowQuantity={poll.paid && !poll.membersOnly}
+                  amountPerVote={poll.amountPerVote}
+                  onSelect={(nomineeId) => select(activeCategory.id, nomineeId)}
+                  onQuantityChange={(q) => setQuantity(activeCategory.id, q)}
+                />
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AnimatePresence>
         {successOpen && (
@@ -474,11 +502,29 @@ function PollHero({
   }[poll.status];
 
   return (
-    <div className="relative min-h-72 overflow-hidden">
+    <div className="relative min-h-[22rem] overflow-hidden sm:min-h-[26rem]">
       {/* Background: real cover photo if the rep set one, else a brand gradient. */}
       <div className="absolute inset-0 bg-brand">
-        {poll.coverImageUrl && (
-          <Image src={poll.coverImageUrl} alt="" fill unoptimized className="object-cover" priority />
+        {poll.coverImageUrl ? (
+          <Image
+            src={poll.coverImageUrl}
+            alt=""
+            fill
+            unoptimized
+            className="object-cover"
+            priority
+          />
+        ) : (
+          // Logo-derived motif (echoes the "D" mark) so a photo-less poll
+          // still reads as Duevy branding, not a generic gradient block.
+          <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
+            <div className="relative h-80 w-80">
+              <span className="absolute inset-0 rounded-[3.5rem] border border-white/15" />
+              <span className="absolute inset-8 rounded-[2.75rem] border border-white/10" />
+              <span className="absolute inset-16 rounded-[2rem] border border-white/[0.07]" />
+              <span className="absolute inset-16 rounded-l-[2rem] rounded-r-[6.5rem] border-r border-white/10" />
+            </div>
+          </div>
         )}
         <div
           className="pointer-events-none absolute inset-0 opacity-60"
@@ -486,16 +532,20 @@ function PollHero({
             backgroundImage:
               "radial-gradient(circle, rgba(255,255,255,0.16) 1px, transparent 1.5px)",
             backgroundSize: "18px 18px",
-            maskImage: "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
-            WebkitMaskImage: "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+            maskImage:
+              "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+            WebkitMaskImage:
+              "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
       </div>
 
-      <div className="relative mx-auto flex max-w-3xl flex-col justify-end px-4 py-7 sm:px-8">
+      <div className="relative mx-auto flex h-full max-w-3xl flex-col justify-end px-4 py-8 sm:px-8 sm:py-10">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusMeta.className}`}>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusMeta.className}`}
+          >
             {statusMeta.label}
           </span>
           {poll.paid && (
@@ -510,7 +560,7 @@ function PollHero({
           )}
         </div>
 
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-4xl">
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-[2.75rem]">
           {poll.title}
         </h1>
         {poll.description && (
@@ -542,7 +592,10 @@ function PollHero({
               onClick={onCopy}
               className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-xs font-semibold text-white backdrop-blur-sm transition-colors duration-300 hover:bg-white/25 cursor-pointer"
             >
-              <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={14} />
+              <HugeiconsIcon
+                icon={copied ? Tick02Icon : Copy01Icon}
+                size={14}
+              />
               {copied ? "Copied" : "Copy link"}
             </button>
           </div>

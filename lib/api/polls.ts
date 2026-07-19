@@ -75,10 +75,8 @@ export function updatePollCategoryImage(
 }
 
 /**
- * Update a nominee on an existing poll — photo, and (proposed) bio/code.
- * Cosmetic, like the category photo PATCH: works at any poll status. Today
- * the API only documents `imageUrl` here; `bio`/`code` need the endpoint
- * widened to accept them (see the poll-fields writeup).
+ * Update a nominee on an existing poll — photo, bio, and vote code.
+ * Cosmetic, like the category photo PATCH: works at any poll status.
  */
 export type PollNomineePatch = { imageUrl?: string | null; bio?: string | null; code?: string | null };
 
