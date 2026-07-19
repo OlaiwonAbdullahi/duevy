@@ -8,7 +8,6 @@ import {
   Wallet01Icon,
   ReceiptDollarIcon,
   MoneyAdd01Icon,
-  GiftIcon,
   Invoice01Icon,
   ArrowRight01Icon,
   CheckmarkCircle02Icon,
@@ -131,7 +130,7 @@ export function StudentOverview() {
             />
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <QuickAction
               href="/dashboard/dues"
               icon={Invoice01Icon}
@@ -149,12 +148,6 @@ export function StudentOverview() {
               icon={MoneyAdd01Icon}
               label="Top up wallet"
               hint="Add funds to pay faster"
-            />
-            <QuickAction
-              href="/dashboard/referrals"
-              icon={GiftIcon}
-              label="Invite friends"
-              hint="Earn ₦500 each"
             />
           </div>
 

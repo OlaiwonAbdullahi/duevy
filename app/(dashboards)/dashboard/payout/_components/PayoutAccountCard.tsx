@@ -49,7 +49,6 @@ export function PayoutAccountCard({
 
       {hasAccount ? (
         <div className="relative mt-5 flex-1 overflow-hidden rounded-2xl bg-[#101512] p-5 text-white">
-          {/* Fine engraved-line texture, like a card's guilloché print */}
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.04]"
             style={{
@@ -57,10 +56,6 @@ export function PayoutAccountCard({
                 "repeating-linear-gradient(135deg, #fff 0px, #fff 1px, transparent 1px, transparent 7px)",
             }}
           />
-          {/* Duevy mark, bottom-right — like a card's printed emblem, flat-filled not stroked.
-              The real logo is two shades of green layered as separate paths; each gets its
-              own mask (logo-mark.svg = dark base, logo-mark-accent.svg = light accent) so
-              they can carry slightly different opacity and still read as two-tone. */}
           <div className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40">
             <div
               className="absolute inset-0 opacity-[0.08]"

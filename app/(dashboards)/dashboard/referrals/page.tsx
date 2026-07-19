@@ -27,17 +27,17 @@ function buildSteps(rewardPerReferral: number): { icon: HugeIcon; title: string;
     {
       icon: Share08Icon,
       title: "Share your link",
-      body: "Send your code to coursemates and friends on other campuses.",
+      body: "Send your code to other reps and department leads you know.",
     },
     {
       icon: UserAdd01Icon,
-      title: "They join Duevy",
-      body: "They sign up with your link and set up their wallet.",
+      title: "They sign up as a rep",
+      body: "They register their own department with your link.",
     },
     {
       icon: Coins01Icon,
       title: "You both earn",
-      body: `You each get ${naira(rewardPerReferral)} once they pay their first due.`,
+      body: `You each get ${naira(rewardPerReferral)} once they receive their first due payment.`,
     },
   ];
 }
@@ -85,8 +85,8 @@ export default function ReferralsPage() {
   const share = async () => {
     if (!data) return;
     const shareData = {
-      title: "Join me on Duevy",
-      text: `Pay your campus dues the easy way. Use my code ${data.code} and we both earn ${naira(
+      title: "Run your department's dues on Duevy",
+      text: `Collect your department's dues the easy way. Sign up as a rep with my code ${data.code} and we both earn ${naira(
         data.rewardPerReferral,
       )}.`,
       url: data.link,
@@ -117,7 +117,7 @@ export default function ReferralsPage() {
           Refer &amp; earn
         </h1>
         <p className="mt-1 text-[13px] text-ink-soft">
-          Invite friends to Duevy and earn together.
+          Invite other reps to Duevy and earn together.
         </p>
       </header>
 
@@ -155,8 +155,8 @@ export default function ReferralsPage() {
           Give {naira(rewardPerReferral)}, get {naira(rewardPerReferral)}
         </p>
         <p className="relative mt-2 max-w-md text-sm text-white/80">
-          Share your code. When a friend joins and pays their first due, you both
-          earn {naira(rewardPerReferral)}.
+          Share your code. When someone signs up as a rep and receives their
+          first due payment, you both earn {naira(rewardPerReferral)}.
         </p>
 
         {/* Code + actions. */}
@@ -205,7 +205,7 @@ export default function ReferralsPage() {
         </div>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <StatCard icon={AddTeamIcon} label="Friends invited" value={String(stats.invited)} />
+          <StatCard icon={AddTeamIcon} label="Reps invited" value={String(stats.invited)} />
           <StatCard icon={UserAdd01Icon} label="Signed up" value={String(stats.joined)} />
           <StatCard
             icon={Coins01Icon}
@@ -266,7 +266,7 @@ export default function ReferralsPage() {
           <EmptyState
             icon={UserAdd01Icon}
             title="No referrals yet"
-            description="Share your code with friends. Once they sign up and pay a due, they'll show up here."
+            description="Share your code with other reps. Once they sign up and receive their first due payment, they'll show up here."
           />
         ) : (
           <ul className="mt-3 flex flex-col">
