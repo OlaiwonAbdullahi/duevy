@@ -228,6 +228,11 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
             )}
           </div>
 
+          <p className="mt-3 text-xs text-ink-soft">
+            Fees shown are the 3% processing charge, already paid by the
+            student on top of the due amount.
+          </p>
+
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
               <p className="text-xs text-ink-soft">
