@@ -142,7 +142,6 @@ export type VoteSelection = { categoryId: string; nomineeId: string; quantity: n
 /** Free polls omit `method` entirely — only paid votes name a payment method. */
 export type CastVotePayload =
   | { selections: VoteSelection[] }
-  | { selections: VoteSelection[]; method: "wallet" }
   | { selections: VoteSelection[]; method: "card"; cardId: string }
   | { selections: VoteSelection[]; method: "online" };
 
@@ -150,9 +149,15 @@ export type CastVoteResult = {
   receiptId?: string;
   totalCharged?: number;
   transaction?: Transaction;
-  /** Present for `online` — redirect to hosted checkout. */
-  checkoutUrl?: string;
+  /** Present for `online` — show these details in an InvoiceModal, don't redirect. */
   reference?: string;
+  amount?: number;
+  bankTransfer?: {
+    accountNumber: string;
+    bankName: string;
+    accountName: string;
+    expiresAt: string | null;
+  };
 };
 
 /** Cast one or more votes. Paid votes require an Idempotency-Key. */

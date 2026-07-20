@@ -5,9 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Wallet01Icon,
+  CreditCardIcon,
   ReceiptDollarIcon,
-  MoneyAdd01Icon,
   Invoice01Icon,
   ArrowRight01Icon,
   CheckmarkCircle02Icon,
@@ -74,6 +73,11 @@ export function StudentOverview() {
     });
   }, [data]);
 
+  const overdueCount = useMemo(
+    () => (data?.openDues ?? []).filter((d) => d.status === "overdue").length,
+    [data],
+  );
+
   const recent = data?.recentTransactions ?? [];
 
   return (
@@ -122,10 +126,10 @@ export function StudentOverview() {
               hint="Across your settled dues"
             />
             <StatCard
-              icon={Wallet01Icon}
-              label="Wallet balance"
-              value={nairaFromKobo(data?.walletBalance ?? 0)}
-              hint="Available to pay dues"
+              icon={Alert01Icon}
+              label="Overdue"
+              value={String(overdueCount)}
+              hint={overdueCount === 0 ? "You're all caught up" : "Needs attention"}
               tone="brand"
             />
           </div>
@@ -145,9 +149,9 @@ export function StudentOverview() {
             />
             <QuickAction
               href="/dashboard/wallet"
-              icon={MoneyAdd01Icon}
-              label="Top up wallet"
-              hint="Add funds to pay faster"
+              icon={CreditCardIcon}
+              label="Add a payment method"
+              hint="Save a card to pay faster"
             />
           </div>
 

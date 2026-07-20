@@ -23,7 +23,8 @@ import {
   type VoteSelection,
   type CastVotePayload,
 } from "@/lib/api/polls";
-import { getWallet, listCards } from "@/lib/api/wallet";
+import { listCards } from "@/lib/api/wallet";
+import { InvoiceModal, type InvoiceDetails } from "@/app/(dashboards)/dashboard/_components/InvoiceModal";
 import { ApiError } from "@/lib/api/errors";
 import { nairaFromKobo } from "@/app/(dashboards)/dashboard/_components/format";
 import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState";
@@ -34,7 +35,6 @@ import { CategoryCard } from "./_components/CategoryCard";
 import { CategoryVoter } from "./_components/CategoryVoter";
 import { PayVoteModal, type VoteMethod } from "./_components/PayVoteModal";
 import { useCountdown } from "./_components/useCountdown";
-import { savePendingVoteCheckout } from "../pending-checkout";
 import {
   Dialog,
   DialogContent,
@@ -61,12 +61,12 @@ export default function VotePage() {
   const [selections, setSelections] = useState<Record<string, Selection>>({});
   const [payOpen, setPayOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [walletKobo, setWalletKobo] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [payLoading, setPayLoading] = useState(false);
   const [lastReceiptId, setLastReceiptId] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
 
   async function load() {
     try {
@@ -142,21 +142,29 @@ export default function VotePage() {
     }));
   }
 
+  function onVoteSettled(receiptId: string | null) {
+    setLastReceiptId(receiptId);
+    setSuccessOpen(true);
+    setSelections({});
+    setPayOpen(false);
+    load();
+  }
+
   async function submitVote(payload: CastVotePayload) {
     setSubmitting(true);
     try {
       const res = await castVote(slug, payload);
-      if (res.checkoutUrl) {
-        if (res.reference)
-          savePendingVoteCheckout({ slug, reference: res.reference });
-        window.location.href = res.checkoutUrl;
+      // Online settles asynchronously — show the invoice and wait for
+      // confirmation instead of redirecting away.
+      if (res.bankTransfer && res.reference) {
+        setInvoice({
+          reference: res.reference,
+          amount: res.amount ?? totalKobo,
+          bankTransfer: res.bankTransfer,
+        });
         return;
       }
-      setLastReceiptId(res.receiptId ?? null);
-      setSuccessOpen(true);
-      setSelections({});
-      setPayOpen(false);
-      await load();
+      onVoteSettled(res.receiptId ?? null);
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
       const message =
@@ -164,13 +172,11 @@ export default function VotePage() {
           ? "You've already voted in that award."
           : code === "POLL_CLOSED"
             ? "Voting has closed for this poll."
-            : code === "INSUFFICIENT_FUNDS"
-              ? "Insufficient wallet balance."
-              : code === "CARD_DECLINED"
-                ? "That card was declined."
-                : err instanceof ApiError
-                  ? err.message
-                  : "Couldn't cast your vote. Please try again.";
+            : code === "CARD_DECLINED"
+              ? "That card was declined."
+              : err instanceof ApiError
+                ? err.message
+                : "Couldn't cast your vote. Please try again.";
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -187,15 +193,10 @@ export default function VotePage() {
       await submitVote({ selections: buildVoteSelections() });
       return;
     }
-    // Paid — fetch wallet/cards on demand, then open the method picker.
+    // Paid — fetch cards on demand, then open the method picker.
     setPayLoading(true);
     try {
-      const [wallet, savedCards] = await Promise.all([
-        getWallet(),
-        listCards(),
-      ]);
-      setWalletKobo(wallet.balance);
-      setCards(savedCards);
+      setCards(await listCards());
       setPayOpen(true);
     } catch {
       toast.error("Couldn't load your payment options.");
@@ -212,8 +213,6 @@ export default function VotePage() {
         method: "card",
         cardId: card.id,
       });
-    } else if (method === "wallet") {
-      await submitVote({ selections: voteSelections, method: "wallet" });
     } else {
       await submitVote({ selections: voteSelections, method: "online" });
     }
@@ -385,11 +384,21 @@ export default function VotePage() {
       {payOpen && (
         <PayVoteModal
           totalKobo={totalKobo}
-          balanceKobo={walletKobo}
           cards={cards}
           pending={submitting}
           onClose={() => (submitting ? null : setPayOpen(false))}
           onConfirm={confirmPay}
+        />
+      )}
+
+      {invoice && (
+        <InvoiceModal
+          invoice={invoice}
+          onClose={() => setInvoice(null)}
+          onConfirmed={(res) => {
+            setInvoice(null);
+            onVoteSettled(res.transaction?.id ?? null);
+          }}
         />
       )}
 
@@ -398,7 +407,7 @@ export default function VotePage() {
         onOpenChange={(open) => !open && setActiveCategoryId(null)}
       >
         <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[28px] border-cloud bg-canvas p-0 sm:max-w-2xl">
-          {activeCategory && (
+          {activeCategory && poll && (
             <>
               <DialogHeader className="border-b border-cloud bg-paper/60 px-6 py-5 pr-14">
                 <div className="flex items-center gap-3">

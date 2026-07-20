@@ -14,7 +14,7 @@ export type UpdateProfilePayload = {
 };
 
 /**
- * Update the caller's own profile. `matricNo`/`level`/`role`/`walletBalance` are
+ * Update the caller's own profile. `matricNo`/`level`/`role` are
  * read-only (server rejects with 422 FIELD_READ_ONLY). Changing `email` flips
  * `emailVerified` to false and re-sends verification. Returns the full user.
  */

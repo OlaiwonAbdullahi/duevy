@@ -51,4 +51,4 @@ export type JoinableDepartment = Space & {
 };
 
 /** How a due gets settled from the pay modal. */
-export type PayMethod = "wallet" | "card" | "online";
+export type PayMethod = "card" | "online";

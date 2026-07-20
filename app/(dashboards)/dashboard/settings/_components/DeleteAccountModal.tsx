@@ -31,9 +31,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
       setAccessToken(null);
       window.location.href = "/login";
     } catch (err) {
-      if (err instanceof ApiError && err.code === "WALLET_NOT_EMPTY") {
-        setError("Your wallet still has a balance — withdraw or spend it first.");
-      } else if (err instanceof ApiError && err.code === "ACTIVE_REP_OBLIGATIONS") {
+      if (err instanceof ApiError && err.code === "ACTIVE_REP_OBLIGATIONS") {
         setError("Transfer lead rep or close your active dues before deactivating.");
       } else {
         setError(

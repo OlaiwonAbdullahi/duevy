@@ -12,7 +12,7 @@ import type {
   PayMethod,
   Space,
 } from "./_components/types";
-import type { Card } from "../wallet/_components/types";
+import type { Card } from "@/lib/api/types";
 import { naira } from "./_components/data";
 import { adaptSpace, adaptDue } from "./_components/adapt";
 import { SpaceCard } from "./_components/SpaceCard";
@@ -21,10 +21,10 @@ import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
 import { PayDueModal } from "./_components/PayDueModal";
 import { ReceiptModal } from "./_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "./_components/receipt";
+import { InvoiceModal, type InvoiceDetails } from "../_components/InvoiceModal";
 import { listSpaces, joinSpace } from "@/lib/api/spaces";
 import { listDues, payDue } from "@/lib/api/dues";
-import { getWallet, listCards } from "@/lib/api/wallet";
-import { fromKobo } from "../_components/format";
+import { listCards } from "@/lib/api/wallet";
 import { useRole } from "../_components/role-context";
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -37,23 +37,22 @@ export default function DuesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
-  const [balance, setBalance] = useState(0);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
+  const [invoiceDue, setInvoiceDue] = useState<{ due: Due; space: Space } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [apiSpaces, apiDues, wallet, savedCards] = await Promise.all([
+        const [apiSpaces, apiDues, savedCards] = await Promise.all([
           listSpaces(),
           listDues({ perPage: 100 }),
-          getWallet(),
           listCards(),
         ]);
         if (cancelled) return;
         setSpaces(apiSpaces.map(adaptSpace));
         setDues(apiDues.data.map(adaptDue));
-        setBalance(fromKobo(wallet.balance));
         setCards(savedCards);
       } catch {
         if (!cancelled) toast.error("Couldn't load your dues.");
@@ -109,7 +108,33 @@ export default function DuesPage() {
     }
   };
 
-  const confirmPay = async (method: PayMethod, card?: Card) => {
+  const finishPayment = (
+    targetDues: Due[],
+    space: Space,
+    method: PayMethod,
+    refs: string[],
+    card?: Card,
+  ) => {
+    const targetIds = targetDues.map((d) => d.id);
+    const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
+    setDues((list) =>
+      list.map((d) => (targetIds.includes(d.id) ? { ...d, status: "paid" } : d)),
+    );
+    setPendingIds([]);
+    setPayDues([]);
+    const payer = {
+      name: user?.name ?? "",
+      detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
+        .filter(Boolean)
+        .join(" · "),
+    };
+    setReceipts(buildReceipts(targetDues, space, method, payer, refs, card));
+    toast.success(`${naira(total)} paid`, {
+      description: targetDues.length === 1 ? targetDues[0].title : `${targetDues.length} dues settled`,
+    });
+  };
+
+  const confirmPay = async (method: PayMethod, card?: Card, discountCode?: string) => {
     if (payDues.length === 0 || !selected) return;
     if (isPendingRep) {
       toast.info("Paused during review", {
@@ -118,59 +143,51 @@ export default function DuesPage() {
       return;
     }
     const targetDues = payDues;
-    const targetIds = targetDues.map((d) => d.id);
-    const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
     const space = selected;
-    setPendingIds(targetIds);
+    setPendingIds(targetDues.map((d) => d.id));
 
     try {
-      // Settle each selected due. Online payments would return a checkoutUrl to
-      // redirect to; wallet/card settle synchronously.
       const results = await Promise.all(
         targetDues.map((d) =>
           payDue(
             d.id,
             method === "card" && card
-              ? { method: "card", cardId: card.id }
-              : method === "online"
-                ? { method: "online" }
-                : { method: "wallet" },
+              ? { method: "card", cardId: card.id, discountCode }
+              : { method: "online", discountCode },
           ),
         ),
       );
 
-      const redirect = results.find((r) => r.checkoutUrl)?.checkoutUrl;
-      if (method === "online" && redirect) {
-        window.location.href = redirect;
+      // Online settles asynchronously — show the invoice for the first due
+      // (mirrors the pre-migration redirect flow's single-checkout simplification
+      // for multi-due batches) and wait for confirmation before marking anything
+      // paid. Closing the pay modal here avoids stacking it under the invoice.
+      const pendingInvoice = results.find((r) => r.bankTransfer);
+      if (method === "online" && pendingInvoice?.bankTransfer && pendingInvoice.reference) {
+        setInvoiceDue({ due: targetDues[0], space });
+        setInvoice({
+          reference: pendingInvoice.reference,
+          amount: pendingInvoice.amount ?? targetDues[0].amount,
+          bankTransfer: pendingInvoice.bankTransfer,
+        });
+        setPayDues([]);
+        setPendingIds([]);
         return;
       }
 
-      setDues((list) =>
-        list.map((d) => (targetIds.includes(d.id) ? { ...d, status: "paid" } : d)),
-      );
-      if (method === "wallet") setBalance((b) => b - total);
-      setPendingIds([]);
-      setPayDues([]);
-      // One receipt per due settled — surfaced together for download. Each
-      // ref comes from that due's own payDue() response, in the same order.
       const refs = results.map((r) => r.transaction?.reference ?? r.reference ?? "");
-      const payer = {
-        name: user?.name ?? "",
-        detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
-          .filter(Boolean)
-          .join(" · "),
-      };
-      setReceipts(buildReceipts(targetDues, space, method, payer, refs, card));
-      toast.success(`${naira(total)} paid`, {
-        description:
-          targetDues.length === 1
-            ? targetDues[0].title
-            : `${targetDues.length} dues settled`,
-      });
+      finishPayment(targetDues, space, method, refs, card);
     } catch {
       setPendingIds([]);
       toast.error("Payment failed. Please try again.");
     }
+  };
+
+  const confirmInvoice = () => {
+    if (!invoice || !invoiceDue) return;
+    finishPayment([invoiceDue.due], invoiceDue.space, "online", [invoice.reference]);
+    setInvoice(null);
+    setInvoiceDue(null);
   };
 
   return (
@@ -291,11 +308,21 @@ export default function DuesPage() {
         <PayDueModal
           dues={payDues}
           space={selected}
-          balance={balance}
           cards={cards}
           pending={pendingIds.length > 0}
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}
+        />
+      )}
+
+      {invoice && (
+        <InvoiceModal
+          invoice={invoice}
+          onClose={() => {
+            setInvoice(null);
+            setInvoiceDue(null);
+          }}
+          onConfirmed={confirmInvoice}
         />
       )}
 

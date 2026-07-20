@@ -6,5 +6,3 @@ export const CARD_LOGOS: Record<string, string> = {
   Mastercard: "/cards/mastercard.svg",
   Verve: "/cards/verve.jpeg",
 };
-
-export const TOP_UP_PRESETS = [1000, 2000, 5000, 10000];

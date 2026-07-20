@@ -56,7 +56,6 @@ export type User = {
   repApplicationStatus: RepApplicationStatus | null;
   matricNo: string | null;
   level: string | null;
-  walletBalance: number;
   referralCode: string | null;
   spaces: SpaceMembershipSummary[];
   createdAt: string;
@@ -88,7 +87,6 @@ export type Space = {
 
 export type DueCategory = "levy" | "dinner" | "handout" | "welfare" | "sport";
 export type DueStatus = "unpaid" | "paid" | "overdue";
-export type PayMethod = "wallet" | "card" | "online";
 
 export type Due = {
   id: string;
@@ -120,7 +118,7 @@ export type TxnStatus = "completed" | "pending" | "failed";
 export type Transaction = {
   id: string;
   type: TxnType;
-  /** e.g. "Wallet" · "Visa •••• 4242" · "Monnify". */
+  /** e.g. "Visa •••• 4242" · "Paystack". */
   method?: string;
   title?: string;
   /** Signed kobo: positive = credit in, negative = debit out. */
@@ -131,16 +129,10 @@ export type Transaction = {
 };
 
 export type StudentOverview = {
-  walletBalance: number;
   outstanding: { amount: number; count: number };
   paidThisSession: number;
   openDues: Due[];
   recentTransactions: Transaction[];
-};
-
-export type Wallet = {
-  balance: number;
-  pendingBalance: number;
 };
 
 export type Card = {

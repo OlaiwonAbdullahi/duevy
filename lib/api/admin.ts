@@ -61,7 +61,6 @@ export type AdminUser = {
   isDeactivated?: boolean;
   matricNo?: string | null;
   level?: string | null;
-  walletBalance?: number;
   createdAt?: string;
 };
 

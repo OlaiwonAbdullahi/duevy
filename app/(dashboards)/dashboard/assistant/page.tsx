@@ -24,18 +24,17 @@ import { Modal } from "../_components/Modal";
 import { EmptyState } from "../_components/EmptyState";
 import { getDue, payDue as payDueApi } from "@/lib/api/dues";
 import { getSpace } from "@/lib/api/spaces";
-import { getWallet, listCards, topUp } from "@/lib/api/wallet";
+import { listCards } from "@/lib/api/wallet";
 import { ApiError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
 import { adaptDue, adaptSpace } from "../dues/_components/adapt";
 import type { Due, PayMethod, Space } from "../dues/_components/types";
-import type { Card } from "../wallet/_components/types";
-import type { TopUpSource } from "../wallet/_components/types";
+import type { Card } from "@/lib/api/types";
 import { PayDueModal } from "../dues/_components/PayDueModal";
 import { ReceiptModal } from "../dues/_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "../dues/_components/receipt";
-import { TopUpModal } from "../wallet/_components/TopUpModal";
-import { naira, fromKobo } from "../_components/format";
+import { InvoiceModal, type InvoiceDetails } from "../_components/InvoiceModal";
+import { naira } from "../_components/format";
 
 type ChatMessage = {
   id: number;
@@ -57,16 +56,9 @@ const exampleQuestions = [
   "Pay my handout fee",
   "Show my payment history",
   "Who is my department rep?",
-  "What's my wallet balance?",
-  "Fund my wallet",
   "Join my department",
   "What dues do I have coming up?",
 ];
-
-/** Online payments redirect to Paystack's hosted checkout. */
-function redirectToCheckout(url: string) {
-  window.location.href = url;
-}
 
 export default function AssistantPage() {
   const { user } = useAuth();
@@ -81,17 +73,12 @@ export default function AssistantPage() {
   // Payment-modal state, populated when Duey resolves an `open_payment_modal` action.
   const [payDue, setPayDue] = useState<Due | null>(null);
   const [paySpace, setPaySpace] = useState<Space | null>(null);
-  const [payBalance, setPayBalance] = useState(0);
   const [payCards, setPayCards] = useState<Card[]>([]);
   const [payLoading, setPayLoading] = useState(false);
   const [payPending, setPayPending] = useState(false);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
-
-  // Top-up modal state, populated when Duey resolves an `open_topup_modal` action.
-  const [topUpAmount, setTopUpAmount] = useState<number | null>(null);
-  const [topUpCards, setTopUpCards] = useState<Card[]>([]);
-  const [topUpLoading, setTopUpLoading] = useState(false);
-  const [topUpPending, setTopUpPending] = useState(false);
+  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
+  const [invoiceContext, setInvoiceContext] = useState<{ due: Due; space: Space } | null>(null);
 
   // Create-due confirm state (rep-only), keyed by the chat message offering it.
   const [creatingDueId, setCreatingDueId] = useState<number | null>(null);
@@ -157,9 +144,6 @@ export default function AssistantPage() {
 
       if (res.action?.type === "open_payment_modal") {
         void openPaymentModal(res.action.dueId);
-      }
-      if (res.action?.type === "open_topup_modal") {
-        void openTopUpModal(res.action.amount);
       }
     } catch (err) {
       console.error("[assistant] FAILED", {
@@ -247,11 +231,6 @@ export default function AssistantPage() {
     }
 
     // Duey already resolved this — re-open the modal rather than re-asking the LLM.
-    if (message.action?.type === "open_topup_modal") {
-      clearQuickReplies();
-      await openTopUpModal(message.action.amount);
-      return;
-    }
     if (message.action?.type === "open_payment_modal") {
       clearQuickReplies();
       await openPaymentModal(message.action.dueId);
@@ -265,14 +244,12 @@ export default function AssistantPage() {
     setPayLoading(true);
     try {
       const due = await getDue(dueId);
-      const [space, wallet, cards] = await Promise.all([
+      const [space, cards] = await Promise.all([
         getSpace(due.spaceId),
-        getWallet(),
         listCards(),
       ]);
       setPayDue(adaptDue(due));
       setPaySpace(adaptSpace(space));
-      setPayBalance(fromKobo(wallet.balance));
       setPayCards(cards);
     } catch {
       toast.error("Couldn't open payment for this due.");
@@ -281,38 +258,44 @@ export default function AssistantPage() {
     }
   };
 
-  const confirmPay = async (method: PayMethod, card?: Card) => {
+  const finishPayment = (due: Due, space: Space, method: PayMethod, ref: string, card?: Card) => {
+    const payer = {
+      name: user?.name ?? "",
+      detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
+        .filter(Boolean)
+        .join(" · "),
+    };
+    setReceipts(buildReceipts([due], space, method, payer, [ref], card));
+    pushMessage("bot", `Payment confirmed! ${naira(due.amount)} for ${due.title} is settled. 🎉`);
+  };
+
+  const confirmPay = async (method: PayMethod, card?: Card, discountCode?: string) => {
     if (!payDue || !paySpace) return;
     setPayPending(true);
     try {
       const result = await payDueApi(
         payDue.id,
         method === "card" && card
-          ? { method: "card", cardId: card.id }
-          : method === "online"
-            ? { method: "online" }
-            : { method: "wallet" },
+          ? { method: "card", cardId: card.id, discountCode }
+          : { method: "online", discountCode },
       );
 
-      if (method === "online" && result.checkoutUrl) {
-        redirectToCheckout(result.checkoutUrl);
+      // Online settles asynchronously — show the invoice and wait for
+      // confirmation before treating the due as paid.
+      if (method === "online" && result.bankTransfer && result.reference) {
+        setInvoiceContext({ due: payDue, space: paySpace });
+        setInvoice({
+          reference: result.reference,
+          amount: result.amount ?? payDue.amount,
+          bankTransfer: result.bankTransfer,
+        });
+        setPayDue(null);
+        setPaySpace(null);
         return;
       }
 
       const ref = result.transaction?.reference ?? result.reference ?? "";
-      const payer = {
-        name: user?.name ?? "",
-        detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
-          .filter(Boolean)
-          .join(" · "),
-      };
-      setReceipts(
-        buildReceipts([payDue], paySpace, method, payer, [ref], card),
-      );
-      pushMessage(
-        "bot",
-        `Payment confirmed! ${naira(payDue.amount)} for ${payDue.title} is settled. 🎉`,
-      );
+      finishPayment(payDue, paySpace, method, ref, card);
       setPayDue(null);
       setPaySpace(null);
     } catch {
@@ -322,57 +305,17 @@ export default function AssistantPage() {
     }
   };
 
+  const confirmInvoice = () => {
+    if (!invoice || !invoiceContext) return;
+    finishPayment(invoiceContext.due, invoiceContext.space, "online", invoice.reference);
+    setInvoice(null);
+    setInvoiceContext(null);
+  };
+
   const closePaymentModal = () => {
     if (payPending) return;
     setPayDue(null);
     setPaySpace(null);
-  };
-
-  const openTopUpModal = async (amountKobo: number) => {
-    setTopUpLoading(true);
-    try {
-      const cards = await listCards();
-      setTopUpCards(cards);
-      setTopUpAmount(fromKobo(amountKobo));
-    } catch {
-      toast.error("Couldn't open the top-up form.");
-    } finally {
-      setTopUpLoading(false);
-    }
-  };
-
-  const confirmTopUp = async (amount: number, via: TopUpSource) => {
-    setTopUpPending(true);
-    try {
-      if (via.source === "online") {
-        const res = await topUp({ amount: amount * 100, method: "online" });
-        if (res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
-          return;
-        }
-      } else {
-        await topUp({
-          amount: amount * 100,
-          method: "card",
-          cardId: via.card.id,
-        });
-      }
-      pushMessage("bot", `${naira(amount)} was added to your wallet 🎉`);
-      setTopUpAmount(null);
-    } catch (err) {
-      toast.error(
-        err instanceof ApiError
-          ? err.message
-          : "Top up failed. Please try again.",
-      );
-    } finally {
-      setTopUpPending(false);
-    }
-  };
-
-  const closeTopUpModal = () => {
-    if (topUpPending) return;
-    setTopUpAmount(null);
   };
 
   const startNewChat = () => {
@@ -597,7 +540,7 @@ export default function AssistantPage() {
         </form>
       </section>
 
-      {(payLoading || topUpLoading) && (
+      {payLoading && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 backdrop-blur-sm">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />
         </div>
@@ -607,7 +550,6 @@ export default function AssistantPage() {
         <PayDueModal
           dues={[payDue]}
           space={paySpace}
-          balance={payBalance}
           cards={payCards}
           pending={payPending}
           onClose={closePaymentModal}
@@ -615,13 +557,14 @@ export default function AssistantPage() {
         />
       )}
 
-      {topUpAmount !== null && (
-        <TopUpModal
-          cards={topUpCards}
-          defaultCard={topUpCards.find((c) => c.isDefault) ?? topUpCards[0]}
-          defaultAmount={topUpAmount}
-          onClose={closeTopUpModal}
-          onConfirm={confirmTopUp}
+      {invoice && (
+        <InvoiceModal
+          invoice={invoice}
+          onClose={() => {
+            setInvoice(null);
+            setInvoiceContext(null);
+          }}
+          onConfirmed={confirmInvoice}
         />
       )}
 

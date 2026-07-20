@@ -3,54 +3,39 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Wallet01Icon,
   CreditCardIcon,
   BankIcon,
-  Alert01Icon,
   ArrowRight01Icon,
-  ArrowUpRight01Icon,
   CheckmarkCircle02Icon,
 } from "@hugeicons/core-free-icons";
 import { CardBrand } from "@/app/(dashboards)/dashboard/wallet/_components/CardBrand";
 import { Modal } from "@/app/(dashboards)/dashboard/_components/Modal";
-import { IconChip } from "@/app/(dashboards)/dashboard/_components/IconChip";
 import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState";
 import { nairaFromKobo } from "@/app/(dashboards)/dashboard/_components/format";
 import type { HugeIcon } from "@/app/(dashboards)/dashboard/_components/nav-config";
 import type { Card } from "@/lib/api/types";
-import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 
-export type VoteMethod = "wallet" | "card" | "online";
+export type VoteMethod = "card" | "online";
 
 export function PayVoteModal({
   totalKobo,
-  balanceKobo,
   cards,
   pending,
   onClose,
   onConfirm,
 }: {
   totalKobo: number;
-  balanceKobo: number;
   cards: Card[];
   pending: boolean;
   onClose: () => void;
   onConfirm: (method: VoteMethod, card?: Card) => void;
 }) {
-  const gatewayName = useActivePaymentGateway();
   const defaultCard = cards.find((c) => c.isDefault) ?? cards[0];
-  const [method, setMethod] = useState<VoteMethod>(
-    balanceKobo >= totalKobo ? "wallet" : cards.length ? "card" : "online",
-  );
+  const [method, setMethod] = useState<VoteMethod>(cards.length ? "card" : "online");
   const [cardId, setCardId] = useState(defaultCard?.id ?? "");
   const selectedCard = cards.find((c) => c.id === cardId) ?? defaultCard;
 
-  const walletShort = balanceKobo < totalKobo;
-  const valid =
-    !pending &&
-    ((method === "wallet" && !walletShort) ||
-      (method === "card" && !!selectedCard) ||
-      method === "online");
+  const valid = !pending && ((method === "card" && !!selectedCard) || method === "online");
 
   return (
     <Modal title="Confirm your vote" icon={CreditCardIcon} onClose={onClose}>
@@ -64,14 +49,7 @@ export function PayVoteModal({
       </div>
 
       <p className="mt-5 text-xs font-medium text-ink-soft">Pay with</p>
-      <div className="mt-1.5 grid grid-cols-3 gap-2">
-        <MethodTile
-          active={method === "wallet"}
-          icon={Wallet01Icon}
-          label="Wallet"
-          hint={nairaFromKobo(balanceKobo)}
-          onClick={() => setMethod("wallet")}
-        />
+      <div className="mt-1.5 grid grid-cols-2 gap-2">
         <MethodTile
           active={method === "card"}
           icon={CreditCardIcon}
@@ -82,21 +60,11 @@ export function PayVoteModal({
         <MethodTile
           active={method === "online"}
           icon={BankIcon}
-          label="Online"
-          hint="Transfer, USSD"
+          label="Bank transfer"
+          hint="Pay by transfer"
           onClick={() => setMethod("online")}
         />
       </div>
-
-      {method === "wallet" && walletShort && (
-        <div className="mt-3 flex items-start gap-2 rounded-2xl bg-rose-50 p-3 text-xs text-rose-700">
-          <HugeiconsIcon icon={Alert01Icon} size={15} className="mt-px shrink-0" />
-          <p>
-            You&apos;re {nairaFromKobo(totalKobo - balanceKobo)} short. Sign in to your dashboard
-            to top up, or pay with a card or online instead.
-          </p>
-        </div>
-      )}
 
       {method === "card" && (
         <div className="mt-3 flex flex-col gap-2">
@@ -106,7 +74,7 @@ export function PayVoteModal({
                 size="sm"
                 icon={CreditCardIcon}
                 title="No saved cards"
-                description="Pay with “Online” instead — you can save a card afterwards."
+                description="Pay by “Bank transfer” instead — you can save a card afterwards."
               />
             </div>
           )}
@@ -143,11 +111,11 @@ export function PayVoteModal({
 
       {method === "online" && (
         <div className="mt-3 flex items-start gap-3 rounded-2xl border border-cloud bg-paper p-4">
-          <IconChip icon={BankIcon} />
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-canvas text-brand">
+            <HugeiconsIcon icon={BankIcon} size={18} />
+          </span>
           <p className="text-xs leading-relaxed text-ink-soft">
-            You&apos;ll be securely redirected to{" "}
-            <span className="font-semibold text-ink">{gatewayName}</span> to finish paying by card,
-            bank transfer or USSD.
+            You&apos;ll get a dedicated account to transfer to, right here in the app — no redirect.
           </p>
         </div>
       )}
@@ -161,10 +129,9 @@ export function PayVoteModal({
         {pending
           ? "Processing…"
           : method === "online"
-            ? `Continue to ${gatewayName}`
+            ? "Get transfer details"
             : `Pay ${nairaFromKobo(totalKobo)}`}
-        {method === "online" && !pending && <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />}
-        {method !== "online" && !pending && <HugeiconsIcon icon={ArrowRight01Icon} size={16} />}
+        {!pending && <HugeiconsIcon icon={ArrowRight01Icon} size={16} />}
       </button>
     </Modal>
   );

@@ -15,7 +15,6 @@ export type AssistantIntent =
   | "check_balance"
   | "view_history"
   | "contact_rep"
-  | "fund_wallet"
   | "create_due"
   | "rep_summary"
   | "unknown";
@@ -32,7 +31,6 @@ export type AssistantDueCategory =
 export type AssistantAction =
   | { type: "open_payment_modal"; dueId: string }
   | { type: "confirm_join_department"; spaceId: string; inviteCode: string }
-  | { type: "open_topup_modal"; amount: number }
   | {
       type: "confirm_create_due";
       spaceId: string;

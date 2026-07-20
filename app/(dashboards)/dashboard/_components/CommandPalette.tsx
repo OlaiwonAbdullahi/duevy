@@ -13,7 +13,6 @@ import {
   GiftIcon,
   InformationCircleIcon,
   Invoice01Icon,
-  MoneyAdd01Icon,
   MoneySend01Icon,
   Notification02Icon,
   Notification03Icon,
@@ -43,9 +42,9 @@ type CommandItem = {
 
 /** One-line descriptions so pages read as more than a bare link. */
 const PAGE_DESC: Record<string, string> = {
-  "/dashboard": "Your wallet, dues and recent activity",
+  "/dashboard": "Your dues and recent activity",
   "/dashboard/dues": "Dues you owe across your spaces",
-  "/dashboard/wallet": "Balance, top ups and saved cards",
+  "/dashboard/wallet": "Saved cards for faster payments",
   "/dashboard/transactions": "Your full money history and receipts",
   "/dashboard/referrals": "Invite friends and earn bonuses",
   "/dashboard/settings": "Profile, theme and preferences",
@@ -65,14 +64,6 @@ const STUDENT_ACTIONS: Omit<CommandItem, "id">[] = [
     sublabel: "Settle an outstanding due",
     href: "/dashboard/dues",
     keywords: "pay due settle outstanding bill levy",
-  },
-  {
-    group: "Quick actions",
-    icon: MoneyAdd01Icon,
-    label: "Top up wallet",
-    sublabel: "Add money to your wallet",
-    href: "/dashboard/wallet",
-    keywords: "top up fund add money wallet balance deposit",
   },
   {
     group: "Quick actions",

@@ -41,7 +41,7 @@ export type NavGroup = {
 export const STUDENT_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard", icon: Home01Icon },
   { label: "My dues", href: "/dashboard/dues", icon: Invoice01Icon },
-  { label: "Wallet", href: "/dashboard/wallet", icon: Wallet01Icon }, // personal wallet — top up, cards
+  { label: "Payment methods", href: "/dashboard/wallet", icon: Wallet01Icon }, // saved cards — no wallet balance since the payment architecture migration
   {
     label: "Transactions",
     href: "/dashboard/transactions",

@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CardBrand } from "./CardBrand";
 import { EmptyState } from "../../_components/EmptyState";
-import type { Card } from "./types";
+import type { Card } from "@/lib/api/types";
 
 export function PaymentMethods({
   cards,
@@ -42,7 +42,7 @@ export function PaymentMethods({
             <EmptyState
               icon={CreditCardIcon}
               title="No cards yet"
-              description="Add a debit card to top up your wallet and pay dues in one tap."
+              description="Add a debit card to pay dues and votes in one tap."
             />
           </div>
         )}

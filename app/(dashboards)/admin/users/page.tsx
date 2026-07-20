@@ -186,7 +186,6 @@ export default function AdminUsersPage() {
             headers={[
               { label: "User" },
               { label: "Role" },
-              { label: "Balance" },
               { label: "KYC" },
               { label: "", align: "right" },
             ]}
@@ -211,9 +210,6 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="p-4">
                   <StatusBadge tone={ROLE_TONES[u.role]}>{u.role}</StatusBadge>
-                </td>
-                <td className="p-4 font-semibold">
-                  {nairaFromKobo(u.walletBalance ?? 0)}
                 </td>
                 <td className="p-4">
                   <StatusBadge tone={KYC_TONES[u.kycStatus]}>
@@ -302,9 +298,6 @@ export default function AdminUsersPage() {
               <StatusBadge tone={ROLE_TONES[selected.role]}>
                 {selected.role}
               </StatusBadge>
-            </ModalField>
-            <ModalField label="Wallet balance">
-              {nairaFromKobo(selected.walletBalance ?? 0)}
             </ModalField>
             <ModalField label="KYC status">
               <StatusBadge tone={KYC_TONES[selected.kycStatus]}>

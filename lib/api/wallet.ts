@@ -1,41 +1,12 @@
 import { apiClient } from "./client";
-import type { Card, SaveCardResult, Transaction, Wallet } from "./types";
+import type { Card, SaveCardResult } from "./types";
 
-/** Current wallet balance + pending (top-ups awaiting webhook confirmation). */
-export function getWallet() {
-  return apiClient.get<Wallet>("/wallet");
-}
-
-export type TopUpPayload =
-  | { amount: number; method: "card"; cardId: string }
-  | { amount: number; method: "online" };
-
-export type TopUpResult = {
-  transaction?: Transaction;
-  checkoutUrl?: string;
-  reference?: string;
-};
-
-/** Add funds. Money-moving — an Idempotency-Key is attached automatically. */
-export function topUp(payload: TopUpPayload) {
-  return apiClient.post<TopUpResult>("/wallet/top-up", payload, {
-    idempotencyKey: crypto.randomUUID(),
-  });
-}
-
-export type WalletActivity = {
-  id: string;
-  label: string;
-  detail: string;
-  /** Signed kobo: positive = in, negative = out. */
-  amount: number;
-  createdAt: string;
-};
-
-/** The 10 most recent wallet-touching transactions — lighter than the ledger. */
-export function getWalletActivity() {
-  return apiClient.get<WalletActivity[]>("/wallet/activity");
-}
+// The wallet balance/top-up system was removed (payment architecture
+// migration — float custody risk). Every payment now goes through a saved
+// card or the in-app bank-transfer invoice flow (see lib/api/dues.ts,
+// lib/api/polls.ts). This module only keeps saved-card management and the
+// active-gateway label, both of which still live at their historical
+// `/wallet/...` paths on the backend.
 
 export function listCards() {
   return apiClient.get<Card[]>("/wallet/cards");
@@ -48,7 +19,7 @@ export type SaveCardPayload = {
 
 /**
  * Start the "add card" flow. Raw PANs never touch this API — redirect the user to
- * `checkoutUrl`, where Monnify runs a ₦50 verification charge and tokenizes the
+ * `checkoutUrl`, where the active gateway runs a ₦50 verification charge and tokenizes the
  * card. Poll `GET /payments/{reference}/status` on return, then re-fetch
  * `listCards()` once it's `completed`.
  */

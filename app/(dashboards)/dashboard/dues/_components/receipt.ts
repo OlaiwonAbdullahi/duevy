@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import { dueReceiptPath } from "@/lib/api/dues";
-import type { Card } from "../../wallet/_components/types";
+import type { Card } from "@/lib/api/types";
 import type { Due, PayMethod, Space } from "./types";
 
 /**
@@ -25,7 +25,6 @@ export type Receipt = {
 };
 
 const METHOD_LABEL: Record<PayMethod, string> = {
-  wallet: "Duevy wallet",
   card: "Card",
   online: "Bank transfer / USSD",
 };

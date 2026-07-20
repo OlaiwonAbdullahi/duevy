@@ -1,5 +1,5 @@
 import { apiClient, type Page } from "./client";
-import type { Due, DueCategory, DueStatus, PayMethod, Transaction } from "./types";
+import type { Due, DueCategory, DueStatus, Transaction } from "./types";
 
 export type DuesQuery = {
   spaceId?: string;
@@ -29,16 +29,24 @@ export function getDue(dueId: string) {
 }
 
 export type PayDuePayload =
-  | { method: "wallet" }
-  | { method: "card"; cardId: string }
-  | { method: "online" };
+  | { method: "card"; cardId: string; discountCode?: string }
+  | { method: "online"; discountCode?: string };
+
+export type BankTransferInvoice = {
+  accountNumber: string;
+  bankName: string;
+  accountName: string;
+  expiresAt: string | null;
+};
 
 export type PayDueResult = {
+  /** Present for `card` — the payment settled synchronously. */
   transaction?: Transaction;
   receiptUrl?: string;
-  /** Present for `online` — redirect the payer to Monnify. */
-  checkoutUrl?: string;
+  /** Present for `online` — show these details in an InvoiceModal, don't redirect. */
   reference?: string;
+  amount?: number;
+  bankTransfer?: BankTransferInvoice;
 };
 
 /** Settle a due. Money-moving — an Idempotency-Key is attached automatically. */
@@ -53,7 +61,7 @@ export type PaymentStatus = {
   transaction?: Transaction;
 };
 
-/** Poll a pending online payment by its provider reference. */
+/** Poll a pending online payment by its provider reference — actively re-checks with the gateway (see backend), so this also drives the "I've made payment" tap. */
 export function getPaymentStatus(reference: string) {
   return apiClient.get<PaymentStatus>(`/payments/${reference}/status`);
 }

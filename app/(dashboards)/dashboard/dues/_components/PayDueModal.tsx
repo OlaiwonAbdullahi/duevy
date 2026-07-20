@@ -1,20 +1,16 @@
 import { useState } from "react";
-import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Wallet01Icon,
   CreditCardIcon,
   BankIcon,
-  Alert01Icon,
-  ArrowRight01Icon,
   ArrowUpRight01Icon,
   CheckmarkCircle02Icon,
   InvoiceIcon,
+  Discount01Icon,
 } from "@hugeicons/core-free-icons";
 import { CardBrand } from "../../wallet/_components/CardBrand";
-import type { Card } from "../../wallet/_components/types";
+import type { Card } from "@/lib/api/types";
 import { Modal } from "../../_components/Modal";
-import { IconChip } from "../../_components/IconChip";
 import type { Due, PayMethod, Space } from "./types";
 import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
 import type { HugeIcon } from "../../_components/nav-config";
@@ -24,7 +20,6 @@ import { useActivePaymentGateway } from "@/lib/hooks/useActivePaymentGateway";
 export function PayDueModal({
   dues,
   space,
-  balance,
   cards,
   pending,
   onClose,
@@ -32,30 +27,22 @@ export function PayDueModal({
 }: {
   dues: Due[];
   space: Space;
-  balance: number;
   cards: Card[];
   pending: boolean;
   onClose: () => void;
-  onConfirm: (method: PayMethod, card?: Card) => void;
+  onConfirm: (method: PayMethod, card?: Card, discountCode?: string) => void;
 }) {
   const gatewayName = useActivePaymentGateway();
   const total = dues.reduce((sum, d) => sum + d.amount, 0);
   const multi = dues.length > 1;
   const defaultCard = cards.find((c) => c.isDefault) ?? cards[0];
 
-  const [method, setMethod] = useState<PayMethod>(
-    balance >= total ? "wallet" : cards.length ? "card" : "online",
-  );
+  const [method, setMethod] = useState<PayMethod>(cards.length ? "card" : "online");
   const [cardId, setCardId] = useState(defaultCard?.id ?? "");
+  const [discountCode, setDiscountCode] = useState("");
   const selectedCard = cards.find((c) => c.id === cardId) ?? defaultCard;
 
-  const walletShort = balance < total;
-  // Wallet is the only method blocked by balance; card/online always proceed.
-  const valid =
-    !pending &&
-    ((method === "wallet" && !walletShort) ||
-      (method === "card" && !!selectedCard) ||
-      method === "online");
+  const valid = !pending && ((method === "card" && !!selectedCard) || method === "online");
 
   const title = multi ? `Pay ${dues.length} dues` : "Confirm payment";
 
@@ -111,14 +98,7 @@ export function PayDueModal({
 
       {/* Method picker. */}
       <p className="mt-5 text-xs font-medium text-ink-soft">Pay with</p>
-      <div className="mt-1.5 grid grid-cols-3 gap-2">
-        <MethodTile
-          active={method === "wallet"}
-          icon={Wallet01Icon}
-          label="Wallet"
-          hint={naira(balance)}
-          onClick={() => setMethod("wallet")}
-        />
+      <div className="mt-1.5 grid grid-cols-2 gap-2">
         <MethodTile
           active={method === "card"}
           icon={CreditCardIcon}
@@ -129,42 +109,13 @@ export function PayDueModal({
         <MethodTile
           active={method === "online"}
           icon={BankIcon}
-          label="Online"
-          hint="Transfer, USSD"
+          label="Bank transfer"
+          hint="Pay by transfer"
           onClick={() => setMethod("online")}
         />
       </div>
 
       {/* Method detail. */}
-      {method === "wallet" && (
-        <div className="mt-3">
-          {walletShort ? (
-            <div className="flex items-start gap-2 rounded-2xl bg-rose-50 p-3 text-xs text-rose-700">
-              <HugeiconsIcon
-                icon={Alert01Icon}
-                size={15}
-                className="mt-px shrink-0"
-              />
-              <p>
-                You&apos;re {naira(total - balance)} short. Top up first, or pay
-                with a card instead.
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 rounded-2xl border border-cloud p-4">
-              <IconChip icon={Wallet01Icon} />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-ink">Duevy wallet</p>
-                <p className="text-xs text-ink-soft">Balance {naira(balance)}</p>
-              </div>
-              <span className="rounded-full bg-cloud px-2.5 py-1 text-[11px] font-medium text-brand">
-                After · {naira(balance - total)}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
       {method === "card" && (
         <div className="mt-3 flex flex-col gap-2">
           {cards.length === 0 && (
@@ -173,7 +124,7 @@ export function PayDueModal({
                 size="sm"
                 icon={CreditCardIcon}
                 title="No saved cards"
-                description="Add a card in your wallet, or pay with “Online” instead."
+                description="Add a card in your payment methods, or pay by “Bank transfer” instead."
               />
             </div>
           )}
@@ -214,39 +165,44 @@ export function PayDueModal({
             <HugeiconsIcon icon={BankIcon} size={18} />
           </span>
           <p className="text-xs leading-relaxed text-ink-soft">
-            You&apos;ll be securely redirected to{" "}
-            <span className="font-semibold text-ink">{gatewayName}</span> to finish
-            paying by card, bank transfer or USSD.
+            You&apos;ll get a dedicated <span className="font-semibold text-ink">{gatewayName}</span>{" "}
+            account to transfer to, right here in the app — no redirect.
           </p>
         </div>
       )}
 
-      {/* CTA. */}
-      {method === "wallet" && walletShort ? (
-        <Link
-          href="/dashboard/wallet"
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
-          Top up wallet
-          <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
-        </Link>
-      ) : (
-        <button
-          type="button"
-          disabled={!valid}
-          onClick={() => onConfirm(method, method === "card" ? selectedCard : undefined)}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
-          {pending
-            ? "Processing…"
-            : method === "online"
-              ? `Continue to ${gatewayName}`
-              : `Pay ${naira(total)}`}
-          {method === "online" && !pending && (
-            <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
-          )}
-        </button>
-      )}
+      {/* Discount code — optional, redeems a referral reward against this payment. */}
+      <div className="mt-4">
+        <label className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+          <HugeiconsIcon icon={Discount01Icon} size={14} />
+          Discount code (optional)
+        </label>
+        <input
+          value={discountCode}
+          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+          placeholder="e.g. REF-8XQP2K4M"
+          disabled={pending}
+          className="mt-1.5 h-11 w-full rounded-xl border border-cloud bg-canvas px-3.5 text-sm text-ink outline-none transition-colors duration-300 placeholder:text-ink-soft/60 focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
+        />
+      </div>
+
+      <button
+        type="button"
+        disabled={!valid}
+        onClick={() =>
+          onConfirm(method, method === "card" ? selectedCard : undefined, discountCode.trim() || undefined)
+        }
+        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+      >
+        {pending
+          ? "Processing…"
+          : method === "online"
+            ? "Get transfer details"
+            : `Pay ${naira(total)}`}
+        {method === "online" && !pending && (
+          <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
+        )}
+      </button>
     </Modal>
   );
 }
