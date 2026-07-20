@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building03Icon,
   Share08Icon,
-  Wallet01Icon,
+  CreditCardIcon,
   CheckmarkBadge01Icon,
   Invoice01Icon,
 } from "@hugeicons/core-free-icons";
@@ -28,9 +28,9 @@ const steps = [
   },
   {
     number: "03",
-    title: "Students top up & pay",
-    body: "Students fund their Duevy wallet, then pay dues, levies, or one-off charges in a couple of taps. Every payment lands instantly with a receipt they can keep, so there’s never a “did my money enter?” back-and-forth with the rep.",
-    Icon: Wallet01Icon,
+    title: "Students pay directly",
+    body: "Students pay dues, levies, or one-off charges by saved card or bank transfer in a couple of taps — no float sitting in an app wallet. Every payment lands instantly with a receipt they can keep, so there’s never a “did my money enter?” back-and-forth with the rep.",
+    Icon: CreditCardIcon,
     color: "#b4562c",
   },
   {

@@ -8,10 +8,10 @@ import {
   Building03Icon,
   CheckmarkCircle02Icon,
   CreditCardIcon,
+  MoneySend01Icon,
   ReceiptDollarIcon,
   UserGroup03Icon,
   UserMultipleIcon,
-  Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "../../dashboard/_components/StatCard";
@@ -127,10 +127,10 @@ export default function AdminOverviewPage() {
               tone="brand"
             />
             <StatCard
-              icon={Wallet01Icon}
-              label="Float held"
+              icon={MoneySend01Icon}
+              label="Pending payout"
               value={nairaFromKobo(data?.floatHeld ?? 0)}
-              hint="With reps, not yet paid out"
+              hint="Collected, not yet withdrawn by reps"
             />
             <StatCard
               icon={AlertCircleIcon}

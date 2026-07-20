@@ -26,7 +26,7 @@ export default function Hero() {
         </h1>
 
         <p className="text-[#7a847f] text-base md:text-lg leading-relaxed max-w-xl mb-10">
-          Duevy gives course reps a simple wallet-based way to collect dues,
+          Duevy gives course reps a simple way to collect dues,
           levies, and payments. Students pay in a tap, Pay for dues in few
           clicks and vote on paid poll.
         </p>

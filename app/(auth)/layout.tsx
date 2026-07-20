@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { CheckIcon, ShieldIcon } from "../components/icons";
 
 const points = [
-  "Collect dues and levies straight to a shared wallet",
+  "Collect dues and levies by card or bank transfer",
   "Payouts only move after students approve them",
   "Every naira tracked with an automatic receipt trail",
 ];

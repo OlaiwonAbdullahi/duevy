@@ -69,8 +69,8 @@ export type DeleteAccountPayload = {
 
 /**
  * Danger-zone action, always behind a re-auth (password) prompt. Soft-deletes the
- * account and revokes all sessions. `409 WALLET_NOT_EMPTY` / `409
- * ACTIVE_REP_OBLIGATIONS` if the caller needs to clear their wallet or rep duties first.
+ * account and revokes all sessions. `409 ACTIVE_REP_OBLIGATIONS` if the caller
+ * needs to hand off rep duties first.
  */
 export function deleteAccount(payload: DeleteAccountPayload) {
   return apiClient.delete<void>("/me", { body: payload });

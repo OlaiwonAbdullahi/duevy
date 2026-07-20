@@ -216,7 +216,7 @@ export function DueForm({
                 size={13}
                 className="mt-px shrink-0"
               />
-              Members can pay from their wallet, card or bank transfer once
+              Members can pay by saved card or bank transfer once
               published.
             </p>
           </div>

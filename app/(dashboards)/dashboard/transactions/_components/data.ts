@@ -14,7 +14,7 @@ export { naira } from "../../_components/format";
 /** Icon + human label per transaction type. */
 export const TXN_META: Record<TxnType, { icon: HugeIcon; label: string }> = {
   due: { icon: Invoice01Icon, label: "Due payment" },
-  topup: { icon: MoneyAdd01Icon, label: "Wallet top up" },
+  topup: { icon: MoneyAdd01Icon, label: "Top up" },
   referral: { icon: GiftIcon, label: "Referral bonus" },
   withdrawal: { icon: MoneySend01Icon, label: "Withdrawal" },
   refund: { icon: ArrowReloadHorizontalIcon, label: "Refund" },

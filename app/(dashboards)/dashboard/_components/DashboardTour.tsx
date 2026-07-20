@@ -39,19 +39,19 @@ const STEPS: TourStep[] = [
   {
     id: "welcome",
     title: "Welcome to Duevy 👋",
-    body: "Your dues, wallet and receipts — all in one place. Here's a quick look around; it takes about thirty seconds.",
+    body: "Your dues, payment methods and receipts — all in one place. Here's a quick look around; it takes about thirty seconds.",
   },
   {
     id: "nav",
     target: '[data-tour="nav"]',
     title: "Everything lives here",
-    body: "Wallet, dues, transactions and settings. Reps also get tools for collections, polls and managing the department.",
+    body: "Payment methods, dues, transactions and settings. Reps also get tools for collections, polls and managing the department.",
   },
   {
     id: "menu",
     target: '[data-tour="menu"]',
     title: "Your menu",
-    body: "Wallet, dues, transactions and settings all live in here. Reps also get tools for collections and managing the department.",
+    body: "Payment methods, dues, transactions and settings all live in here. Reps also get tools for collections and managing the department.",
   },
   {
     id: "search",

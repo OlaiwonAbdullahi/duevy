@@ -33,7 +33,7 @@ const rowVariants: Variants = {
 const rows = [
   {
     old: "Dues collected in cash or scattered transfers",
-    fixed: "Every payment flows through one wallet",
+    fixed: "Every payment flows through one tracked record",
   },
   {
     old: "No receipts. No records to point to.",

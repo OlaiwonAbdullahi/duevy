@@ -29,7 +29,7 @@ const personas = [
     challenge:
       "Pays dues, departmental levies, and event fees across the year. Never sure if her money reached the right place.",
     gives: [
-      "A wallet she tops up once",
+      "A card she saves once",
       "Instant payment confirmation",
       "A clear view of what every naira funded",
     ],

@@ -26,7 +26,7 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   auth?: boolean;
   /** Retry once after a silent token refresh on 401. Default true. */
   retryOn401?: boolean;
-  /** Required by the API for payment/wallet state-changing requests. */
+  /** Required by the API for payment/card state-changing requests. */
   idempotencyKey?: string;
 };
 

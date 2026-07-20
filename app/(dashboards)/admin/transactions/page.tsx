@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  Invoice01Icon,
   MoneySend01Icon,
   ReceiptDollarIcon,
-  Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "../../dashboard/_components/StatCard";
@@ -131,7 +131,7 @@ export default function AdminTransactionsPage() {
           value={nairaFromKobo(totalVolume)}
           tone="brand"
         />
-        <StatCard icon={Wallet01Icon} label="Dues collected" value={nairaFromKobo(duesVolume)} />
+        <StatCard icon={Invoice01Icon} label="Dues collected" value={nairaFromKobo(duesVolume)} />
         <StatCard
           icon={MoneySend01Icon}
           label="Pending payouts"

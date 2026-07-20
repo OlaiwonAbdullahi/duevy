@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Wallet01Icon,
+  CreditCardIcon,
   SecurityCheckIcon,
   Analytics01Icon,
   Invoice01Icon,
@@ -12,9 +12,9 @@ import {
 
 const features = [
   {
-    icon: Wallet01Icon,
-    title: "Wallet top-up & spend",
-    body: "Fund once, pay for anything on your department's list.",
+    icon: CreditCardIcon,
+    title: "Pay by card or bank transfer",
+    body: "Save a card once, or pay by transfer — settles in seconds, no float sitting anywhere.",
   },
   {
     icon: SecurityCheckIcon,

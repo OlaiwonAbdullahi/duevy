@@ -309,7 +309,7 @@ export function RepOverview() {
         <div>
           <p className="text-sm font-semibold text-ink">Your student account</p>
           <p className="mt-0.5 text-xs text-ink-soft">
-            Your own dues, wallet and payments live here too.
+            Your own dues and payments live here too.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -317,7 +317,7 @@ export function RepOverview() {
             <Link href="/dashboard/dues">My dues</Link>
           </Button>
           <Button variant="brand-outline" size="pill" asChild>
-            <Link href="/dashboard/wallet">My wallet</Link>
+            <Link href="/dashboard/wallet">Payment methods</Link>
           </Button>
         </div>
       </section>

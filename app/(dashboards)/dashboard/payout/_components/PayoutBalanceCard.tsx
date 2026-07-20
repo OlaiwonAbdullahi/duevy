@@ -8,9 +8,8 @@ import {
 import { naira } from "./data";
 
 /**
- * Hero card for the payout page — mirrors the wallet BalanceCard treatment so
- * the two money surfaces feel like one family. Shows what can be withdrawn now,
- * with the collected total and pending clearance as context chips.
+ * Hero card for the payout page. Shows what can be withdrawn now, with the
+ * collected total and pending clearance as context chips.
  */
 export function PayoutBalanceCard({
   available,

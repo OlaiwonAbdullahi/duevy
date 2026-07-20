@@ -1,10 +1,10 @@
-import { WalletIcon, EyeIcon, ShieldIcon } from "./icons";
+import { CardIcon, EyeIcon, ShieldIcon } from "./icons";
 
 const blocks = [
   {
-    icon: WalletIcon,
-    title: "Wallet-based collection",
-    body: "Students top up their Duevy wallet, then pay dues, levies, and fees in seconds. No chasing transfers or counting cash.",
+    icon: CardIcon,
+    title: "Direct card & transfer collection",
+    body: "Students pay dues, levies, and fees straight from a saved card or bank transfer in seconds. No chasing transfers or counting cash.",
   },
   {
     icon: EyeIcon,

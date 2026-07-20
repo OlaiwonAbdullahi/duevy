@@ -19,7 +19,7 @@ const jsonLd = {
   name: "Duevy",
   url: "https://duevy.app",
   description:
-    "A wallet-based way for Nigerian campus reps to collect dues and levies transparently — every student sees where their money went.",
+    "A simple way for Nigerian campus reps to collect dues and levies transparently — every student sees where their money went.",
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
   offers: {

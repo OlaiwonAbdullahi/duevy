@@ -25,14 +25,14 @@ export const metadata: Metadata = {
     template: "%s | Duevy",
   },
   description:
-    "Duevy gives Nigerian campus reps a wallet-based way to collect dues, levies, and payments — while every student sees exactly where their money went.",
+    "Duevy gives Nigerian campus reps a simple way to collect dues, levies, and payments — while every student sees exactly where their money went.",
   keywords: [
     "campus dues collection Nigeria",
     "student dues payment",
     "departmental levies",
     "Nigerian university fintech",
     "course rep payments",
-    "class rep wallet",
+    "class rep payments app",
     "duevy",
   ],
   authors: [{ name: "Duevy", url: BASE_URL }],
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     siteName: "Duevy",
     title: "Duevy — Collect dues. Track every kobo. No wahala.",
     description:
-      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
+      "A simple way for campus reps to collect dues and levies — with full transparency for every student.",
     images: [
       {
         url: "/ogimage.png",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     creator: "@duevyapp",
     title: "Duevy — Collect dues. Track every kobo. No wahala.",
     description:
-      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
+      "A simple way for campus reps to collect dues and levies — with full transparency for every student.",
     images: ["/ogimage.png"],
   },
   robots: {

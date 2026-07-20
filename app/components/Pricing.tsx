@@ -3,12 +3,12 @@ import {
   PercentIcon,
   CheckmarkBadge01Icon,
   EyeIcon,
-  Wallet01Icon,
+  MoneyBag01Icon,
 } from "@hugeicons/core-free-icons";
 
 const included = [
   {
-    icon: Wallet01Icon,
+    icon: MoneyBag01Icon,
     title: "No monthly fees",
     body: "You never pay to set up a department, invite students, or keep the platform running. Duevy only earns when money actually moves.",
   },

@@ -22,7 +22,7 @@ const sections: LegalSection[] = [
   {
     heading: "Collecting and paying dues",
     body: [
-      "Duevy is a tool for collecting dues, levies, and payments transparently. Payouts from shared wallets require the approvals configured for that department. You're responsible for the accuracy of what you collect and how funds are used.",
+      "Duevy is a tool for collecting dues, levies, and payments transparently. Payouts of collected funds require the approvals configured for that department. You're responsible for the accuracy of what you collect and how funds are used.",
     ],
   },
   {

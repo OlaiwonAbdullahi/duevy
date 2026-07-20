@@ -9,9 +9,9 @@ export type Transaction = {
   title: string;
   /** Secondary line — usually the space or counterparty. */
   detail: string;
-  /** Positive = money into the wallet, negative = money out. */
+  /** Positive = money credited in, negative = money out. */
   amount: number;
-  /** How it moved: "Wallet", "Visa •••• 4242", "Paystack". */
+  /** How it moved: "Visa •••• 4242", "Paystack". */
   method: string;
   /** ISO timestamp the transaction posted. */
   date: string;

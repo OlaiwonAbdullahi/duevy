@@ -53,7 +53,7 @@ export const STUDENT_LINKS: NavLink[] = [
 
 /**
  * Rep-only tools. Shown *in addition* to the student links when the viewer is a
- * rep — a rep runs the department's collections on top of their own wallet.
+ * rep — a rep runs the department's collections on top of their own dues and payments.
  * Referrals lives here (not in STUDENT_LINKS) because the backend restricts
  * the referral program to reps/admins — a plain student gets a 403.
  */

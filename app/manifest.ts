@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Duevy — Campus dues, made simple",
     short_name: "Duevy",
     description:
-      "Pay your campus dues, top up your wallet and keep every receipt — in one app.",
+      "Pay your campus dues by card or bank transfer and keep every receipt — in one app.",
     id: "/",
     start_url: "/dashboard",
     scope: "/",

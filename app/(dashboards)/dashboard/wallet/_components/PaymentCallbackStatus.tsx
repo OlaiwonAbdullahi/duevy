@@ -21,7 +21,7 @@ const MAX_ATTEMPTS = 30; // ~60s
 
 const NEXT_STEP: Record<string, { href: string; label: string }> = {
   due: { href: "/dashboard/dues", label: "View my dues" },
-  topup: { href: "/dashboard/wallet", label: "Go to wallet" },
+  card_verification: { href: "/dashboard/wallet", label: "View payment methods" },
   vote: { href: "/dashboard/transactions", label: "View transactions" },
   withdrawal: { href: "/dashboard/payout", label: "View payout" },
   refund: { href: "/dashboard/transactions", label: "View transactions" },
