@@ -59,6 +59,9 @@ export function payDue(dueId: string, payload: PayDuePayload) {
 export type PaymentStatus = {
   status: "pending" | "completed" | "failed";
   transaction?: Transaction;
+  /** Present while pending — lets a dedicated payment page render the full invoice from just the reference, e.g. on a page reload. */
+  amount?: number;
+  bankTransfer?: BankTransferInvoice;
 };
 
 /** Poll a pending online payment by its provider reference — actively re-checks with the gateway (see backend), so this also drives the "I've made payment" tap. */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -21,7 +22,6 @@ import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
 import { PayDueModal } from "./_components/PayDueModal";
 import { ReceiptModal } from "./_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "./_components/receipt";
-import { InvoiceModal, type InvoiceDetails } from "../_components/InvoiceModal";
 import { listSpaces, joinSpace } from "@/lib/api/spaces";
 import { listDues, payDue } from "@/lib/api/dues";
 import { listCards } from "@/lib/api/wallet";
@@ -31,6 +31,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 export default function DuesPage() {
   const { isPendingRep } = useRole();
   const { user } = useAuth();
+  const router = useRouter();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [dues, setDues] = useState<Due[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -38,8 +39,6 @@ export default function DuesPage() {
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
-  const [invoiceDue, setInvoiceDue] = useState<{ due: Due; space: Space } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,20 +157,13 @@ export default function DuesPage() {
         ),
       );
 
-      // Online settles asynchronously — show the invoice for the first due
-      // (mirrors the pre-migration redirect flow's single-checkout simplification
-      // for multi-due batches) and wait for confirmation before marking anything
-      // paid. Closing the pay modal here avoids stacking it under the invoice.
+      // Online settles asynchronously — navigate to the dedicated payment page
+      // for the first due (mirrors the pre-migration redirect flow's
+      // single-checkout simplification for multi-due batches) rather than
+      // marking anything paid yet.
       const pendingInvoice = results.find((r) => r.bankTransfer);
       if (method === "online" && pendingInvoice?.bankTransfer && pendingInvoice.reference) {
-        setInvoiceDue({ due: targetDues[0], space });
-        setInvoice({
-          reference: pendingInvoice.reference,
-          amount: pendingInvoice.amount ?? targetDues[0].amount,
-          bankTransfer: pendingInvoice.bankTransfer,
-        });
-        setPayDues([]);
-        setPendingIds([]);
+        router.push(`/dashboard/pay/${pendingInvoice.reference}?dueId=${targetDues[0].id}`);
         return;
       }
 
@@ -181,13 +173,6 @@ export default function DuesPage() {
       setPendingIds([]);
       toast.error("Payment failed. Please try again.");
     }
-  };
-
-  const confirmInvoice = () => {
-    if (!invoice || !invoiceDue) return;
-    finishPayment([invoiceDue.due], invoiceDue.space, "online", [invoice.reference]);
-    setInvoice(null);
-    setInvoiceDue(null);
   };
 
   return (
@@ -312,17 +297,6 @@ export default function DuesPage() {
           pending={pendingIds.length > 0}
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}
-        />
-      )}
-
-      {invoice && (
-        <InvoiceModal
-          invoice={invoice}
-          onClose={() => {
-            setInvoice(null);
-            setInvoiceDue(null);
-          }}
-          onConfirmed={confirmInvoice}
         />
       )}
 

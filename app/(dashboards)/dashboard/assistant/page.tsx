@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -33,7 +34,6 @@ import type { Card } from "@/lib/api/types";
 import { PayDueModal } from "../dues/_components/PayDueModal";
 import { ReceiptModal } from "../dues/_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "../dues/_components/receipt";
-import { InvoiceModal, type InvoiceDetails } from "../_components/InvoiceModal";
 import { naira } from "../_components/format";
 
 type ChatMessage = {
@@ -62,6 +62,8 @@ const exampleQuestions = [
 
 export default function AssistantPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([starterMessage]);
   const [input, setInput] = useState("");
@@ -77,8 +79,6 @@ export default function AssistantPage() {
   const [payLoading, setPayLoading] = useState(false);
   const [payPending, setPayPending] = useState(false);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
-  const [invoiceContext, setInvoiceContext] = useState<{ due: Due; space: Space } | null>(null);
 
   // Create-due confirm state (rep-only), keyed by the chat message offering it.
   const [creatingDueId, setCreatingDueId] = useState<number | null>(null);
@@ -98,6 +98,31 @@ export default function AssistantPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
+
+  // Restores the chat transcript when returning from the dedicated payment
+  // page (?conversationId=... on the back link) — otherwise the conversation
+  // would look reset even though the backend still has the full history.
+  useEffect(() => {
+    const resumeId = searchParams.get("conversationId");
+    if (!resumeId) return;
+    (async () => {
+      try {
+        const { messages: history } = await getAssistantConversationMessages(resumeId);
+        messageId.current = 1;
+        setMessages(
+          history.map((m) => ({
+            id: messageId.current++,
+            sender: m.role === "user" ? "user" : "bot",
+            content: m.content,
+          })),
+        );
+        setConversationId(resumeId);
+      } catch {
+        // Conversation may have expired or belong elsewhere — fall back to a fresh chat silently.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pushMessage = (
     sender: ChatMessage["sender"],
@@ -280,17 +305,15 @@ export default function AssistantPage() {
           : { method: "online", discountCode },
       );
 
-      // Online settles asynchronously — show the invoice and wait for
-      // confirmation before treating the due as paid.
+      // Online settles asynchronously — navigate to the dedicated payment
+      // page rather than treating the due as paid yet. conversationId rides
+      // along so the chat transcript can be restored on return.
       if (method === "online" && result.bankTransfer && result.reference) {
-        setInvoiceContext({ due: payDue, space: paySpace });
-        setInvoice({
-          reference: result.reference,
-          amount: result.amount ?? payDue.amount,
-          bankTransfer: result.bankTransfer,
-        });
+        const qs = new URLSearchParams({ dueId: payDue.id, from: "assistant" });
+        if (conversationId) qs.set("conversationId", conversationId);
         setPayDue(null);
         setPaySpace(null);
+        router.push(`/dashboard/pay/${result.reference}?${qs.toString()}`);
         return;
       }
 
@@ -303,13 +326,6 @@ export default function AssistantPage() {
     } finally {
       setPayPending(false);
     }
-  };
-
-  const confirmInvoice = () => {
-    if (!invoice || !invoiceContext) return;
-    finishPayment(invoiceContext.due, invoiceContext.space, "online", invoice.reference);
-    setInvoice(null);
-    setInvoiceContext(null);
   };
 
   const closePaymentModal = () => {
@@ -554,17 +570,6 @@ export default function AssistantPage() {
           pending={payPending}
           onClose={closePaymentModal}
           onConfirm={confirmPay}
-        />
-      )}
-
-      {invoice && (
-        <InvoiceModal
-          invoice={invoice}
-          onClose={() => {
-            setInvoice(null);
-            setInvoiceContext(null);
-          }}
-          onConfirmed={confirmInvoice}
         />
       )}
 
