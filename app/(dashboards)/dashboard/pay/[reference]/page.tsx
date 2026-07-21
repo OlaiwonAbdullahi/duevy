@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft02Icon,
+  ArrowUpRight01Icon,
   BankIcon,
   Copy01Icon,
   Tick02Icon,
@@ -19,12 +20,16 @@ import { nairaFromKobo } from "../../_components/format";
 const BACKGROUND_POLL_MS = 5000;
 
 /**
- * Dedicated page for the in-app bank-transfer "invoice" flow — replaces the
- * old InvoiceModal dialog so the payer has a real URL to sit on (bookmark,
- * reload, come back to) instead of state trapped inside whatever page opened
- * it. Needs only the reference in the URL: GET /payments/:reference/status
- * returns the full invoice (amount + bank details) for as long as it's
- * pending, so this page works on a cold load, not just mid-session.
+ * Dedicated page for the "invoice" payment flow — a real URL to sit on
+ * (bookmark, reload, come back to) instead of state trapped in whatever page
+ * opened it. Needs only the reference in the URL: GET /payments/:reference/status
+ * returns the full invoice for as long as it's pending, so this works on a
+ * cold load too. Two shapes, depending on which gateway is active:
+ *  - Monnify's Create Invoice returns bank-transfer details directly — shown
+ *    in-app here, with a "pay by card instead" link out to checkoutUrl.
+ *  - Paystack's Initialize Transaction only returns a checkoutUrl (transfer
+ *    lives on that hosted page) — the source page redirects there immediately,
+ *    and Paystack's callback brings the payer back to this same page to confirm.
  */
 export default function PaymentPage() {
   const params = useParams<{ reference: string }>();
@@ -44,6 +49,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [amount, setAmount] = useState<number | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [bankTransfer, setBankTransfer] = useState<BankTransferInvoice | null>(null);
   const [status, setStatus] = useState<"pending" | "completed" | "failed">("pending");
   const [checking, setChecking] = useState(false);
@@ -59,6 +65,7 @@ export default function PaymentPage() {
     try {
       const res = await getPaymentStatus(reference);
       if (res.amount !== undefined) setAmount(res.amount);
+      if (res.checkoutUrl) setCheckoutUrl(res.checkoutUrl);
       if (res.bankTransfer) setBankTransfer(res.bankTransfer);
       if (settled.current) return;
       if (res.status === "completed") {
@@ -203,7 +210,7 @@ export default function PaymentPage() {
               {backLabel}
             </button>
           </div>
-        ) : (
+        ) : bankTransfer ? (
           <>
             <div className="flex items-center gap-2">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand">
@@ -224,7 +231,7 @@ export default function PaymentPage() {
                 <HugeiconsIcon icon={Alert01Icon} size={15} className="mt-px shrink-0" />
                 <p>This account has expired. Go back and start the payment again.</p>
               </div>
-            ) : bankTransfer ? (
+            ) : (
               <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-cloud bg-canvas p-4">
                 <Row label="Bank" value={bankTransfer.bankName} />
                 <button
@@ -247,7 +254,7 @@ export default function PaymentPage() {
                 </button>
                 <Row label="Account name" value={bankTransfer.accountName} />
               </div>
-            ) : null}
+            )}
 
             <p className="mt-4 text-xs leading-relaxed text-ink-soft">
               Transfer the exact amount above to the account shown, then tap the button below. We&apos;ll
@@ -267,6 +274,53 @@ export default function PaymentPage() {
               )}
               {checking ? "Checking…" : "I've made payment"}
             </button>
+
+            {checkoutUrl && !expired && (
+              <a
+                href={checkoutUrl}
+                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-ink-soft transition-colors duration-300 hover:text-brand"
+              >
+                Pay by card instead
+                <HugeiconsIcon icon={ArrowUpRight01Icon} size={13} />
+              </a>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <span className="grid h-14 w-14 place-items-center rounded-full bg-brand/10 text-brand">
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+              </span>
+              <h1 className="text-lg font-semibold text-ink">Confirming your payment</h1>
+              <p className="text-sm text-ink-soft">
+                {amount !== null ? `${nairaFromKobo(amount)} — ` : ""}
+                We're waiting for the payment provider to confirm this. This usually only takes a moment.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={checking}
+              onClick={() => check(true)}
+              className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              {checking ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : (
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
+              )}
+              {checking ? "Checking…" : "Check status now"}
+            </button>
+
+            {checkoutUrl && (
+              <a
+                href={checkoutUrl}
+                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-ink-soft transition-colors duration-300 hover:text-brand"
+              >
+                Haven't paid yet? Return to checkout
+                <HugeiconsIcon icon={ArrowUpRight01Icon} size={13} />
+              </a>
+            )}
           </>
         )}
       </div>

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Building03Icon } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../_components/EmptyState";
+import { ListSkeleton } from "../_components/Skeleton";
 import type {
   Due,
   JoinableDepartment,
@@ -35,6 +36,7 @@ export default function DuesPage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [dues, setDues] = useState<Due[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
@@ -55,6 +57,8 @@ export default function DuesPage() {
         setCards(savedCards);
       } catch {
         if (!cancelled) toast.error("Couldn't load your dues.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -157,13 +161,18 @@ export default function DuesPage() {
         ),
       );
 
-      // Online settles asynchronously — navigate to the dedicated payment page
-      // for the first due (mirrors the pre-migration redirect flow's
-      // single-checkout simplification for multi-due batches) rather than
-      // marking anything paid yet.
-      const pendingInvoice = results.find((r) => r.bankTransfer);
-      if (method === "online" && pendingInvoice?.bankTransfer && pendingInvoice.reference) {
-        router.push(`/dashboard/pay/${pendingInvoice.reference}?dueId=${targetDues[0].id}`);
+      // Online settles asynchronously — for the first due (mirrors the
+      // pre-migration redirect flow's single-checkout simplification for
+      // multi-due batches) rather than marking anything paid yet. Monnify
+      // returns bank-transfer details to show in-app; Paystack doesn't
+      // (transfer lives on its hosted checkout page), so redirect there directly.
+      const pendingInvoice = results.find((r) => r.checkoutUrl);
+      if (method === "online" && pendingInvoice?.checkoutUrl && pendingInvoice.reference) {
+        if (pendingInvoice.bankTransfer) {
+          router.push(`/dashboard/pay/${pendingInvoice.reference}?dueId=${targetDues[0].id}`);
+        } else {
+          window.location.href = pendingInvoice.checkoutUrl;
+        }
         return;
       }
 
@@ -212,78 +221,88 @@ export default function DuesPage() {
                   settle its dues.
                 </p>
               </div>
-              <div className="flex items-center gap-4 rounded-2xl border border-cloud bg-canvas px-4 py-3">
-                <div>
-                  <p className="text-[11px] font-medium text-ink-soft">
-                    Total outstanding
-                  </p>
-                  <p className="text-lg font-semibold tracking-tight text-ink">
-                    {naira(totals.outstanding)}
-                  </p>
-                </div>
-                {totals.overdue > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-600">
-                    <HugeiconsIcon icon={Alert01Icon} size={12} />
-                    {totals.overdue} overdue
-                  </span>
-                )}
-              </div>
-            </header>
-
-            {/* Join a new department by code. */}
-            <div id="join" className="mt-6 scroll-mt-24">
-              <JoinDepartmentCard
-                joinedIds={spaces.map((s) => s.id)}
-                onJoin={joinDepartment}
-              />
-            </div>
-
-            {/* Spaces you're a member of. */}
-            <section className="mt-8">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-                Your spaces
-              </h2>
-              {members.length === 0 ? (
-                <EmptyState
-                  className="mt-3"
-                  icon={Building03Icon}
-                  title="No spaces yet"
-                  description="Join a department using its code above to see it here."
-                />
-              ) : (
-                <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {members.map((space) => (
-                    <SpaceCard
-                      key={space.id}
-                      space={space}
-                      dues={dues}
-                      onOpen={openSpace}
-                    />
-                  ))}
+              {!loading && (
+                <div className="flex items-center gap-4 rounded-2xl border border-cloud bg-canvas px-4 py-3">
+                  <div>
+                    <p className="text-[11px] font-medium text-ink-soft">
+                      Total outstanding
+                    </p>
+                    <p className="text-lg font-semibold tracking-tight text-ink">
+                      {naira(totals.outstanding)}
+                    </p>
+                  </div>
+                  {totals.overdue > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-600">
+                      <HugeiconsIcon icon={Alert01Icon} size={12} />
+                      {totals.overdue} overdue
+                    </span>
+                  )}
                 </div>
               )}
-            </section>
+            </header>
 
-            {/* Bodies you're paying at without being a full member. */}
-            {guests.length > 0 && (
-              <section className="mt-8">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-                  Also paying at
-                </h2>
-                <p className="mt-0.5 text-xs text-ink-soft">
-                  Spaces outside your department where you have dues to settle.
-                </p>
-                <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {guests.map((space) => (
-                    <SpaceCard
-                      key={space.id}
-                      space={space}
-                      dues={dues}
-                      onOpen={openSpace}
-                    />
-                  ))}
+            {loading ? (
+              <div className="mt-6">
+                <ListSkeleton rows={3} />
+              </div>
+            ) : (
+              <>
+                {/* Join a new department by code. */}
+                <div id="join" className="mt-6 scroll-mt-24">
+                  <JoinDepartmentCard
+                    joinedIds={spaces.map((s) => s.id)}
+                    onJoin={joinDepartment}
+                  />
                 </div>
-              </section>
+
+                {/* Spaces you're a member of. */}
+                <section className="mt-8">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                    Your spaces
+                  </h2>
+                  {members.length === 0 ? (
+                    <EmptyState
+                      className="mt-3"
+                      icon={Building03Icon}
+                      title="No spaces yet"
+                      description="Join a department using its code above to see it here."
+                    />
+                  ) : (
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {members.map((space) => (
+                        <SpaceCard
+                          key={space.id}
+                          space={space}
+                          dues={dues}
+                          onOpen={openSpace}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* Bodies you're paying at without being a full member. */}
+                {guests.length > 0 && (
+                  <section className="mt-8">
+                    <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Also paying at
+                    </h2>
+                    <p className="mt-0.5 text-xs text-ink-soft">
+                      Spaces outside your department where you have dues to settle.
+                    </p>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {guests.map((space) => (
+                        <SpaceCard
+                          key={space.id}
+                          space={space}
+                          dues={dues}
+                          onOpen={openSpace}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
             )}
           </motion.div>
         )}

@@ -7,6 +7,7 @@ import { Add01Icon, Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icon
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../_components/EmptyState";
 import { UserAvatar } from "../../_components/UserAvatar";
+import { Skeleton } from "../../_components/Skeleton";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { listReps, inviteRep, removeRep } from "@/lib/api/rep";
@@ -17,6 +18,7 @@ export function RepsCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
   const [reps, setReps] = useState<Rep[]>([]);
+  const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
@@ -26,7 +28,10 @@ export function RepsCard() {
       .then((list) => {
         if (!cancelled) setReps(list);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -80,7 +85,23 @@ export function RepsCard() {
         </Button>
       }
     >
-      {reps.length === 0 ? (
+      {loading ? (
+        <ul className="flex flex-col">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <li
+              key={i}
+              className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0 first:pt-0"
+            >
+              <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="mt-2 h-3 w-40" />
+              </div>
+              <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+            </li>
+          ))}
+        </ul>
+      ) : reps.length === 0 ? (
         <EmptyState
           icon={Shield01Icon}
           title="No reps yet"

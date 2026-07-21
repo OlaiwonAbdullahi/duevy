@@ -43,9 +43,12 @@ export type PayDueResult = {
   /** Present for `card` — the payment settled synchronously. */
   transaction?: Transaction;
   receiptUrl?: string;
-  /** Present for `online` — show these details in an InvoiceModal, don't redirect. */
+  /** Present for `online`. `bankTransfer` only comes back on Monnify — show
+   * it in-app. On Paystack it's absent and `checkoutUrl` should be an
+   * immediate full-page redirect instead (transfer lives on that hosted page). */
   reference?: string;
   amount?: number;
+  checkoutUrl?: string;
   bankTransfer?: BankTransferInvoice;
 };
 
@@ -59,8 +62,9 @@ export function payDue(dueId: string, payload: PayDuePayload) {
 export type PaymentStatus = {
   status: "pending" | "completed" | "failed";
   transaction?: Transaction;
-  /** Present while pending — lets a dedicated payment page render the full invoice from just the reference, e.g. on a page reload. */
+  /** Snapshotted at creation — lets a dedicated payment page render the full invoice from just the reference, e.g. on a page reload. */
   amount?: number;
+  checkoutUrl?: string;
   bankTransfer?: BankTransferInvoice;
 };
 

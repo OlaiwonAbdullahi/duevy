@@ -16,6 +16,7 @@ import {
 import type { HugeIcon } from "../../_components/nav-config";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { EmptyState } from "../../_components/EmptyState";
+import { Skeleton } from "../../_components/Skeleton";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { timeAgo } from "../../_components/notifications-data";
 import { getAuditLog } from "@/lib/api/rep";
@@ -40,6 +41,7 @@ export function AuditTrailCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
   const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -48,7 +50,10 @@ export function AuditTrailCard() {
       .then(({ data }) => {
         if (!cancelled) setEntries(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -60,7 +65,22 @@ export function AuditTrailCard() {
       title="Activity log"
       description="A record of recent changes and who made them."
     >
-      {entries.length === 0 ? (
+      {loading ? (
+        <ol className="flex flex-col">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <li
+              key={i}
+              className="flex items-start gap-3 border-t border-cloud py-3.5 first:border-t-0 first:pt-0"
+            >
+              <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-3.5 w-44" />
+                <Skeleton className="mt-2 h-3 w-20" />
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : entries.length === 0 ? (
         <EmptyState
           size="sm"
           icon={Clock01Icon}

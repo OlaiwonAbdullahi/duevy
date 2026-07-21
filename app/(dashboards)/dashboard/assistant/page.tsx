@@ -305,15 +305,21 @@ export default function AssistantPage() {
           : { method: "online", discountCode },
       );
 
-      // Online settles asynchronously — navigate to the dedicated payment
-      // page rather than treating the due as paid yet. conversationId rides
-      // along so the chat transcript can be restored on return.
-      if (method === "online" && result.bankTransfer && result.reference) {
-        const qs = new URLSearchParams({ dueId: payDue.id, from: "assistant" });
-        if (conversationId) qs.set("conversationId", conversationId);
+      // Online settles asynchronously rather than treating the due as paid
+      // yet. Monnify returns bank-transfer details to show on the dedicated
+      // payment page; Paystack doesn't (transfer lives on its hosted checkout
+      // page), so redirect there directly instead. conversationId rides along
+      // on the dashboard route so the chat transcript can be restored on return.
+      if (method === "online" && result.checkoutUrl && result.reference) {
         setPayDue(null);
         setPaySpace(null);
-        router.push(`/dashboard/pay/${result.reference}?${qs.toString()}`);
+        if (result.bankTransfer) {
+          const qs = new URLSearchParams({ dueId: payDue.id, from: "assistant" });
+          if (conversationId) qs.set("conversationId", conversationId);
+          router.push(`/dashboard/pay/${result.reference}?${qs.toString()}`);
+        } else {
+          window.location.href = result.checkoutUrl;
+        }
         return;
       }
 
