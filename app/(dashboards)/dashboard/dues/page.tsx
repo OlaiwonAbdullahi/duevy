@@ -160,6 +160,7 @@ export default function DuesPage() {
           ),
         ),
       );
+      console.log("[pay-due] initiation response", results);
 
       // Online settles asynchronously — for the first due (mirrors the
       // pre-migration redirect flow's single-checkout simplification for
