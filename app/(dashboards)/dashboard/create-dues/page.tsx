@@ -43,6 +43,7 @@ function adaptRepDue(api: ApiRepDue): RepDue {
     status: api.status as RepDueStatus,
     paidCount: api.paidCount,
     memberCount: api.memberCount,
+    assignedRepId: api.assignedRepId,
   };
 }
 

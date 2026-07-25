@@ -7,6 +7,7 @@ import { Alert01Icon } from "@hugeicons/core-free-icons";
 import { verifyEmail } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
+import { readPostAuthNext, clearPostAuthNext } from "@/lib/auth/post-auth-next";
 import { ArrowRightIcon, CheckIcon } from "../../components/icons";
 
 type State = "verifying" | "success" | "error";
@@ -16,6 +17,15 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
   const [state, setState] = useState<State>(token ? "verifying" : "error");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const ran = useRef(false);
+  // Carries `next` across the verify-email hop, which can happen in a
+  // different tab/device than the one that started signup.
+  const [persistedNext] = useState(() => readPostAuthNext());
+  const authenticated = status === "authenticated";
+  const continueHref = authenticated
+    ? (persistedNext ?? "/dashboard")
+    : persistedNext
+      ? `/login?next=${encodeURIComponent(persistedNext)}`
+      : "/login";
 
   useEffect(() => {
     if (!token || ran.current) return;
@@ -66,10 +76,11 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
         </p>
 
         <Link
-          href={status === "authenticated" ? "/dashboard" : "/login"}
+          href={continueHref}
+          onClick={() => authenticated && clearPostAuthNext()}
           className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
         >
-          {status === "authenticated" ? "Go to dashboard" : "Sign in"}
+          {authenticated ? "Go to dashboard" : "Sign in"}
           <ArrowRightIcon
             size={16}
             className="transition-transform duration-500 group-hover:translate-x-1"
@@ -94,10 +105,11 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
       </p>
 
       <Link
-        href={status === "authenticated" ? "/dashboard" : "/login"}
+        href={continueHref}
+        onClick={() => authenticated && clearPostAuthNext()}
         className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
       >
-        {status === "authenticated" ? "Back to dashboard" : "Back to sign in"}
+        {authenticated ? "Back to dashboard" : "Back to sign in"}
         <ArrowRightIcon
           size={16}
           className="transition-transform duration-500 group-hover:translate-x-1"

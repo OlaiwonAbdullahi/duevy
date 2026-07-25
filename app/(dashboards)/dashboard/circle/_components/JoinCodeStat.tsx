@@ -7,10 +7,13 @@ import {
   SquareLock01Icon,
   Copy01Icon,
   CopyCheckIcon,
+  Link04Icon,
+  Tick02Icon,
   Share08Icon,
   ArrowReloadHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { joinLink } from "./data";
 
 /**
  * The join code as a stat card — carries its own copy / share / regenerate
@@ -26,7 +29,9 @@ export function JoinCodeStat({
   onRegenerate: () => Promise<void>;
 }) {
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const link = joinLink(code);
 
   const regenerate = async () => {
     setRegenerating(true);
@@ -48,11 +53,22 @@ export function JoinCodeStat({
     }
   };
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      toast.success("Link copied", { description: link });
+      setTimeout(() => setLinkCopied(false), 1600);
+    } catch {
+      toast.error("Couldn't copy — long-press to copy the link");
+    }
+  };
+
   const share = async () => {
-    const message = `Join ${spaceName} on Duevy. Open the app, tap "Join a department" and enter code ${code}.`;
+    const message = `Join ${spaceName} on Duevy — tap the link to get added automatically: ${link}`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: "Join on Duevy", text: message });
+        await navigator.share({ title: "Join on Duevy", text: message, url: link });
         return;
       } catch {
         // Share sheet dismissed — fall through to clipboard.
@@ -87,6 +103,16 @@ export function JoinCodeStat({
         >
           <HugeiconsIcon icon={copied ? CopyCheckIcon : Copy01Icon} size={13} />
           {copied ? "Copied" : "Copy"}
+        </Button>
+        <Button
+          variant="brand-outline"
+          size="icon-sm"
+          onClick={copyLink}
+          title="Copy join link"
+          aria-label="Copy join link"
+          className="text-ink-soft hover:text-ink"
+        >
+          <HugeiconsIcon icon={linkCopied ? Tick02Icon : Link04Icon} size={14} />
         </Button>
         <Button
           variant="brand-outline"

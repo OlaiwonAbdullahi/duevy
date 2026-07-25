@@ -148,7 +148,7 @@ export function StudentOverview() {
               hint="Enter a code to join"
             />
             <QuickAction
-              href="/dashboard/wallet"
+              href="/dashboard/settings#payment-methods"
               icon={CreditCardIcon}
               label="Add a payment method"
               hint="Save a card to pay faster"

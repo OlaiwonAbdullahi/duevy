@@ -186,6 +186,8 @@ export type RepDue = Omit<Due, "status"> & {
   status: RepDueStatus;
   paidCount: number;
   memberCount: number;
+  /** The rep this due's payout access is scoped to — auto-set to the creator. */
+  assignedRepId: string | null;
 };
 
 export type CollectionTotals = {
@@ -225,7 +227,7 @@ export type AuditEntry = {
   id: string;
   action: string;
   description: string;
-  actor: { id: string; name: string };
+  actor: { id: string; name: string; role: RepRole | null };
   createdAt: string;
 };
 
@@ -251,17 +253,42 @@ export type RepOverview = {
 
 // ---- Payouts (§10) --------------------------------------------------------
 
-export type PayoutStatus = "processing" | "completed" | "failed";
+export type PayoutStatus = "pending_approval" | "processing" | "completed" | "failed" | "cancelled";
 
 export type Payout = {
   id: string;
+  /** Set when this payout is scoped to a single due rather than the whole space. */
+  dueId: string | null;
   amount: number;
   reference: string;
   status: PayoutStatus;
   account: string;
+  note?: string | null;
+  requestedById: string | null;
   requestedAt: string;
+  cancelledAt: string | null;
   settledAt: string | null;
   failureReason: string | null;
+};
+
+export type PayoutApprovalDecision = "approved" | "rejected";
+
+export type PayoutApprovalStatus = {
+  totalReps: number;
+  approvedCount: number;
+  requiredCount: number;
+  met: boolean;
+};
+
+export type PayoutApprovalVote = {
+  repUserId: string;
+  repName: string;
+  decision: PayoutApprovalDecision;
+  decidedAt: string;
+};
+
+export type PayoutWithApproval = Payout & {
+  approval: PayoutApprovalStatus & { decisions: PayoutApprovalVote[] };
 };
 
 export type PayoutSummary = {

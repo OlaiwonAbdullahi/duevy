@@ -12,14 +12,19 @@ import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { listReps, inviteRep, removeRep } from "@/lib/api/rep";
 import type { SpaceRep as Rep } from "@/lib/api/types";
+import { InviteRepModal } from "./InviteRepModal";
+import { RepActivityPanel } from "./RepActivityPanel";
 
 /** Co-reps who help run collections. The lead rep can invite or remove them. */
 export function RepsCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  // Inviting/removing reps is lead-only on the backend.
+  const isLead = repSpace?.membership !== "co";
   const [reps, setReps] = useState<Rep[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviting, setInviting] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [activityRep, setActivityRep] = useState<Rep | null>(null);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -50,22 +55,14 @@ export function RepsCard() {
     }
   };
 
-  const invite = async () => {
+  const invite = async (email: string) => {
     if (!spaceId) return;
-    const email = window.prompt("Invite a co-rep by email:")?.trim();
-    if (!email) return;
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      toast.error("Enter a valid email address.");
-      return;
-    }
-    setInviting(true);
     try {
-      await inviteRep(spaceId, email);
+      const newRep = await inviteRep(spaceId, email);
+      setReps((list) => [...list, newRep]);
       toast.success("Invite sent", { description: email });
     } catch {
       toast.error("Couldn't send the invite.");
-    } finally {
-      setInviting(false);
     }
   };
 
@@ -75,14 +72,12 @@ export function RepsCard() {
       title="Reps & roles"
       description="People who can manage dues and approvals for this department."
       action={
-        <Button variant="brand" size="pill" onClick={invite} disabled={inviting}>
-          {inviting ? (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-          ) : (
+        isLead && (
+          <Button variant="brand" size="pill" onClick={() => setInviteOpen(true)}>
             <HugeiconsIcon icon={Add01Icon} size={14} className="size-3.5" />
-          )}
-          {inviting ? "Inviting…" : "Invite"}
-        </Button>
+            Invite
+          </Button>
+        )
       }
     >
       {loading ? (
@@ -114,13 +109,20 @@ export function RepsCard() {
               key={rep.id}
               className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0 first:pt-0"
             >
-              <UserAvatar name={rep.name} size={40} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {rep.name}
-                </p>
-                <p className="truncate text-xs text-ink-soft">{rep.email}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setActivityRep(rep)}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                title={`View ${rep.name}'s activity`}
+              >
+                <UserAvatar name={rep.name} size={40} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {rep.name}
+                  </p>
+                  <p className="truncate text-xs text-ink-soft">{rep.email}</p>
+                </div>
+              </button>
               {rep.role === "lead" ? (
                 <span className="rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold text-white">
                   Lead rep
@@ -130,19 +132,35 @@ export function RepsCard() {
                   <span className="rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand">
                     Co-rep
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => remove(rep)}
-                    aria-label={`Remove ${rep.name}`}
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                  >
-                    <HugeiconsIcon icon={Cancel01Icon} size={16} />
-                  </button>
+                  {isLead && (
+                    <button
+                      type="button"
+                      onClick={() => remove(rep)}
+                      aria-label={`Remove ${rep.name}`}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                    >
+                      <HugeiconsIcon icon={Cancel01Icon} size={16} />
+                    </button>
+                  )}
                 </>
               )}
             </li>
           ))}
         </ul>
+      )}
+
+      {inviteOpen && (
+        <InviteRepModal onClose={() => setInviteOpen(false)} onInvite={invite} />
+      )}
+
+      {activityRep && spaceId && (
+        <RepActivityPanel
+          spaceId={spaceId}
+          repId={activityRep.id}
+          repName={activityRep.name}
+          repRole={activityRep.role}
+          onClose={() => setActivityRep(null)}
+        />
       )}
     </SettingsCard>
   );

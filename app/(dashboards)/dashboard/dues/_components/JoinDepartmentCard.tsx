@@ -16,12 +16,9 @@ import { ApiError } from "@/lib/api/errors";
 import { lookupSpace } from "@/lib/api/spaces";
 import type { JoinableDepartment } from "./types";
 import { adaptJoinable } from "./adapt";
-import { KIND_GLYPH, SPACE_KIND_LABEL } from "./data";
+import { KIND_GLYPH, SPACE_KIND_LABEL, MIN_CODE, MAX_CODE } from "./data";
 import { SpaceEmblem } from "./SpaceEmblem";
 import { BRAND_INPUT } from "../../_components/form-styles";
-
-const MIN_CODE = 4;
-const MAX_CODE = 20;
 
 /**
  * Search-by-code join, two steps: enter the code and **Look up** the department

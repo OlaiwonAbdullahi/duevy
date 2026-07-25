@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -10,6 +10,7 @@ import {
   Building03Icon,
 } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
+import { savePostAuthNext } from "@/lib/auth/post-auth-next";
 import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
@@ -64,7 +65,18 @@ export default function SignupFlow() {
       : safeNext(new URLSearchParams(window.location.search).get("next")),
   );
   const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+  // A join link implies the visitor is joining as a member, not registering
+  // as a rep — skip the role picker entirely and go straight to account details.
+  const joinFlow = next?.startsWith("/join/") ?? false;
   const [role, setRole] = useState<SignupRole>("student");
+
+  useEffect(() => {
+    if (next) savePostAuthNext(next);
+    // Only needs to run once, on mount, to cover the case where the user
+    // verifies their email in a different tab/device than the one that
+    // started signup (the `next` query param alone can't survive that hop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
@@ -81,7 +93,7 @@ export default function SignupFlow() {
     theme: "emerald",
   });
 
-  const steps = STEPS[role];
+  const steps = joinFlow ? (["account"] as StepId[]) : STEPS[role];
   const currentId = steps[stepIndex];
   const total = steps.length;
 
@@ -162,7 +174,7 @@ export default function SignupFlow() {
   }
 
   const RoleIcon = ROLE_META[role].icon;
-  const { title, subtitle } = headerFor(currentId, role, space.spaceName);
+  const { title, subtitle } = headerFor(currentId, role, space.spaceName, joinFlow);
 
   if (submittedEmail) {
     return <CheckEmailNotice email={submittedEmail} loginHref={loginHref} />;
@@ -172,9 +184,11 @@ export default function SignupFlow() {
     <div className="flex flex-col">
       {/* Heading */}
       <div className="mb-8">
-        <p className="text-[#0b6e4f] text-[12px] font-semibold uppercase tracking-[0.14em] mb-3">
-          Step {stepIndex + 1} of {total}
-        </p>
+        {total > 1 && (
+          <p className="text-[#0b6e4f] text-[12px] font-semibold uppercase tracking-[0.14em] mb-3">
+            Step {stepIndex + 1} of {total}
+          </p>
+        )}
         <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
           {title}
         </h1>
@@ -201,27 +215,30 @@ export default function SignupFlow() {
 
       {currentId === "account" && (
         <div className="flex flex-col">
-          {/* Chosen role summary — tap to change */}
-          <button
-            type="button"
-            onClick={() => setStepIndex(0)}
-            className="mb-6 flex items-center justify-between rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] px-4 py-3 text-left transition-colors duration-300 hover:border-[#0b6e4f]/40 cursor-pointer"
-          >
-            <span className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e6f2ec] text-[#0b6e4f]">
-                <HugeiconsIcon icon={RoleIcon} size={18} />
-              </span>
-              <span className="flex flex-col">
-                <span className="text-[#7a847f] text-[12px] leading-none mb-1">
-                  Signing up as
+          {/* Chosen role summary — tap to change. Hidden on a join-link
+              signup: there's no role step to jump back to, since it's skipped. */}
+          {!joinFlow && (
+            <button
+              type="button"
+              onClick={() => setStepIndex(0)}
+              className="mb-6 flex items-center justify-between rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] px-4 py-3 text-left transition-colors duration-300 hover:border-[#0b6e4f]/40 cursor-pointer"
+            >
+              <span className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e6f2ec] text-[#0b6e4f]">
+                  <HugeiconsIcon icon={RoleIcon} size={18} />
                 </span>
-                <span className="text-[#1b2520] text-[14px] font-semibold leading-none">
-                  {ROLE_META[role].label}
+                <span className="flex flex-col">
+                  <span className="text-[#7a847f] text-[12px] leading-none mb-1">
+                    Signing up as
+                  </span>
+                  <span className="text-[#1b2520] text-[14px] font-semibold leading-none">
+                    {ROLE_META[role].label}
+                  </span>
                 </span>
               </span>
-            </span>
-            <span className="text-[#0b6e4f] text-[13px] font-medium">Change</span>
-          </button>
+              <span className="text-[#0b6e4f] text-[13px] font-medium">Change</span>
+            </button>
+          )}
 
           {/* Form */}
           <form className="flex flex-col gap-5" onSubmit={handleAccountSubmit}>
@@ -362,7 +379,7 @@ export default function SignupFlow() {
         <p className="mt-8 text-center text-[#7a847f] text-[14px]">
           Already have an account?{" "}
           <Link
-            href="/login"
+            href={loginHref}
             className="text-[#0b6e4f] font-semibold hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
           >
             Sign in
@@ -377,6 +394,7 @@ function headerFor(
   step: StepId,
   role: SignupRole,
   spaceName: string,
+  joinFlow: boolean,
 ): { title: string; subtitle: string } {
   const space = spaceName || "your department";
   switch (step) {
@@ -388,8 +406,9 @@ function headerFor(
     case "account":
       return {
         title: "Your details",
-        subtitle:
-          role === "rep"
+        subtitle: joinFlow
+          ? "You're joining via a rep's invite — create your account and we'll add you next."
+          : role === "rep"
             ? "Tell us about you — you'll set up your department next."
             : "Setting up as a student — it's free to start.",
       };

@@ -6,3 +6,6 @@ export const CARD_LOGOS: Record<string, string> = {
   Mastercard: "/cards/mastercard.svg",
   Verve: "/cards/verve.jpeg",
 };
+
+/** Survives the gateway redirect round-trip so the return page can verify the add-card charge. */
+export const ADDCARD_REF_KEY = "duevy-addcard-ref";

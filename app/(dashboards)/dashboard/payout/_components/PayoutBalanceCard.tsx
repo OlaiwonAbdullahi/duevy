@@ -15,11 +15,14 @@ export function PayoutBalanceCard({
   available,
   collected,
   pending,
+  canWithdraw = true,
   onWithdraw,
 }: {
   available: number;
   collected: number;
   pending: number;
+  /** Space-wide withdrawal is lead-only — co-reps request against an assigned due instead. */
+  canWithdraw?: boolean;
   onWithdraw: () => void;
 }) {
   return (
@@ -61,15 +64,17 @@ export function PayoutBalanceCard({
       </div>
 
       <div className="relative mt-8 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onWithdraw}
-          disabled={available <= 0}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-        >
-          <HugeiconsIcon icon={MoneySend01Icon} size={16} />
-          Withdraw funds
-        </button>
+        {canWithdraw && (
+          <button
+            type="button"
+            onClick={onWithdraw}
+            disabled={available <= 0}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            <HugeiconsIcon icon={MoneySend01Icon} size={16} />
+            Withdraw funds
+          </button>
+        )}
         <Link
           href="/dashboard/payout/breakdown"
           className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/30 px-7 text-sm font-semibold text-white transition-colors duration-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"

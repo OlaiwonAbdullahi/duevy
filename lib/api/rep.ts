@@ -64,6 +64,11 @@ export function deleteDue(spaceId: string, dueId: string) {
   return apiClient.delete<void>(`/spaces/${spaceId}/dues/${dueId}`);
 }
 
+/** Reassign a due to a different co-rep. Lead-only; target must already be a co-rep. */
+export function reassignDue(spaceId: string, dueId: string, userId: string) {
+  return apiClient.post<RepDue>(`/spaces/${spaceId}/dues/${dueId}/reassign`, { userId });
+}
+
 export type CollectionsResponse = {
   totals: CollectionTotals;
   students: CollectionStudent[];
@@ -110,7 +115,7 @@ export function listReps(spaceId: string) {
 }
 
 export function inviteRep(spaceId: string, email: string) {
-  return apiClient.post<void>(`/spaces/${spaceId}/reps/invite`, { email });
+  return apiClient.post<SpaceRep>(`/spaces/${spaceId}/reps/invite`, { email });
 }
 
 export function removeRep(spaceId: string, userId: string) {

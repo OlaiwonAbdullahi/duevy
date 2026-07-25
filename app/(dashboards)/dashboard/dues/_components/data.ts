@@ -14,6 +14,10 @@ import type { DueCategory, EmblemHue, Due, SpaceKind } from "./types";
 
 export { naira } from "../../_components/format";
 
+/** Join codes are uppercase alphanumerics with optional dashes, e.g. "CSC29-LMYB". */
+export const MIN_CODE = 4;
+export const MAX_CODE = 20;
+
 /**
  * Emblem palettes. Each space paints its crest from one of these — a deep base
  * for the plate, a brighter tint for the monogram sheen, and a soft ring color.

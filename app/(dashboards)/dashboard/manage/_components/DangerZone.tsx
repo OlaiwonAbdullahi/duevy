@@ -18,6 +18,9 @@ type PendingAction = "transfer" | "archive" | null;
 export function DangerZone() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  // Transfer-lead and archive are lead-only on the backend — hide them for
+  // co-reps rather than let the password-confirm modal end in a 403.
+  const isCoRep = repSpace?.membership === "co";
   const { refreshUser } = useAuth();
   const router = useRouter();
   const [pending, setPending] = useState<PendingAction>(null);
@@ -39,22 +42,28 @@ export function DangerZone() {
       title="Danger zone"
       description="These actions affect the whole department. Handle with care."
     >
-      <div className="flex flex-col gap-3">
-        <Row
-          title="Transfer lead role"
-          description="Hand over department ownership to another rep. You'll become a co-rep."
-          action="Transfer"
-          disabled={!spaceId}
-          onClick={() => setPending("transfer")}
-        />
-        <Row
-          title="Archive department"
-          description="Stop new dues and join requests. Existing records stay available."
-          action="Archive"
-          disabled={!spaceId}
-          onClick={() => setPending("archive")}
-        />
-      </div>
+      {isCoRep ? (
+        <p className="rounded-2xl border border-rose-200 bg-white/70 p-4 text-xs text-ink-soft">
+          Only your lead rep can transfer ownership or archive this department.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <Row
+            title="Transfer lead role"
+            description="Hand over department ownership to another rep. You'll become a co-rep."
+            action="Transfer"
+            disabled={!spaceId}
+            onClick={() => setPending("transfer")}
+          />
+          <Row
+            title="Archive department"
+            description="Stop new dues and join requests. Existing records stay available."
+            action="Archive"
+            disabled={!spaceId}
+            onClick={() => setPending("archive")}
+          />
+        </div>
+      )}
 
       {pending === "transfer" && spaceId && (
         <TransferLeadModal

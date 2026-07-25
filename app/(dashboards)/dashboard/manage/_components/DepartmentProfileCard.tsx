@@ -18,11 +18,13 @@ function Field({
   value,
   onChange,
   placeholder,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -31,6 +33,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
         className={cn(BRAND_INPUT, "mt-1.5")}
       />
     </div>
@@ -41,6 +44,9 @@ function Field({
 export function DepartmentProfileCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  // Only the lead can edit the profile — the backend 403s a co-rep, so hide
+  // the edit affordance up front rather than let them hit that error.
+  const readOnly = repSpace?.membership === "co";
 
   const [name, setName] = useState(repSpace?.name ?? "");
   const [acronym, setAcronym] = useState("");
@@ -93,11 +99,17 @@ export function DepartmentProfileCard() {
     <SettingsCard
       icon={Building03Icon}
       title="Department profile"
-      description="The name and details students see across Duevy."
+      description={
+        readOnly
+          ? "Only your lead rep can edit these details."
+          : "The name and details students see across Duevy."
+      }
       action={
-        <Button variant="brand" size="pill" onClick={save} disabled={!dirty || saving}>
-          Save
-        </Button>
+        !readOnly && (
+          <Button variant="brand" size="pill" onClick={save} disabled={!dirty || saving}>
+            Save
+          </Button>
+        )
       }
     >
       {/* Identity strip */}
@@ -115,18 +127,19 @@ export function DepartmentProfileCard() {
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field label="Department name" value={name} onChange={edit(setName)} />
+          <Field label="Department name" value={name} onChange={edit(setName)} disabled={readOnly} />
         </div>
-        <Field label="Acronym" value={acronym} onChange={edit(setAcronym)} />
-        <Field label="Faculty" value={faculty} onChange={edit(setFaculty)} />
+        <Field label="Acronym" value={acronym} onChange={edit(setAcronym)} disabled={readOnly} />
+        <Field label="Faculty" value={faculty} onChange={edit(setFaculty)} disabled={readOnly} />
         <div className="sm:col-span-2">
           <Label className="block text-xs font-medium text-ink-soft">About</Label>
           <textarea
             value={about}
             onChange={(e) => edit(setAbout)(e.target.value)}
             rows={3}
+            disabled={readOnly}
             placeholder="Tell students what this space is for."
-            className="mt-1.5 w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-brand focus:ring-[3px] focus:ring-brand/15"
+            className="mt-1.5 w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-brand focus:ring-[3px] focus:ring-brand/15 disabled:opacity-60"
           />
         </div>
       </div>

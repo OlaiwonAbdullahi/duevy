@@ -16,6 +16,8 @@ export type RepDue = {
   /** Members who've settled it — drives the collection progress. */
   paidCount: number;
   memberCount: number;
+  /** The rep this due's payout access is scoped to — auto-set to the creator. */
+  assignedRepId: string | null;
 };
 
 /** The editable slice a rep fills in when creating or editing a due. */

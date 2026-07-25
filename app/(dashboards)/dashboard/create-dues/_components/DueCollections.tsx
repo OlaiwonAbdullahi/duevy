@@ -7,15 +7,20 @@ import {
   ArrowLeft01Icon,
   Notification03Icon,
   Download04Icon,
+  MoneySend01Icon,
+  UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { fromKobo } from "../../_components/format";
 import { timeAgo } from "../../_components/notifications-data";
-import { getCollections, remindUnpaid } from "@/lib/api/rep";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useRepSpace } from "../../_components/use-rep-space";
+import { getCollections, remindUnpaid, listReps, reassignDue } from "@/lib/api/rep";
 import { ApiError } from "@/lib/api/errors";
 import { CollectionSummary } from "../../collections/_components/CollectionSummary";
 import { CollectionTable } from "../../collections/_components/CollectionTable";
 import { downloadCollectionCsv } from "../../collections/_components/csv";
+import { DuePayoutModal } from "./DuePayoutModal";
 import type {
   CollectionStudent,
   CollectionTotals,
@@ -24,6 +29,7 @@ import type {
 import type {
   CollectionStudent as ApiCollectionStudent,
   CollectionTotals as ApiCollectionTotals,
+  SpaceRep,
 } from "@/lib/api/types";
 import type { RepDue } from "./types";
 
@@ -61,19 +67,58 @@ function adaptTotals(api: ApiCollectionTotals): CollectionTotals {
 /** Per-due collections roster (who's paid / unpaid) shown inline from a due card. */
 export function DueCollections({
   spaceId,
-  due,
+  due: initialDue,
   onBack,
 }: {
   spaceId: string;
   due: RepDue;
   onBack: () => void;
 }) {
+  const { user } = useAuth();
+  const repSpace = useRepSpace();
+  const isLead = repSpace?.membership !== "co";
+
+  const [due, setDue] = useState(initialDue);
   const [students, setStudents] = useState<CollectionStudent[]>([]);
   const [totals, setTotals] = useState<CollectionTotals>(EMPTY_TOTALS);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [reps, setReps] = useState<SpaceRep[]>([]);
+  const [reassigning, setReassigning] = useState(false);
+  const [payoutOpen, setPayoutOpen] = useState(false);
+
+  const assignedRep = reps.find((r) => r.id === due.assignedRepId);
+  const coReps = reps.filter((r) => r.role === "co");
+  // The dropdown must always be able to display the current assignee, even
+  // though a lead can only ever be *reassigned to* a co-rep (never the lead
+  // themself, per the backend) — a due assigned at creation defaults to its
+  // creator, who may well be the lead.
+  const selectableReps =
+    assignedRep && assignedRep.role === "lead" ? [assignedRep, ...coReps] : coReps;
+  const canRequestPayout = isLead || due.assignedRepId === user?.id;
+
+  useEffect(() => {
+    listReps(spaceId)
+      .then(setReps)
+      .catch(() => {});
+  }, [spaceId]);
+
+  const reassign = async (userId: string) => {
+    if (!userId || userId === due.assignedRepId) return;
+    setReassigning(true);
+    try {
+      const updated = await reassignDue(spaceId, due.id, userId);
+      setDue((prev) => ({ ...prev, assignedRepId: updated.assignedRepId }));
+      const target = reps.find((r) => r.id === userId);
+      toast.success("Due reassigned", { description: target?.name ?? "Reassigned" });
+    } catch {
+      toast.error("Couldn't reassign this due.");
+    } finally {
+      setReassigning(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -197,7 +242,13 @@ export function DueCollections({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {canRequestPayout && (
+            <Button variant="brand" size="pill" onClick={() => setPayoutOpen(true)}>
+              <HugeiconsIcon icon={MoneySend01Icon} size={15} />
+              Request payout
+            </Button>
+          )}
           <Button
             variant="brand-outline"
             size="pill"
@@ -223,6 +274,36 @@ export function DueCollections({
         </div>
       </header>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+        <HugeiconsIcon icon={UserAdd01Icon} size={14} />
+        {isLead && coReps.length > 0 ? (
+          <>
+            <span>Assigned to</span>
+            <select
+              value={due.assignedRepId ?? ""}
+              onChange={(e) => reassign(e.target.value)}
+              disabled={reassigning}
+              className="rounded-full border border-cloud bg-canvas px-3 py-1 text-xs font-semibold text-ink outline-none focus:border-brand disabled:opacity-60"
+            >
+              {!assignedRep && <option value="">Unassigned</option>}
+              {selectableReps.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                  {r.role === "lead" ? " (you)" : ""}
+                </option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <span>
+            Assigned to{" "}
+            <span className="font-semibold text-ink">
+              {assignedRep?.name ?? "no one yet"}
+            </span>
+          </span>
+        )}
+      </div>
+
       {loading ? (
         <div className="mt-6 space-y-3">
           <div className="h-28 animate-pulse rounded-3xl border border-cloud bg-canvas" />
@@ -244,6 +325,20 @@ export function DueCollections({
             onQueryChange={setQuery}
           />
         </>
+      )}
+
+      {payoutOpen && (
+        <DuePayoutModal
+          spaceId={spaceId}
+          dueId={due.id}
+          dueTitle={due.title}
+          onClose={() => setPayoutOpen(false)}
+          onRequested={() =>
+            toast.success("Payout requested", {
+              description: "Awaiting approval from your department's reps.",
+            })
+          }
+        />
       )}
     </div>
   );

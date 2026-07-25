@@ -44,7 +44,6 @@ type CommandItem = {
 const PAGE_DESC: Record<string, string> = {
   "/dashboard": "Your dues and recent activity",
   "/dashboard/dues": "Dues you owe across your spaces",
-  "/dashboard/wallet": "Saved cards for faster payments",
   "/dashboard/transactions": "Your full money history and receipts",
   "/dashboard/referrals": "Invite friends and earn bonuses",
   "/dashboard/settings": "Profile, theme and preferences",
@@ -70,7 +69,7 @@ const STUDENT_ACTIONS: Omit<CommandItem, "id">[] = [
     icon: CreditCardIcon,
     label: "Add a card",
     sublabel: "Save a debit card for payments",
-    href: "/dashboard/wallet",
+    href: "/dashboard/settings#payment-methods",
     keywords: "add card debit payment method visa mastercard",
   },
   {

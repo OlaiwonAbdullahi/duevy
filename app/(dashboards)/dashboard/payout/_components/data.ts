@@ -19,7 +19,9 @@ export const PAYOUT_STATUS_META: Record<
   PayoutStatus,
   { label: string; className: string }
 > = {
+  pending_approval: { label: "Awaiting approval", className: "bg-amber-100 text-amber-700" },
   completed: { label: "Completed", className: "bg-cloud text-brand" },
   processing: { label: "Processing", className: "bg-amber-100 text-amber-700" },
   failed: { label: "Failed", className: "bg-rose-100 text-rose-600" },
+  cancelled: { label: "Cancelled", className: "bg-paper text-ink-soft" },
 };

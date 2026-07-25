@@ -9,6 +9,8 @@ import { CardBrand } from "./CardBrand";
 import { EmptyState } from "../../_components/EmptyState";
 import type { Card } from "@/lib/api/types";
 
+/** The saved-card list + add/remove/default actions. Content only — the
+ *  caller supplies the surrounding card chrome (icon, title, description). */
 export function PaymentMethods({
   cards,
   onAdd,
@@ -21,22 +23,8 @@ export function PaymentMethods({
   onMakeDefault: (id: string) => void;
 }) {
   return (
-    <section className="rounded-3xl border border-cloud bg-canvas p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold tracking-tight text-ink">
-          Payment methods
-        </h2>
-        <Button
-          onClick={onAdd}
-          size="icon"
-          className="rounded-full bg-paper text-brand hover:bg-cloud"
-          aria-label="Add card"
-        >
-          <HugeiconsIcon icon={Add01Icon} size={18} />
-        </Button>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3">
+    <>
+      <div className="flex flex-col gap-3">
         {cards.length === 0 && (
           <div className="rounded-2xl border border-dashed border-cloud">
             <EmptyState
@@ -95,6 +83,6 @@ export function PaymentMethods({
           Add new card
         </Button>
       </div>
-    </section>
+    </>
   );
 }

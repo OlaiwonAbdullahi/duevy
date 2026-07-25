@@ -1,5 +1,12 @@
 import { apiClient, type Page } from "./client";
-import type { BankAccount, DueCategory, Payout, PayoutSummary } from "./types";
+import type {
+  BankAccount,
+  DueCategory,
+  Payout,
+  PayoutApprovalDecision,
+  PayoutSummary,
+  PayoutWithApproval,
+} from "./types";
 
 function toQuery(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
@@ -59,7 +66,13 @@ export function setPayoutAccount(spaceId: string, payload: BankAccountInput) {
   );
 }
 
-/** Request a withdrawal. Money-moving — an Idempotency-Key is attached automatically. */
+/**
+ * Request a whole-space withdrawal. Lead-only — co-reps use `requestDuePayout`
+ * against a due assigned to them instead. Every payout now requires 70% of the
+ * space's reps to approve before it disburses; the requester's own request
+ * counts as an implicit "yes" vote. Money-moving — an Idempotency-Key is
+ * attached automatically.
+ */
 export function requestPayout(
   spaceId: string,
   payload: { amount: number; note?: string },
@@ -71,6 +84,47 @@ export function requestPayout(
 
 export function listPayouts(spaceId: string) {
   return apiClient.get<Payout[]>(`/spaces/${spaceId}/payouts`);
+}
+
+/** A single payout with its live approval progress (who's voted so far). */
+export function getPayout(spaceId: string, payoutId: string) {
+  return apiClient.get<PayoutWithApproval>(`/spaces/${spaceId}/payout/${payoutId}`);
+}
+
+/** Balance available against a single due (for the due-scoped request flow). */
+export function getDuePayoutSummary(spaceId: string, dueId: string) {
+  return apiClient.get<PayoutSummary>(`/spaces/${spaceId}/dues/${dueId}/payout/summary`);
+}
+
+/**
+ * Request a payout scoped to one due's collected funds. Allowed for the lead,
+ * or the co-rep this due is assigned to.
+ */
+export function requestDuePayout(
+  spaceId: string,
+  dueId: string,
+  payload: { amount: number; note?: string },
+) {
+  return apiClient.post<Payout>(`/spaces/${spaceId}/dues/${dueId}/payout/request`, payload, {
+    idempotencyKey: crypto.randomUUID(),
+  });
+}
+
+/** Cast or change your approve/reject vote on a payout awaiting approval. */
+export function castPayoutApproval(
+  spaceId: string,
+  payoutId: string,
+  decision: PayoutApprovalDecision,
+) {
+  return apiClient.post<{ payout: Payout; approval: PayoutWithApproval["approval"] }>(
+    `/spaces/${spaceId}/payout/${payoutId}/approve`,
+    { decision },
+  );
+}
+
+/** Withdraw a payout still awaiting approval. Requester or lead only. */
+export function cancelPayout(spaceId: string, payoutId: string, reason?: string) {
+  return apiClient.post<Payout>(`/spaces/${spaceId}/payout/${payoutId}/cancel`, { reason });
 }
 
 export type PayoutBreakdownTotals = {

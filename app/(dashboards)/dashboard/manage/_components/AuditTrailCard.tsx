@@ -12,6 +12,8 @@ import {
   UserMultipleIcon,
   SquareLock01Icon,
   Archive02Icon,
+  CheckmarkCircle02Icon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
@@ -23,7 +25,7 @@ import { getAuditLog } from "@/lib/api/rep";
 import type { AuditEntry } from "@/lib/api/types";
 
 /** Icon per audit `action` (§5.8). */
-const ACTION_ICON: Record<string, HugeIcon> = {
+export const ACTION_ICON: Record<string, HugeIcon> = {
   payout_requested: MoneySend01Icon,
   due_published: Invoice01Icon,
   due_closed: Invoice01Icon,
@@ -35,6 +37,10 @@ const ACTION_ICON: Record<string, HugeIcon> = {
   code_regenerated: SquareLock01Icon,
   lead_transferred: UserMultipleIcon,
   space_archived: Archive02Icon,
+  due_reassigned: UserAdd01Icon,
+  payout_approval_cast: CheckmarkCircle02Icon,
+  payout_disbursement_started: MoneySend01Icon,
+  payout_cancelled: Cancel01Icon,
 };
 
 export function AuditTrailCard() {

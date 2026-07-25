@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { accountLabel, naira } from "./_components/data";
+import { accountLabel } from "./_components/data";
 import type { BankAccount, Payout } from "./_components/types";
 
 /** Placeholder until the rep's real account loads from the API. */
@@ -10,6 +10,7 @@ const EMPTY_ACCOUNT: BankAccount = { bankName: "", accountName: "", accountNumbe
 import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { PayoutAccountCard } from "./_components/PayoutAccountCard";
 import { PayoutHistory } from "./_components/PayoutHistory";
+import { PendingApprovalsCard } from "./_components/PendingApprovalsCard";
 import { WithdrawModal } from "./_components/WithdrawModal";
 import { EditAccountModal } from "./_components/EditAccountModal";
 import { useRepSpace } from "../_components/use-rep-space";
@@ -31,10 +32,12 @@ import { ApiError } from "@/lib/api/errors";
 function adaptPayout(p: ApiPayout): Payout {
   return {
     id: p.id,
+    dueId: p.dueId,
     amount: fromKobo(p.amount),
     requestedAt: timeAgo(p.requestedAt),
     reference: p.reference,
     status: p.status,
+    requestedById: p.requestedById,
     account: p.account,
   };
 }
@@ -42,6 +45,9 @@ function adaptPayout(p: ApiPayout): Payout {
 export default function PayoutPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  // Space-wide payout requests are lead-only — co-reps request against a due
+  // assigned to them instead, from that due's collections view.
+  const isLead = repSpace?.membership !== "co";
 
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [account, setAccount] = useState<BankAccount>(EMPTY_ACCOUNT);
@@ -89,7 +95,7 @@ export default function PayoutPage() {
       await requestPayout(spaceId, { amount: amount * 100 });
       setWithdrawOpen(false);
       toast.success("Payout requested", {
-        description: `${naira(amount)} on its way to ${account.accountName}.`,
+        description: "Awaiting approval from your department's reps.",
       });
       await refresh(spaceId);
     } catch {
@@ -154,12 +160,23 @@ export default function PayoutPage() {
             available={available}
             collected={collected}
             pending={pending}
+            canWithdraw={isLead}
             onWithdraw={() => setWithdrawOpen(true)}
           />
           <PayoutAccountCard
             account={account}
             hasAccount={hasAccount}
             onEdit={() => setEditOpen(true)}
+          />
+        </div>
+      )}
+
+      {!loading && spaceId && (
+        <div className="mt-6">
+          <PendingApprovalsCard
+            spaceId={spaceId}
+            payoutIds={payouts.filter((p) => p.status === "pending_approval").map((p) => p.id)}
+            onChanged={() => refresh(spaceId)}
           />
         </div>
       )}

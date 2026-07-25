@@ -1,6 +1,5 @@
 import {
   Home01Icon,
-  Wallet01Icon,
   Invoice01Icon,
   AddInvoiceIcon,
   ReceiptDollarIcon,
@@ -41,7 +40,6 @@ export type NavGroup = {
 export const STUDENT_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard", icon: Home01Icon },
   { label: "My dues", href: "/dashboard/dues", icon: Invoice01Icon },
-  { label: "Payment methods", href: "/dashboard/wallet", icon: Wallet01Icon }, // saved cards — no wallet balance since the payment architecture migration
   {
     label: "Transactions",
     href: "/dashboard/transactions",

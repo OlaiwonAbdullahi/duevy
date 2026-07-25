@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/auth-context";
+import { readPostAuthNext, clearPostAuthNext } from "@/lib/auth/post-auth-next";
 import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import { ArrowRightIcon } from "../../components/icons";
@@ -20,11 +21,14 @@ export default function LoginForm() {
   const router = useRouter();
   // Read once on mount rather than via `useSearchParams()`, which would force
   // this route into a Suspense boundary just for a value we only need at submit time.
-  const [next] = useState(() =>
-    typeof window === "undefined"
-      ? null
-      : safeNext(new URLSearchParams(window.location.search).get("next")),
-  );
+  // Falls back to a persisted destination for the case where the URL's own
+  // `next` was lost — e.g. verifying an email link in a different tab/device
+  // than the one that started signup.
+  const [next] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const urlNext = safeNext(new URLSearchParams(window.location.search).get("next"));
+    return urlNext ?? readPostAuthNext();
+  });
   const { login, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -45,6 +49,7 @@ export default function LoginForm() {
       toast.success("Welcome back", {
         description: `Signed in as ${user.name.split(" ")[0]}.`,
       });
+      clearPostAuthNext();
       router.push(next ?? (user.role === "admin" ? "/admin" : "/dashboard"));
     } catch (err) {
       toast.error(

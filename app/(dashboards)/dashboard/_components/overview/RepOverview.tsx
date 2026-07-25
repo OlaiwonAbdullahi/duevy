@@ -124,12 +124,17 @@ export function RepOverview() {
               value={`${Math.round((data?.stats.collectionRate ?? 0) * 100)}%`}
               hint={`${data?.space.memberCount ?? 0} members`}
             />
-            <StatCard
-              icon={SquareLock01Icon}
-              label="Join code"
-              value={data?.joinCode ?? "—"}
-              hint="Share to add students"
-            />
+            <Link
+              href="/dashboard/circle"
+              className="block rounded-3xl transition-opacity duration-300 hover:opacity-80 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              <StatCard
+                icon={SquareLock01Icon}
+                label="Join code"
+                value={data?.joinCode ?? "—"}
+                hint="Share to add students"
+              />
+            </Link>
           </div>
 
           {/* Rep quick actions. */}
@@ -317,7 +322,7 @@ export function RepOverview() {
             <Link href="/dashboard/dues">My dues</Link>
           </Button>
           <Button variant="brand-outline" size="pill" asChild>
-            <Link href="/dashboard/wallet">Payment methods</Link>
+            <Link href="/dashboard/settings#payment-methods">Payment methods</Link>
           </Button>
         </div>
       </section>
