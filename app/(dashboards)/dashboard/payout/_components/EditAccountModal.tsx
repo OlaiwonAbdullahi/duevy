@@ -44,11 +44,12 @@ export function EditAccountModal({
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
 
-  // Live bank list (name + CBN code). Preselect the current bank by name.
+  // Live bank list (name + CBN code), scoped to this space's own Bachs
+  // connected account. Preselect the current bank by name.
   useEffect(() => {
     let cancelled = false;
     setBanksLoading(true);
-    listBanks()
+    listBanks(spaceId)
       .then((list) => {
         if (cancelled) return;
         setBanks(list);
@@ -62,7 +63,7 @@ export function EditAccountModal({
     return () => {
       cancelled = true;
     };
-  }, [account.bankName]);
+  }, [spaceId, account.bankName]);
 
   const bankName = useMemo(
     () => banks.find((b) => b.code === bankCode)?.name ?? account.bankName,

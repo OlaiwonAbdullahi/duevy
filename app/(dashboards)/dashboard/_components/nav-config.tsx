@@ -15,6 +15,7 @@ import {
   Megaphone01Icon,
   AiChat01Icon,
 } from "@hugeicons/core-free-icons";
+import { FEATURES } from "@/lib/features";
 
 /** The icon-data shape exported by @hugeicons/core-free-icons. */
 export type HugeIcon = typeof Home01Icon;
@@ -45,7 +46,9 @@ export const STUDENT_LINKS: NavLink[] = [
     href: "/dashboard/transactions",
     icon: ReceiptDollarIcon,
   },
-  { label: "Assistant", href: "/dashboard/assistant", icon: AiChat01Icon },
+  ...(FEATURES.assistant
+    ? [{ label: "Assistant", href: "/dashboard/assistant", icon: AiChat01Icon }]
+    : []),
   { label: "Settings", href: "/dashboard/settings", icon: Settings02Icon },
 ];
 
@@ -63,13 +66,13 @@ export const REP_LINKS: NavLink[] = [
     icon: AddInvoiceIcon,
   },
   { label: "Circle", href: "/dashboard/circle", icon: UserGroup03Icon }, // members etc.
-  {
-    label: "Create Vote Poll",
-    href: "/dashboard/polls",
-    icon: CheckmarkSquare01Icon,
-  },
+  ...(FEATURES.polls
+    ? [{ label: "Create Vote Poll", href: "/dashboard/polls", icon: CheckmarkSquare01Icon }]
+    : []),
   { label: "Payout", href: "/dashboard/payout", icon: MoneySend01Icon },
-  { label: "Referrals", href: "/dashboard/referrals", icon: GiftIcon },
+  ...(FEATURES.referrals
+    ? [{ label: "Referrals", href: "/dashboard/referrals", icon: GiftIcon }]
+    : []),
   { label: "Manage dept.", href: "/dashboard/manage", icon: Building03Icon },
 ];
 
@@ -83,6 +86,23 @@ export const REP_ONLY_PREFIXES = REP_LINKS.map((link) => link.href).filter(
 
 export function isRepOnlyPath(pathname: string) {
   return REP_ONLY_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
+/**
+ * Dashboard route prefixes for pilot-cut features — blocked regardless of
+ * role when the corresponding flag in lib/features.ts is off, so a direct
+ * URL hit doesn't reach a page that's been hidden from the nav.
+ */
+const FEATURE_GATED_PREFIXES = [
+  ...(FEATURES.assistant ? [] : ["/dashboard/assistant"]),
+  ...(FEATURES.polls ? [] : ["/dashboard/polls"]),
+  ...(FEATURES.referrals ? [] : ["/dashboard/referrals"]),
+];
+
+export function isFeatureGatedPath(pathname: string) {
+  return FEATURE_GATED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
 }
@@ -110,8 +130,12 @@ export const ADMIN_LINKS: NavLink[] = [
     href: "/admin/transactions",
     icon: ReceiptDollarIcon,
   },
-  { label: "Referrals", href: "/admin/referrals", icon: GiftIcon },
-  { label: "Polls", href: "/admin/polls", icon: CheckmarkSquare01Icon },
+  ...(FEATURES.referrals
+    ? [{ label: "Referrals", href: "/admin/referrals", icon: GiftIcon }]
+    : []),
+  ...(FEATURES.polls
+    ? [{ label: "Polls", href: "/admin/polls", icon: CheckmarkSquare01Icon }]
+    : []),
   { label: "Disputes", href: "/admin/disputes", icon: Megaphone01Icon },
   { label: "Reports", href: "/admin/reports", icon: Analytics01Icon },
   { label: "Settings", href: "/admin/settings", icon: Shield01Icon },

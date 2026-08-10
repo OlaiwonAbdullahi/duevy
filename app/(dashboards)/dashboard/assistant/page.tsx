@@ -25,12 +25,10 @@ import { Modal } from "../_components/Modal";
 import { EmptyState } from "../_components/EmptyState";
 import { getDue, payDue as payDueApi } from "@/lib/api/dues";
 import { getSpace } from "@/lib/api/spaces";
-import { listCards } from "@/lib/api/wallet";
 import { ApiError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
 import { adaptDue, adaptSpace } from "../dues/_components/adapt";
-import type { Due, PayMethod, Space } from "../dues/_components/types";
-import type { Card } from "@/lib/api/types";
+import type { Due, Space } from "../dues/_components/types";
 import { PayDueModal } from "../dues/_components/PayDueModal";
 import { ReceiptModal } from "../dues/_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "../dues/_components/receipt";
@@ -75,7 +73,6 @@ export default function AssistantPage() {
   // Payment-modal state, populated when Duey resolves an `open_payment_modal` action.
   const [payDue, setPayDue] = useState<Due | null>(null);
   const [paySpace, setPaySpace] = useState<Space | null>(null);
-  const [payCards, setPayCards] = useState<Card[]>([]);
   const [payLoading, setPayLoading] = useState(false);
   const [payPending, setPayPending] = useState(false);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -269,13 +266,9 @@ export default function AssistantPage() {
     setPayLoading(true);
     try {
       const due = await getDue(dueId);
-      const [space, cards] = await Promise.all([
-        getSpace(due.spaceId),
-        listCards(),
-      ]);
+      const space = await getSpace(due.spaceId);
       setPayDue(adaptDue(due));
       setPaySpace(adaptSpace(space));
-      setPayCards(cards);
     } catch {
       toast.error("Couldn't open payment for this due.");
     } finally {
@@ -283,48 +276,33 @@ export default function AssistantPage() {
     }
   };
 
-  const finishPayment = (due: Due, space: Space, method: PayMethod, ref: string, card?: Card) => {
+  const finishPayment = (due: Due, space: Space, ref: string) => {
     const payer = {
       name: user?.name ?? "",
       detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
         .filter(Boolean)
         .join(" · "),
     };
-    setReceipts(buildReceipts([due], space, method, payer, [ref], card));
+    setReceipts(buildReceipts([due], space, payer, [ref]));
     pushMessage("bot", `Payment confirmed! ${naira(due.amount)} for ${due.title} is settled. 🎉`);
   };
 
-  const confirmPay = async (method: PayMethod, card?: Card, discountCode?: string) => {
+  const confirmPay = async (discountCode?: string) => {
     if (!payDue || !paySpace) return;
     setPayPending(true);
     try {
-      const result = await payDueApi(
-        payDue.id,
-        method === "card" && card
-          ? { method: "card", cardId: card.id, discountCode }
-          : { method: "online", discountCode },
-      );
+      const result = await payDueApi(payDue.id, { discountCode });
 
-      // Online settles asynchronously rather than treating the due as paid
-      // yet. Monnify returns bank-transfer details to show on the dedicated
-      // payment page; Paystack doesn't (transfer lives on its hosted checkout
-      // page), so redirect there directly instead. conversationId rides along
-      // on the dashboard route so the chat transcript can be restored on return.
-      if (method === "online" && result.checkoutUrl && result.reference) {
+      // Every due payment redirects to a Bachs-hosted checkout page.
+      if (result.checkoutUrl && result.reference) {
         setPayDue(null);
         setPaySpace(null);
-        if (result.bankTransfer) {
-          const qs = new URLSearchParams({ dueId: payDue.id, from: "assistant" });
-          if (conversationId) qs.set("conversationId", conversationId);
-          router.push(`/dashboard/pay/${result.reference}?${qs.toString()}`);
-        } else {
-          window.location.href = result.checkoutUrl;
-        }
+        window.location.href = result.checkoutUrl;
         return;
       }
 
-      const ref = result.transaction?.reference ?? result.reference ?? "";
-      finishPayment(payDue, paySpace, method, ref, card);
+      const ref = result.reference ?? "";
+      finishPayment(payDue, paySpace, ref);
       setPayDue(null);
       setPaySpace(null);
     } catch {
@@ -572,7 +550,6 @@ export default function AssistantPage() {
         <PayDueModal
           dues={[payDue]}
           space={paySpace}
-          cards={payCards}
           pending={payPending}
           onClose={closePaymentModal}
           onConfirm={confirmPay}

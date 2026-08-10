@@ -6,6 +6,7 @@ import { MembershipCard } from "./_components/MembershipCard";
 import { RepsCard } from "./_components/RepsCard";
 import { AuditTrailCard } from "./_components/AuditTrailCard";
 import { DangerZone } from "./_components/DangerZone";
+import { FEATURES } from "@/lib/features";
 
 export default function ManageDeptPage() {
   return (
@@ -24,7 +25,7 @@ export default function ManageDeptPage() {
 
       <div className="mt-6 flex flex-col gap-5">
         <DepartmentProfileCard />
-        <SpaceThemeCard />
+        {FEATURES.themes && <SpaceThemeCard />}
         <MembershipCard />
         <RepsCard />
         <AuditTrailCard />

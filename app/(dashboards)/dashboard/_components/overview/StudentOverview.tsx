@@ -28,6 +28,7 @@ import {
 import { TXN_META, formatTime } from "../../transactions/_components/data";
 import type { HugeIcon } from "../nav-config";
 import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
+import { FEATURES } from "@/lib/features";
 
 const TXN_FALLBACK = { icon: ReceiptDollarIcon as HugeIcon, label: "Activity" };
 function txnMeta(type: string) {
@@ -91,13 +92,15 @@ export function StudentOverview() {
             Your dues and payments at a glance.
           </p>
         </div>
-        <Link
-          href="/dashboard/assistant"
-          className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
-        >
-          <HugeiconsIcon icon={AiChat01Icon} size={16} />
-          Chat with Duey
-        </Link>
+        {FEATURES.assistant && (
+          <Link
+            href="/dashboard/assistant"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
+          >
+            <HugeiconsIcon icon={AiChat01Icon} size={16} />
+            Chat with Duey
+          </Link>
+        )}
       </div>
 
       {error && !loading ? (
@@ -146,12 +149,6 @@ export function StudentOverview() {
               icon={UserAdd01Icon}
               label="Join a department"
               hint="Enter a code to join"
-            />
-            <QuickAction
-              href="/dashboard/settings#payment-methods"
-              icon={CreditCardIcon}
-              label="Add a payment method"
-              hint="Save a card to pay faster"
             />
           </div>
 

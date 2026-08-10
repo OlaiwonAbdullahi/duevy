@@ -139,25 +139,19 @@ export function getPollResults(spaceId: string, pollId: string) {
 
 export type VoteSelection = { categoryId: string; nomineeId: string; quantity: number };
 
-/** Free polls omit `method` entirely — only paid votes name a payment method. */
+/** Free polls omit `method` entirely — a paid vote always pays online. */
 export type CastVotePayload =
   | { selections: VoteSelection[] }
-  | { selections: VoteSelection[]; method: "card"; cardId: string }
   | { selections: VoteSelection[]; method: "online" };
 
 export type CastVoteResult = {
   receiptId?: string;
   totalCharged?: number;
   transaction?: Transaction;
-  /** Present for `online` — show these details in an InvoiceModal, don't redirect. */
+  /** Present for a paid vote — redirect the payer here to complete the Bachs checkout. */
   reference?: string;
   amount?: number;
-  bankTransfer?: {
-    accountNumber: string;
-    bankName: string;
-    accountName: string;
-    expiresAt: string | null;
-  };
+  checkoutUrl?: string;
 };
 
 /** Cast one or more votes. Paid votes require an Idempotency-Key. */

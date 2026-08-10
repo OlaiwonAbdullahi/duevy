@@ -23,17 +23,15 @@ import {
   type VoteSelection,
   type CastVotePayload,
 } from "@/lib/api/polls";
-import { listCards } from "@/lib/api/wallet";
-import { InvoiceModal, type InvoiceDetails } from "@/app/(dashboards)/dashboard/_components/InvoiceModal";
 import { ApiError } from "@/lib/api/errors";
 import { nairaFromKobo } from "@/app/(dashboards)/dashboard/_components/format";
 import { EmptyState } from "@/app/(dashboards)/dashboard/_components/EmptyState";
 import { Skeleton } from "@/app/(dashboards)/dashboard/_components/Skeleton";
-import type { Card, Poll } from "@/lib/api/types";
+import type { Poll } from "@/lib/api/types";
 import { isSpaceThemeId } from "@/app/(dashboards)/dashboard/_components/space-theme";
 import { CategoryCard } from "./_components/CategoryCard";
 import { CategoryVoter } from "./_components/CategoryVoter";
-import { PayVoteModal, type VoteMethod } from "./_components/PayVoteModal";
+import { PayVoteModal } from "./_components/PayVoteModal";
 import { useCountdown } from "./_components/useCountdown";
 import {
   Dialog,
@@ -61,12 +59,9 @@ export default function VotePage() {
   const [selections, setSelections] = useState<Record<string, Selection>>({});
   const [payOpen, setPayOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [payLoading, setPayLoading] = useState(false);
   const [lastReceiptId, setLastReceiptId] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
 
   async function load() {
     try {
@@ -154,14 +149,9 @@ export default function VotePage() {
     setSubmitting(true);
     try {
       const res = await castVote(slug, payload);
-      // Online settles asynchronously — show the invoice and wait for
-      // confirmation instead of redirecting away.
-      if (res.bankTransfer && res.reference) {
-        setInvoice({
-          reference: res.reference,
-          amount: res.amount ?? totalKobo,
-          bankTransfer: res.bankTransfer,
-        });
+      // A paid vote always redirects to a Bachs checkout.
+      if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
         return;
       }
       onVoteSettled(res.receiptId ?? null);
@@ -172,50 +162,30 @@ export default function VotePage() {
           ? "You've already voted in that award."
           : code === "POLL_CLOSED"
             ? "Voting has closed for this poll."
-            : code === "CARD_DECLINED"
-              ? "That card was declined."
-              : err instanceof ApiError
-                ? err.message
-                : "Couldn't cast your vote. Please try again.";
+            : err instanceof ApiError
+              ? err.message
+              : "Couldn't cast your vote. Please try again.";
       toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
-  const castNow = async () => {
+  const castNow = () => {
     if (selectionCount === 0) return;
     if (!authenticated) {
       router.push(`/login?next=${encodeURIComponent(`/vote/${slug}`)}`);
       return;
     }
     if (!poll?.paid) {
-      await submitVote({ selections: buildVoteSelections() });
+      submitVote({ selections: buildVoteSelections() });
       return;
     }
-    // Paid — fetch cards on demand, then open the method picker.
-    setPayLoading(true);
-    try {
-      setCards(await listCards());
-      setPayOpen(true);
-    } catch {
-      toast.error("Couldn't load your payment options.");
-    } finally {
-      setPayLoading(false);
-    }
+    setPayOpen(true);
   };
 
-  const confirmPay = async (method: VoteMethod, card?: Card) => {
-    const voteSelections = buildVoteSelections();
-    if (method === "card" && card) {
-      await submitVote({
-        selections: voteSelections,
-        method: "card",
-        cardId: card.id,
-      });
-    } else {
-      await submitVote({ selections: voteSelections, method: "online" });
-    }
+  const confirmPay = () => {
+    submitVote({ selections: buildVoteSelections(), method: "online" });
   };
 
   const copyLink = async () => {
@@ -366,16 +336,14 @@ export default function VotePage() {
             <button
               type="button"
               onClick={castNow}
-              disabled={payLoading}
+              disabled={submitting}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
             >
-              {payLoading
-                ? "Loading…"
-                : !authenticated
-                  ? "Sign in to vote"
-                  : poll.paid
-                    ? "Continue"
-                    : "Cast vote"}
+              {!authenticated
+                ? "Sign in to vote"
+                : poll.paid
+                  ? "Continue"
+                  : "Cast vote"}
             </button>
           </div>
         </div>
@@ -384,21 +352,9 @@ export default function VotePage() {
       {payOpen && (
         <PayVoteModal
           totalKobo={totalKobo}
-          cards={cards}
           pending={submitting}
           onClose={() => (submitting ? null : setPayOpen(false))}
           onConfirm={confirmPay}
-        />
-      )}
-
-      {invoice && (
-        <InvoiceModal
-          invoice={invoice}
-          onClose={() => setInvoice(null)}
-          onConfirmed={(res) => {
-            setInvoice(null);
-            onVoteSettled(res.transaction?.id ?? null);
-          }}
         />
       )}
 

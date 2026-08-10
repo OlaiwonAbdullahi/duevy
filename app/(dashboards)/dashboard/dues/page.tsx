@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Building03Icon } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../_components/EmptyState";
 import { ListSkeleton } from "../_components/Skeleton";
-import type {
-  Due,
-  JoinableDepartment,
-  PayMethod,
-  Space,
-} from "./_components/types";
-import type { Card } from "@/lib/api/types";
+import type { Due, JoinableDepartment, Space } from "./_components/types";
 import { naira } from "./_components/data";
 import { adaptSpace, adaptDue } from "./_components/adapt";
 import { SpaceCard } from "./_components/SpaceCard";
@@ -25,17 +18,14 @@ import { ReceiptModal } from "./_components/ReceiptModal";
 import { buildReceipts, type Receipt } from "./_components/receipt";
 import { listSpaces, joinSpace } from "@/lib/api/spaces";
 import { listDues, payDue } from "@/lib/api/dues";
-import { listCards } from "@/lib/api/wallet";
 import { useRole } from "../_components/role-context";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function DuesPage() {
   const { isPendingRep } = useRole();
   const { user } = useAuth();
-  const router = useRouter();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [dues, setDues] = useState<Due[]>([]);
-  const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
@@ -46,15 +36,13 @@ export default function DuesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [apiSpaces, apiDues, savedCards] = await Promise.all([
+        const [apiSpaces, apiDues] = await Promise.all([
           listSpaces(),
           listDues({ perPage: 100 }),
-          listCards(),
         ]);
         if (cancelled) return;
         setSpaces(apiSpaces.map(adaptSpace));
         setDues(apiDues.data.map(adaptDue));
-        setCards(savedCards);
       } catch {
         if (!cancelled) toast.error("Couldn't load your dues.");
       } finally {
@@ -111,13 +99,7 @@ export default function DuesPage() {
     }
   };
 
-  const finishPayment = (
-    targetDues: Due[],
-    space: Space,
-    method: PayMethod,
-    refs: string[],
-    card?: Card,
-  ) => {
+  const finishPayment = (targetDues: Due[], space: Space, refs: string[]) => {
     const targetIds = targetDues.map((d) => d.id);
     const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
     setDues((list) =>
@@ -131,13 +113,13 @@ export default function DuesPage() {
         .filter(Boolean)
         .join(" · "),
     };
-    setReceipts(buildReceipts(targetDues, space, method, payer, refs, card));
+    setReceipts(buildReceipts(targetDues, space, payer, refs));
     toast.success(`${naira(total)} paid`, {
       description: targetDues.length === 1 ? targetDues[0].title : `${targetDues.length} dues settled`,
     });
   };
 
-  const confirmPay = async (method: PayMethod, card?: Card, discountCode?: string) => {
+  const confirmPay = async (discountCode?: string) => {
     if (payDues.length === 0 || !selected) return;
     if (isPendingRep) {
       toast.info("Paused during review", {
@@ -151,34 +133,20 @@ export default function DuesPage() {
 
     try {
       const results = await Promise.all(
-        targetDues.map((d) =>
-          payDue(
-            d.id,
-            method === "card" && card
-              ? { method: "card", cardId: card.id, discountCode }
-              : { method: "online", discountCode },
-          ),
-        ),
+        targetDues.map((d) => payDue(d.id, { discountCode })),
       );
-      console.log("[pay-due] initiation response", results);
 
-      // Online settles asynchronously — for the first due (mirrors the
-      // pre-migration redirect flow's single-checkout simplification for
-      // multi-due batches) rather than marking anything paid yet. Monnify
-      // returns bank-transfer details to show in-app; Paystack doesn't
-      // (transfer lives on its hosted checkout page), so redirect there directly.
+      // Every due payment redirects to a Bachs checkout — one checkout for
+      // the whole batch (mirrors the pre-migration single-checkout
+      // simplification for multi-due batches).
       const pendingInvoice = results.find((r) => r.checkoutUrl);
-      if (method === "online" && pendingInvoice?.checkoutUrl && pendingInvoice.reference) {
-        if (pendingInvoice.bankTransfer) {
-          router.push(`/dashboard/pay/${pendingInvoice.reference}?dueId=${targetDues[0].id}`);
-        } else {
-          window.location.href = pendingInvoice.checkoutUrl;
-        }
+      if (pendingInvoice?.checkoutUrl) {
+        window.location.href = pendingInvoice.checkoutUrl;
         return;
       }
 
-      const refs = results.map((r) => r.transaction?.reference ?? r.reference ?? "");
-      finishPayment(targetDues, space, method, refs, card);
+      const refs = results.map((r) => r.reference ?? "");
+      finishPayment(targetDues, space, refs);
     } catch {
       setPendingIds([]);
       toast.error("Payment failed. Please try again.");
@@ -313,7 +281,6 @@ export default function DuesPage() {
         <PayDueModal
           dues={payDues}
           space={selected}
-          cards={cards}
           pending={pendingIds.length > 0}
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}

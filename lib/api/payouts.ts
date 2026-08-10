@@ -2,6 +2,9 @@ import { apiClient, type Page } from "./client";
 import type {
   BankAccount,
   DueCategory,
+  IdentityMethods,
+  OnboardingChecklist,
+  OnboardingStatus,
   Payout,
   PayoutApprovalDecision,
   PayoutSummary,
@@ -19,9 +22,12 @@ function toQuery(params: Record<string, string | number | undefined>) {
 
 export type Bank = { code: string; name: string };
 
-/** Live Nigerian bank list (name + CBN code) from the provider. Auth required. */
-export function listBanks() {
-  return apiClient.get<Bank[]>("/banks");
+/**
+ * Live Nigerian bank list (name + CBN code), scoped to the space's own Bachs
+ * connected account — creating one on first use if it doesn't exist yet.
+ */
+export function listBanks(spaceId: string) {
+  return apiClient.get<Bank[]>(`/banks?spaceId=${encodeURIComponent(spaceId)}`);
 }
 
 /** Available / pending / lifetime — all net of the 3% processing charge. */
@@ -39,7 +45,7 @@ export type BankAccountInput = {
 };
 
 export type ResolvedAccount = {
-  /** Holder name resolved via Monnify name-enquiry. */
+  /** Holder name resolved via Bachs name-enquiry. */
   accountName: string;
 };
 
@@ -161,5 +167,56 @@ export function getPayoutBreakdown(
 ): Promise<Page<PayoutBreakdown>> {
   return apiClient.getPage<PayoutBreakdown>(
     `/spaces/${spaceId}/payout/breakdown${toQuery(query)}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bachs connected-account onboarding — in-app, no redirect to a hosted page.
+// ---------------------------------------------------------------------------
+
+/** Status badge off the space's connected-account row — cheap, no full checklist fetch. */
+export function getOnboardingStatus(spaceId: string) {
+  return apiClient.get<OnboardingStatus>(`/spaces/${spaceId}/payout/onboarding-status`);
+}
+
+/** The Tasks/checklist to render as a form. Field shapes here aren't fully confirmed yet — kept loosely typed. */
+export function getOnboardingChecklist(spaceId: string) {
+  return apiClient.get<OnboardingChecklist>(`/spaces/${spaceId}/payout/onboarding/checklist`);
+}
+
+/** Upload an onboarding document (ID, proof of address, ...). Returns an `uploadId` to reference in `submitOnboarding`. */
+export function uploadOnboardingDocument(spaceId: string, file: File, scope: string) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("scope", scope);
+  return apiClient.post<{ uploadId: string }>(
+    `/spaces/${spaceId}/payout/onboarding/documents`,
+    form,
+  );
+}
+
+/** `draft: true` for a partial save — validation issues come back on the response instead of failing the request. */
+export function submitOnboarding(spaceId: string, data: Record<string, unknown>, draft = false) {
+  return apiClient.post<OnboardingChecklist>(`/spaces/${spaceId}/payout/onboarding/submit`, {
+    draft,
+    data,
+  });
+}
+
+export function getIdentityMethods(spaceId: string) {
+  return apiClient.get<IdentityMethods>(`/spaces/${spaceId}/payout/onboarding/identity/methods`);
+}
+
+/** `consent` must be `true` — the rep is attesting to a government database check; show real consent copy before calling this. */
+export function submitNin(spaceId: string, nin: string, consent: true, selfie?: string) {
+  return apiClient.post<{ status: "verified" | "failed" | "pending"; reason?: string }>(
+    `/spaces/${spaceId}/payout/onboarding/identity/nin`,
+    { nin, consent, selfie },
+  );
+}
+
+export function getIdentityStatus(spaceId: string) {
+  return apiClient.get<{ status: string; failureReason?: string }>(
+    `/spaces/${spaceId}/payout/onboarding/identity/status`,
   );
 }

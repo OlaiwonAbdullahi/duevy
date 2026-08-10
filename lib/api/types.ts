@@ -118,7 +118,7 @@ export type TxnStatus = "completed" | "pending" | "failed";
 export type Transaction = {
   id: string;
   type: TxnType;
-  /** e.g. "Visa •••• 4242" · "Paystack". */
+  /** "Wallet" · "Bachs". */
   method?: string;
   title?: string;
   /** Signed kobo: positive = credit in, negative = debit out. */
@@ -133,20 +133,6 @@ export type StudentOverview = {
   paidThisSession: number;
   openDues: Due[];
   recentTransactions: Transaction[];
-};
-
-export type Card = {
-  id: string;
-  brand: string;
-  last4: string;
-  expiry: string;
-  isDefault: boolean;
-};
-
-/** Returned by `POST /wallet/cards` — a hosted checkout to verify + tokenize the card. */
-export type SaveCardResult = {
-  checkoutUrl: string;
-  reference: string;
 };
 
 export type NotificationPreferences = {
@@ -302,6 +288,41 @@ export type BankAccount = {
   bankName?: string;
   accountNumber: string;
   accountName?: string;
+};
+
+// ---- Bachs connected-account onboarding ------------------------------------
+
+export type OnboardingStatus = {
+  setupStatus: "incomplete" | "awaiting_review" | "complete";
+  transfersActive: boolean;
+  payoutsActive: boolean;
+};
+
+export type IdentityMethods = {
+  hostedAvailable: boolean;
+  ninAvailable: boolean;
+  country: string;
+};
+
+/**
+ * The Tasks/checklist for a connected account's onboarding. Field shapes here
+ * aren't fully confirmed against a live Bachs sandbox yet — kept loose
+ * rather than over-committing to an exact structure.
+ */
+export type OnboardingChecklist = {
+  checklist?: Array<{
+    key: string;
+    state: string;
+    provided: boolean;
+    errorReason?: string;
+  }>;
+  tasks?: Array<{
+    title: string;
+    type: string;
+    status: string;
+    rejectionReason?: string;
+  }>;
+  errors?: Array<{ field?: string; issue?: string }>;
 };
 
 // ---- Polls (§11) ----------------------------------------------------------
