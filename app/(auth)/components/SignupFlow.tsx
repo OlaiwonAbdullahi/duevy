@@ -15,15 +15,14 @@ import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
-import CoRepsStep from "./CoRepsStep";
 import SpaceSettingsStep, { type SpaceSettings } from "./SpaceSettingsStep";
 import { CheckEmailNotice } from "./CheckEmailNotice";
 
-type StepId = "role" | "account" | "space" | "coReps" | "settings";
+type StepId = "role" | "account" | "space" | "settings";
 
 const STEPS: Record<SignupRole, StepId[]> = {
   student: ["role", "account"],
-  rep: ["role", "account", "space", "coReps", "settings"],
+  rep: ["role", "account", "space", "settings"],
 };
 
 const ROLE_META: Record<SignupRole, { label: string; icon: typeof UserIcon }> =
@@ -88,7 +87,6 @@ export default function SignupFlow() {
     acceptedTerms: false,
   });
   const [space, setSpace] = useState<SpaceDetails>(EMPTY_SPACE);
-  const [coReps, setCoReps] = useState<string[]>([]);
   const [settings, setSettings] = useState<SpaceSettings>({
     theme: "emerald",
   });
@@ -158,7 +156,6 @@ export default function SignupFlow() {
           school: space.school,
           faculty: space.faculty || undefined,
           theme: data.theme,
-          coRepInvites: coReps.length > 0 ? coReps : undefined,
         },
       });
       setSubmittedEmail(account.email);
@@ -352,19 +349,6 @@ export default function SignupFlow() {
         />
       )}
 
-      {currentId === "coReps" && (
-        <CoRepsStep
-          spaceName={space.spaceName || "your department"}
-          defaultValues={coReps}
-          submitLabel="Continue"
-          onBack={goBack}
-          onSubmit={(emails) => {
-            setCoReps(emails);
-            goNext();
-          }}
-        />
-      )}
-
       {currentId === "settings" && (
         <SpaceSettingsStep
           defaultValues={settings}
@@ -416,11 +400,6 @@ function headerFor(
       return {
         title: "Your department",
         subtitle: "Set up the space you'll collect dues for.",
-      };
-    case "coReps":
-      return {
-        title: "Invite your co-reps",
-        subtitle: `Add anyone who helps run ${space}. You can skip this for now.`,
       };
     case "settings":
       return {

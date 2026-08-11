@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { LockIcon, Shield01Icon, CreditCardIcon } from "@hugeicons/core-free-icons";
+import { LockIcon, Shield01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
@@ -17,13 +17,9 @@ import {
   getAdminRoles,
   updateAdminRole,
   listAuditLogs,
-  getPaymentGatewaySettings,
-  updatePaymentGateway,
   type AdminRoleInfo,
   type AdminAuditLog,
   type AdminPermissions,
-  type PaymentGateway,
-  type PaymentGatewaySettings,
 } from "@/lib/api/admin";
 
 type PermissionKey = keyof AdminPermissions;
@@ -47,11 +43,6 @@ const SEVERITY_TONES: Record<string, StatusTone> = {
   critical: "bad",
 };
 
-const GATEWAY_LABELS: Record<PaymentGateway, string> = {
-  paystack: "Paystack",
-  monnify: "Monnify",
-};
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("en-NG", {
     day: "numeric",
@@ -62,15 +53,11 @@ function formatDate(iso: string) {
 }
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<"roles" | "gateway" | "audit">("roles");
+  const [activeTab, setActiveTab] = useState<"roles" | "audit">("roles");
 
   const [roles, setRoles] = useState<AdminRoleInfo[]>([]);
   const [rolesLoading, setRolesLoading] = useState(true);
   const [savingRole, setSavingRole] = useState<AdminRoleInfo["role"] | null>(null);
-
-  const [gatewaySettings, setGatewaySettings] = useState<PaymentGatewaySettings | null>(null);
-  const [gatewayLoading, setGatewayLoading] = useState(true);
-  const [savingGateway, setSavingGateway] = useState(false);
 
   const [logs, setLogs] = useState<AdminAuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
@@ -83,13 +70,6 @@ export default function AdminSettingsPage() {
       .then(setRoles)
       .catch(() => toast.error("Couldn't load admin roles."))
       .finally(() => setRolesLoading(false));
-  }, []);
-
-  useEffect(() => {
-    getPaymentGatewaySettings()
-      .then(setGatewaySettings)
-      .catch(() => toast.error("Couldn't load payment gateway settings."))
-      .finally(() => setGatewayLoading(false));
   }, []);
 
   useEffect(() => {
@@ -136,29 +116,11 @@ export default function AdminSettingsPage() {
     }
   }
 
-  async function switchGateway(gateway: PaymentGateway) {
-    if (!gatewaySettings || gateway === gatewaySettings.active) return;
-    setSavingGateway(true);
-    try {
-      const { active } = await updatePaymentGateway(gateway);
-      setGatewaySettings((prev) => (prev ? { ...prev, active } : prev));
-      toast.success(`Active payment gateway switched to ${GATEWAY_LABELS[active]}.`);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "GATEWAY_NOT_CONFIGURED") {
-        toast.error(`${GATEWAY_LABELS[gateway]} isn't configured — its env credentials are missing.`);
-      } else {
-        toast.error(err instanceof ApiError ? err.message : "Couldn't switch payment gateway.");
-      }
-    } finally {
-      setSavingGateway(false);
-    }
-  }
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Settings"
-        description="Admin roles, the active payment gateway and the platform-wide audit trail."
+        description="Admin roles and the platform-wide audit trail."
       />
 
       <Tabs
@@ -166,7 +128,6 @@ export default function AdminSettingsPage() {
         onChange={setActiveTab}
         items={[
           { value: "roles", label: "Roles" },
-          { value: "gateway", label: "Payment gateway" },
           { value: "audit", label: "Audit log" },
         ]}
       />
@@ -212,67 +173,6 @@ export default function AdminSettingsPage() {
                 </tr>
               ))}
             </DataTable>
-          )}
-        </TableCard>
-      )}
-
-      {activeTab === "gateway" && (
-        <TableCard
-          title="Payment gateway"
-          subtitle="Which processor handles platform money right now"
-        >
-          {gatewayLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="h-16 animate-pulse rounded-xl bg-paper" />
-              ))}
-            </div>
-          ) : !gatewaySettings ? (
-            <EmptyState
-              icon={CreditCardIcon}
-              title="Couldn't load gateway settings"
-              description="Try refreshing the page."
-            />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(Object.keys(gatewaySettings.gateways) as PaymentGateway[]).map((gateway) => {
-                const info = gatewaySettings.gateways[gateway];
-                const isActive = gatewaySettings.active === gateway;
-                return (
-                  <button
-                    key={gateway}
-                    type="button"
-                    disabled={savingGateway || isActive || !info.configured}
-                    onClick={() => switchGateway(gateway)}
-                    className={
-                      "flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-colors disabled:cursor-not-allowed " +
-                      (isActive
-                        ? "border-brand bg-brand/5"
-                        : "border-cloud hover:bg-paper/60 disabled:hover:bg-transparent")
-                    }
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cloud">
-                        <HugeiconsIcon icon={CreditCardIcon} size={18} className="text-ink-soft" />
-                      </span>
-                      <div>
-                        <p className="font-semibold text-ink">{GATEWAY_LABELS[gateway]}</p>
-                        <p className="text-xs text-ink-soft">
-                          {info.configured ? "Credentials configured" : "Not configured"}
-                        </p>
-                      </div>
-                    </div>
-                    {isActive ? (
-                      <StatusBadge tone="ok">Active</StatusBadge>
-                    ) : !info.configured ? (
-                      <StatusBadge tone="neutral">Unavailable</StatusBadge>
-                    ) : (
-                      <StatusBadge tone="neutral">Switch</StatusBadge>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
           )}
         </TableCard>
       )}

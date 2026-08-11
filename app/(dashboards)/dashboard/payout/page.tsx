@@ -9,6 +9,7 @@ import type { BankAccount, Payout } from "./_components/types";
 const EMPTY_ACCOUNT: BankAccount = { bankName: "", accountName: "", accountNumber: "" };
 import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { PayoutAccountCard } from "./_components/PayoutAccountCard";
+import { OnboardingCard } from "./_components/OnboardingCard";
 import { PayoutHistory } from "./_components/PayoutHistory";
 import { PendingApprovalsCard } from "./_components/PendingApprovalsCard";
 import { WithdrawModal } from "./_components/WithdrawModal";
@@ -95,7 +96,7 @@ export default function PayoutPage() {
       await requestPayout(spaceId, { amount: amount * 100 });
       setWithdrawOpen(false);
       toast.success("Payout requested", {
-        description: "Awaiting approval from your department's reps.",
+        description: "We're processing it now — check the history below for status.",
       });
       await refresh(spaceId);
     } catch {
@@ -107,7 +108,7 @@ export default function PayoutPage() {
     if (!spaceId) return;
     try {
       // The API strictly takes { bankCode, accountNumber } — the account name is
-      // resolved + verified server-side via Paystack name-enquiry.
+      // resolved + verified server-side via Bachs name-enquiry.
       await setPayoutAccount(spaceId, {
         bankCode: next.bankCode,
         accountNumber: next.accountNumber,
@@ -155,20 +156,27 @@ export default function PayoutPage() {
           <Skeleton className="h-48 rounded-3xl" />
         </div>
       ) : (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <PayoutBalanceCard
-            available={available}
-            collected={collected}
-            pending={pending}
-            canWithdraw={isLead}
-            onWithdraw={() => setWithdrawOpen(true)}
-          />
-          <PayoutAccountCard
-            account={account}
-            hasAccount={hasAccount}
-            onEdit={() => setEditOpen(true)}
-          />
-        </div>
+        <>
+          {spaceId && (
+            <div className="mt-6">
+              <OnboardingCard spaceId={spaceId} />
+            </div>
+          )}
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+            <PayoutBalanceCard
+              available={available}
+              collected={collected}
+              pending={pending}
+              canWithdraw={isLead}
+              onWithdraw={() => setWithdrawOpen(true)}
+            />
+            <PayoutAccountCard
+              account={account}
+              hasAccount={hasAccount}
+              onEdit={() => setEditOpen(true)}
+            />
+          </div>
+        </>
       )}
 
       {!loading && spaceId && (

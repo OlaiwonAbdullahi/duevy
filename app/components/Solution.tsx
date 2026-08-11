@@ -14,7 +14,7 @@ const blocks = [
   {
     icon: ShieldIcon,
     title: "Reps stay accountable",
-    body: "Payouts need approval from a quorum before funds are released. The rep can't move money alone, and nobody can accuse them of it.",
+    body: "Every department gets its own verified payout account, and every withdrawal is logged and traceable back to who requested it.",
   },
 ];
 

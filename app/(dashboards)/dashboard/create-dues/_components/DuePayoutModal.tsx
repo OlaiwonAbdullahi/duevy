@@ -14,8 +14,7 @@ import { getDuePayoutSummary, requestDuePayout } from "@/lib/api/payouts";
 
 /**
  * Requesting a payout scoped to a single due's collected funds — for the lead,
- * or the co-rep this due is assigned to. Every payout (this one included) now
- * needs 70% of the space's reps to approve before it disburses.
+ * or the co-rep this due is assigned to. Disburses immediately once requested.
  */
 export function DuePayoutModal({
   spaceId,
@@ -105,8 +104,7 @@ export function DuePayoutModal({
       </div>
 
       <p className="mt-3 text-xs leading-5 text-ink-soft">
-        This needs 70% of your department&apos;s reps to approve before it
-        disburses — you can track it from the Payout page.
+        This is processed right away — you can track it from the Payout page.
       </p>
 
       <Button

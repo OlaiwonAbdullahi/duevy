@@ -8,7 +8,6 @@ import {
   AddInvoiceIcon,
   Award01Icon,
   CheckmarkSquare01Icon,
-  CreditCardIcon,
   Download01Icon,
   GiftIcon,
   InformationCircleIcon,
@@ -29,6 +28,7 @@ import { useRepSpace } from "./use-rep-space";
 import { listRepDues, listMembers } from "@/lib/api/rep";
 import { listPolls } from "@/lib/api/polls";
 import type { RepDue, SpaceMember, Poll } from "@/lib/api/types";
+import { FEATURES } from "@/lib/features";
 
 type CommandItem = {
   id: string;
@@ -66,28 +66,24 @@ const STUDENT_ACTIONS: Omit<CommandItem, "id">[] = [
   },
   {
     group: "Quick actions",
-    icon: CreditCardIcon,
-    label: "Add a card",
-    sublabel: "Save a debit card for payments",
-    href: "/dashboard/settings#payment-methods",
-    keywords: "add card debit payment method visa mastercard",
-  },
-  {
-    group: "Quick actions",
     icon: Download01Icon,
     label: "Download a receipt",
     sublabel: "Export a payment as PDF",
     href: "/dashboard/transactions",
     keywords: "receipt export pdf download transaction history proof",
   },
-  {
-    group: "Quick actions",
-    icon: GiftIcon,
-    label: "Invite friends",
-    sublabel: "Share your referral code",
-    href: "/dashboard/referrals",
-    keywords: "invite refer referral code earn bonus friends share",
-  },
+  ...(FEATURES.referrals
+    ? [
+        {
+          group: "Quick actions",
+          icon: GiftIcon,
+          label: "Invite friends",
+          sublabel: "Share your referral code",
+          href: "/dashboard/referrals",
+          keywords: "invite refer referral code earn bonus friends share",
+        },
+      ]
+    : []),
   {
     group: "Quick actions",
     icon: Settings02Icon,
@@ -124,14 +120,18 @@ const REP_ACTIONS: Omit<CommandItem, "id">[] = [
     href: "/dashboard/create-dues",
     keywords: "create raise new due levy handout collect",
   },
-  {
-    group: "Quick actions",
-    icon: CheckmarkSquare01Icon,
-    label: "Create a vote poll",
-    sublabel: "Set up award voting",
-    href: "/dashboard/polls",
-    keywords: "create poll vote award dinner nominee ballot election",
-  },
+  ...(FEATURES.polls
+    ? [
+        {
+          group: "Quick actions",
+          icon: CheckmarkSquare01Icon,
+          label: "Create a vote poll",
+          sublabel: "Set up award voting",
+          href: "/dashboard/polls",
+          keywords: "create poll vote award dinner nominee ballot election",
+        },
+      ]
+    : []),
   {
     group: "Quick actions",
     icon: Notification03Icon,
@@ -228,7 +228,7 @@ function buildIndex(
     keywords: `${student.name} ${student.matricNo} ${student.email}`.toLowerCase(),
   }));
 
-  const polls: CommandItem[] = repData.polls.map((poll) => ({
+  const polls: CommandItem[] = !FEATURES.polls ? [] : repData.polls.map((poll) => ({
     id: `poll-${poll.id}`,
     group: "Polls",
     icon: Award01Icon,
@@ -274,7 +274,7 @@ export function CommandPalette({
         Promise.all([
           listRepDues(spaceId),
           listMembers(spaceId, { perPage: 50 }),
-          listPolls(spaceId),
+          FEATURES.polls ? listPolls(spaceId) : Promise.resolve([]),
         ])
           .then(([dues, students, polls]) =>
             setRepData({ dues, students: students.data, polls }),

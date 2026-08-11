@@ -26,6 +26,7 @@ import {
   createDue,
   updateDue,
   deleteDue,
+  closeDue,
   type DueDraft as ApiDueDraft,
 } from "@/lib/api/rep";
 import type { RepDue as ApiRepDue } from "@/lib/api/types";
@@ -71,6 +72,7 @@ export default function CreateDuesPage() {
   const [editing, setEditing] = useState<RepDue | null>(null);
   const [viewingDue, setViewingDue] = useState<RepDue | null>(null);
   const [toDelete, setToDelete] = useState<RepDue | null>(null);
+  const [toClose, setToClose] = useState<RepDue | null>(null);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -156,6 +158,22 @@ export default function CreateDuesPage() {
     } catch {
       setDues(prev);
       toast.error("Couldn't delete the due.");
+    }
+  };
+
+  const closeDueAction = async (due: RepDue) => {
+    if (!spaceId) return;
+    const prev = dues;
+    setDues((list) =>
+      list.map((d) => (d.id === due.id ? { ...d, status: "closed" } : d)),
+    );
+    setToClose(null);
+    try {
+      await closeDue(spaceId, due.id);
+      toast.success("Due closed", { description: due.title });
+    } catch {
+      setDues(prev);
+      toast.error("Couldn't close the due.");
     }
   };
 
@@ -274,6 +292,7 @@ export default function CreateDuesPage() {
                           due={due}
                           onEdit={openEdit}
                           onDelete={setToDelete}
+                          onClose={setToClose}
                           onViewCollections={openCollections}
                         />
                       ))}
@@ -297,6 +316,19 @@ export default function CreateDuesPage() {
         confirmLabel="Delete due"
         onConfirm={() => toDelete && remove(toDelete)}
         onClose={() => setToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={!!toClose}
+        title="Close this due?"
+        description={
+          toClose
+            ? `No further payments can be collected for "${toClose.title}" once closed. This can't be undone.`
+            : ""
+        }
+        confirmLabel="Close due"
+        onConfirm={() => toClose && closeDueAction(toClose)}
+        onClose={() => setToClose(null)}
       />
     </div>
   );

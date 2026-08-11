@@ -4,6 +4,7 @@ import {
   Delete02Icon,
   Clock01Icon,
   UserMultipleIcon,
+  SquareLock02Icon,
 } from "@hugeicons/core-free-icons";
 import {
   relativeDue,
@@ -17,11 +18,13 @@ export function DueListRow({
   due,
   onEdit,
   onDelete,
+  onClose,
   onViewCollections,
 }: {
   due: RepDue;
   onEdit: (due: RepDue) => void;
   onDelete: (due: RepDue) => void;
+  onClose: (due: RepDue) => void;
   onViewCollections: (due: RepDue) => void;
 }) {
   const rel = relativeDue(due.dueDate);
@@ -100,6 +103,17 @@ export function DueListRow({
           >
             <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
           </button>
+          {due.status === "active" && (
+            <button
+              type="button"
+              onClick={() => onClose(due)}
+              aria-label={`Close ${due.title}`}
+              title="Close due"
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer"
+            >
+              <HugeiconsIcon icon={SquareLock02Icon} size={16} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onDelete(due)}

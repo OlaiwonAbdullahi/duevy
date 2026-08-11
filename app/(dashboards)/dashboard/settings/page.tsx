@@ -4,7 +4,6 @@ import { ProfileCard } from "./_components/ProfileCard";
 import { NotificationsCard } from "./_components/NotificationsCard";
 import { AppearanceCard } from "./_components/AppearanceCard";
 import { TourCard } from "./_components/TourCard";
-import { PaymentMethodsCard } from "./_components/PaymentMethodsCard";
 import { SecurityCard } from "./_components/SecurityCard";
 import { DangerZone } from "./_components/DangerZone";
 
@@ -25,9 +24,6 @@ export default function SettingsPage() {
         <NotificationsCard />
         <AppearanceCard />
         <TourCard />
-        <div id="payment-methods" className="scroll-mt-24">
-          <PaymentMethodsCard />
-        </div>
         <SecurityCard />
         <DangerZone />
       </div>
