@@ -25,12 +25,12 @@ export const metadata: Metadata = {
     template: "%s | Duevy",
   },
   description:
-    "Duevy gives Nigerian campus reps a simple way to collect dues, levies, and payments — while every student sees exactly where their money went.",
+    "Duevy gives campus reps a simple way to collect dues, levies, and payments — while every student sees exactly where their money went.",
   keywords: [
     "campus dues collection Nigeria",
     "student dues payment",
     "departmental levies",
-    "Nigerian university fintech",
+    "University fintech",
     "course rep payments",
     "class rep payments app",
     "duevy",
