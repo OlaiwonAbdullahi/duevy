@@ -1,10 +1,6 @@
 import { ShieldIcon } from "./icons";
 
-const rails = [
-  { name: "Monnify", domain: "monnify.com" },
-  { name: "Paystack", domain: "paystack.com" },
-  { name: "Google Gemma", domain: "deepmind.google" },
-];
+const rails = [{ name: "Bachs", domain: "bachs.io" }];
 
 export default function TrustBar() {
   return (
@@ -15,7 +11,7 @@ export default function TrustBar() {
           Powered by trusted rails
         </span>
         <p className="text-[#1b2520] text-base md:text-lg leading-relaxed max-w-3xl mb-10">
-          Every payment moves on Monify. Funds sit in secure, partitioned
+          Every payment moves on Bachs. Funds sit in secure, partitioned
           accounts —{" "}
           <span className="font-semibold">
             student money and platform money never mix

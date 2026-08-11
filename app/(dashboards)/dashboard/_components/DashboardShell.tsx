@@ -8,10 +8,11 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
 import { TourProvider } from "./DashboardTour";
-import { getDashboardGroups, isRepOnlyPath } from "./nav-config";
+import { getDashboardGroups, isRepOnlyPath, isFeatureGatedPath } from "./nav-config";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { RepOnlyNotice } from "./RepOnlyNotice";
+import { FeatureUnavailableNotice } from "./FeatureUnavailableNotice";
 import { CommandPalette } from "./CommandPalette";
 
 /** Shown across the dashboard while a rep application is under admin review. */
@@ -59,7 +60,9 @@ function ShellInner({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Students who reach a rep-only route by URL get a graceful notice, not the tool.
-  const blocked = !isRep && isRepOnlyPath(pathname);
+  const repBlocked = !isRep && isRepOnlyPath(pathname);
+  // Anyone who reaches a pilot-cut route by URL gets the same treatment.
+  const featureBlocked = isFeatureGatedPath(pathname);
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -75,7 +78,13 @@ function ShellInner({ children }: { children: ReactNode }) {
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {isPendingRep && <PendingRepBanner />}
           {!isPendingRep && user && !user.emailVerified && <VerifyEmailBanner />}
-          {blocked ? <RepOnlyNotice /> : children}
+          {featureBlocked ? (
+            <FeatureUnavailableNotice />
+          ) : repBlocked ? (
+            <RepOnlyNotice />
+          ) : (
+            children
+          )}
         </main>
       </div>
 

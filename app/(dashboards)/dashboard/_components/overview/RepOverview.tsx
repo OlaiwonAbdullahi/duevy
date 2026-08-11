@@ -29,6 +29,7 @@ import { nairaFromKobo } from "../format";
 import { timeAgo } from "../notifications-data";
 import { useRepSpace } from "../use-rep-space";
 import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
+import { FEATURES } from "@/lib/features";
 
 export function RepOverview() {
   const { user } = useAuth();
@@ -157,18 +158,22 @@ export function RepOverview() {
               label="Request payout"
               hint="Withdraw funds"
             />
-            <QuickAction
-              href="/dashboard/polls"
-              icon={CheckmarkSquare01Icon}
-              label="Create a poll"
-              hint="Set up award votes"
-            />
-            <QuickAction
-              href="/dashboard/assistant"
-              icon={AiChat01Icon}
-              label="Chat with Duey"
-              hint="Ask about your dues"
-            />
+            {FEATURES.polls && (
+              <QuickAction
+                href="/dashboard/polls"
+                icon={CheckmarkSquare01Icon}
+                label="Create a poll"
+                hint="Set up award votes"
+              />
+            )}
+            {FEATURES.assistant && (
+              <QuickAction
+                href="/dashboard/assistant"
+                icon={AiChat01Icon}
+                label="Chat with Duey"
+                hint="Ask about your dues"
+              />
+            )}
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">

@@ -49,6 +49,3 @@ export type JoinableDepartment = Space & {
   faculty: string;
   dues: Due[];
 };
-
-/** How a due gets settled from the pay modal. */
-export type PayMethod = "card" | "online";

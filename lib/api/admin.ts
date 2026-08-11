@@ -276,6 +276,17 @@ export function refundTransaction(txnId: string, payload: { amount?: number; rea
   return apiClient.post<AdminTransaction>(`/admin/transactions/${txnId}/refund`, payload);
 }
 
+/**
+ * Manually mark a due as paid for a user — fixes a payment that genuinely
+ * happened (e.g. a webhook that never landed) but never got recorded.
+ */
+export function manualCreditDue(
+  dueId: string,
+  payload: { userId: string; reference?: string; reason: string },
+) {
+  return apiClient.post<{ id: string; reference: string }>(`/admin/dues/${dueId}/credit`, payload);
+}
+
 // ---------------------------------------------------------------------------
 // 14.6 Disputes
 // ---------------------------------------------------------------------------
@@ -452,29 +463,7 @@ export function reportDownloadPath(reportId: string) {
   return `/admin/reports/${reportId}/download`;
 }
 
-// ---------------------------------------------------------------------------
-// 14.11 Payment gateway
-// ---------------------------------------------------------------------------
-
-export type PaymentGateway = "paystack" | "monnify";
-
-export type PaymentGatewaySettings = {
-  active: PaymentGateway;
-  gateways: Record<PaymentGateway, { configured: boolean }>;
-};
-
-/** Active payment gateway plus which gateways have credentials configured. Any admin. */
-export function getPaymentGatewaySettings() {
-  return apiClient.get<PaymentGatewaySettings>("/admin/settings/payment-gateway");
-}
-
-/**
- * Switch the platform's active payment gateway. Super admin only — same gate as
- * `/admin/roles/:role`, since this redirects all platform money. 409s with
- * `GATEWAY_NOT_CONFIGURED` if the target gateway's env credentials aren't set.
- */
-export function updatePaymentGateway(gateway: PaymentGateway) {
-  return apiClient.put<{ active: PaymentGateway }>("/admin/settings/payment-gateway", { gateway });
-}
+// Bachs is the sole, non-switchable payment provider — the admin gateway-
+// switch endpoints that used to live here are gone.
 
 export type { ApiMeta };

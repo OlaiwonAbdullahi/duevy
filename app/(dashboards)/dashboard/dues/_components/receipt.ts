@@ -1,7 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import { dueReceiptPath } from "@/lib/api/dues";
-import type { Card } from "@/lib/api/types";
-import type { Due, PayMethod, Space } from "./types";
+import type { Due, Space } from "./types";
 
 /**
  * A settled payment, issued per due so every line a student pays gets its own
@@ -17,36 +16,24 @@ export type Receipt = {
   amount: number;
   spaceName: string;
   spaceKind: Space["kind"];
-  method: PayMethod;
   methodDetail: string;
   payerName: string;
   payerDetail: string;
   paidAt: string; // ISO
 };
 
-const METHOD_LABEL: Record<PayMethod, string> = {
-  card: "Card",
-  online: "Bank transfer / USSD",
-};
-
 /**
- * Mint one receipt entry per paid due, sharing the payment's method and
- * timestamp. `refs` is the real backend reference per due, in the same order
- * as `dues` (from each due's own `payDue()` response).
+ * Mint one receipt entry per paid due, sharing the payment's timestamp.
+ * `refs` is the real backend reference per due, in the same order as `dues`
+ * (from each due's own `payDue()` response).
  */
 export function buildReceipts(
   dues: Due[],
   space: Space,
-  method: PayMethod,
   payer: { name: string; detail: string },
   refs: string[],
-  card?: Card,
 ): Receipt[] {
   const paidAt = new Date().toISOString();
-  const methodDetail =
-    method === "card" && card
-      ? `${card.brand} •••• ${card.last4}`
-      : METHOD_LABEL[method];
 
   return dues.map((due, i) => ({
     dueId: due.id,
@@ -56,8 +43,7 @@ export function buildReceipts(
     amount: due.amount,
     spaceName: space.name,
     spaceKind: space.kind,
-    method,
-    methodDetail,
+    methodDetail: "Bachs",
     payerName: payer.name,
     payerDetail: payer.detail,
     paidAt,

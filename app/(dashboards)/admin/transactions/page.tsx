@@ -6,8 +6,11 @@ import {
   Invoice01Icon,
   MoneySend01Icon,
   ReceiptDollarIcon,
+  AddInvoiceIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { BRAND_INPUT } from "../../dashboard/_components/form-styles";
 import { StatCard } from "../../dashboard/_components/StatCard";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
@@ -21,6 +24,7 @@ import { ApiError } from "@/lib/api/errors";
 import {
   listAdminTransactions,
   refundTransaction,
+  manualCreditDue,
   type AdminTransaction,
   type AdminTxnStatus,
   type AdminTxnType,
@@ -58,6 +62,10 @@ export default function AdminTransactionsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [creditOpen, setCreditOpen] = useState(false);
+  const [creditForm, setCreditForm] = useState({ dueId: "", userId: "", reference: "", reason: "" });
+  const [crediting, setCrediting] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -108,7 +116,13 @@ export default function AdminTransactionsPage() {
       setTransactions((prev) => prev.map((t) => (t.id === tx.id ? updated : t)));
       toast.success(`${tx.reference} refunded.`);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn't refund this transaction.");
+      if (err instanceof ApiError && err.code === "REFUND_NOT_SUPPORTED") {
+        toast.error("Refunds aren't supported yet", {
+          description: "Process this manually with the payer for now.",
+        });
+      } else {
+        toast.error(err instanceof ApiError ? err.message : "Couldn't refund this transaction.");
+      }
     } finally {
       setBusy(false);
     }
@@ -117,11 +131,36 @@ export default function AdminTransactionsPage() {
   const canRefund = (tx: AdminTransaction) =>
     (tx.type === "dues_payment" || tx.type === "deposit") && tx.status === "completed";
 
+  async function handleManualCredit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCrediting(true);
+    try {
+      await manualCreditDue(creditForm.dueId.trim(), {
+        userId: creditForm.userId.trim(),
+        reference: creditForm.reference.trim() || undefined,
+        reason: creditForm.reason.trim(),
+      });
+      toast.success("Due marked as paid.");
+      setCreditOpen(false);
+      setCreditForm({ dueId: "", userId: "", reference: "", reason: "" });
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't credit this due.");
+    } finally {
+      setCrediting(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Transactions"
         description="The money trail — deposits, dues, payouts and refunds."
+        right={
+          <Button variant="brand-outline" size="pill" onClick={() => setCreditOpen(true)}>
+            Credit a due manually
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -262,6 +301,73 @@ export default function AdminTransactionsPage() {
               {formatDate(selected.createdAt)}
             </ModalField>
           </div>
+        </AdminModal>
+      )}
+
+      {creditOpen && (
+        <AdminModal
+          icon={AddInvoiceIcon}
+          title="Credit a due manually"
+          description="Marks a due as paid for a user — use this to fix a payment that happened but never recorded (e.g. a missed webhook)."
+          onClose={() => setCreditOpen(false)}
+        >
+          <form className="space-y-4" onSubmit={handleManualCredit}>
+            <div>
+              <label htmlFor="credit-due" className="mb-1.5 block text-xs font-semibold text-ink-soft">
+                Due ID
+              </label>
+              <Input
+                id="credit-due"
+                required
+                value={creditForm.dueId}
+                onChange={(e) => setCreditForm((f) => ({ ...f, dueId: e.target.value }))}
+                placeholder="cku1a2b3c..."
+                className={BRAND_INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="credit-user" className="mb-1.5 block text-xs font-semibold text-ink-soft">
+                User ID
+              </label>
+              <Input
+                id="credit-user"
+                required
+                value={creditForm.userId}
+                onChange={(e) => setCreditForm((f) => ({ ...f, userId: e.target.value }))}
+                placeholder="cku1x2y3z..."
+                className={BRAND_INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="credit-reference" className="mb-1.5 block text-xs font-semibold text-ink-soft">
+                Reference <span className="font-normal text-ink-soft/70">(optional)</span>
+              </label>
+              <Input
+                id="credit-reference"
+                value={creditForm.reference}
+                onChange={(e) => setCreditForm((f) => ({ ...f, reference: e.target.value }))}
+                placeholder="Auto-generated if left blank"
+                className={BRAND_INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="credit-reason" className="mb-1.5 block text-xs font-semibold text-ink-soft">
+                Reason
+              </label>
+              <textarea
+                id="credit-reason"
+                required
+                value={creditForm.reason}
+                onChange={(e) => setCreditForm((f) => ({ ...f, reason: e.target.value }))}
+                placeholder="e.g. Bank transfer confirmed by student, webhook never landed — see support thread #142"
+                rows={3}
+                className="w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15"
+              />
+            </div>
+            <Button type="submit" variant="brand" size="pill" className="w-full" disabled={crediting}>
+              {crediting ? "Crediting…" : "Mark as paid"}
+            </Button>
+          </form>
         </AdminModal>
       )}
     </div>

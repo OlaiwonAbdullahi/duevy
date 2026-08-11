@@ -9,8 +9,8 @@ CTAs: [Get Started] [See how it works]
 
 Trust bar
 Powered by trusted rails
-Every payment moves on Paystack. Funds sit in secure, partitioned accounts — student money and platform money never mix. NDPR-compliant by design.
-Logos: Monify · Nomba · CBN/NDPR badge
+Every payment moves on Bachs. Funds sit in secure, partitioned accounts — student money and platform money never mix. NDPR-compliant by design.
+Logos: Bachs · CBN/NDPR badge
 
 Problem (Why Duevy)
 Every semester, the same story.
@@ -21,7 +21,7 @@ Solution (What Duevy does)
 Three short value blocks:
 Wallet-based collection — Students top up their Duevy wallet, then pay dues, levies, and fees in seconds. No chasing transfers or counting cash.
 Transparent by default — Every student sees what was collected, who has paid, and what the money was spent on. No more "trust me."
-Reps stay accountable — Payouts need approval from a quorum before funds are released. The rep can't move money alone, and nobody can accuse them of it.
+Reps stay accountable — Every department gets its own verified payout account, and every withdrawal is logged and traceable back to who requested it.
 
 Who it's for (personas)
 Made for the people who run campus money.
@@ -39,7 +39,7 @@ Features
 The whole platform, in plain words.
 
 Wallet top-up & spend — Fund once, pay for anything on your department's list.
-Approval-based payouts — Funds release only after a quorum of students or execs approve.
+Verified payouts — Funds release to a verified, department-owned payout account, with a full trail of who requested it.
 Live payment tracking — See who has paid, who hasn't, and send reminders in one tap.
 Automatic receipts — Every payment generates proof for both student and rep.
 Multi-school ready — Built to run across departments, faculties, and campuses.
@@ -51,7 +51,7 @@ One simple flow, from set-up to settled.
 Rep Setup their dept.  — Names it (e.g. "200L CSC Department "), sets the team and roles.
 Students get the link — Shared on WhatsApp or the class group. No app to install to pay.
 Students top up & pay — Fund the Duevy wallet, pay in seconds, get an instant receipt.
-Payout needs approval — When the rep wants to spend, a quorum of students approves first.
+Payouts are verified — Funds move only to the department's own verified payout account.
 Money moves, cleanly — Funds release to the verified destination. Full trail kept for handover.
 
 
@@ -68,8 +68,8 @@ Real problems, real scale.
 FAQ
 
 Do students need to download an app? No but they hace the option to add shortcut on their phone app list. Reps get a full dashboard.
-How is my money kept safe? Student funds sit in a separate, partitioned account from platform revenue, on Paystack's secure rails.
-Can a rep run away with the money? No. Payouts require quorum approval before any funds are released.
+How is my money kept safe? Student funds sit in a separate, partitioned account from platform revenue, on Bachs's secure rails.
+Can a rep run away with the money? No. Every department has its own verified payout account, and every withdrawal is logged and traceable back to who requested it.
 How do you know a payer is a real student? Every account is verified by matric number through an admin approval queue.
 What does it cost? 3% per transaction
 Which schools can use it? Duevy is launching at LAUTECH and is built to expand to any Nigerian university.

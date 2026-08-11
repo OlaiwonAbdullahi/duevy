@@ -28,35 +28,22 @@ export function getDue(dueId: string) {
   return apiClient.get<Due>(`/dues/${dueId}`);
 }
 
-export type PayDuePayload =
-  | { method: "card"; cardId: string; discountCode?: string }
-  | { method: "online"; discountCode?: string };
-
-export type BankTransferInvoice = {
-  accountNumber: string;
-  bankName: string;
-  accountName: string;
-  expiresAt: string | null;
-};
+export type PayDuePayload = { discountCode?: string };
 
 export type PayDueResult = {
-  /** Present for `card` — the payment settled synchronously. */
-  transaction?: Transaction;
-  receiptUrl?: string;
-  /** Present for `online`. `bankTransfer` only comes back on Monnify — show
-   * it in-app. On Paystack it's absent and `checkoutUrl` should be an
-   * immediate full-page redirect instead (transfer lives on that hosted page). */
   reference?: string;
   amount?: number;
+  /** Redirect the payer here to complete the Bachs checkout. */
   checkoutUrl?: string;
-  bankTransfer?: BankTransferInvoice;
 };
 
-/** Settle a due. Money-moving — an Idempotency-Key is attached automatically. */
-export function payDue(dueId: string, payload: PayDuePayload) {
-  return apiClient.post<PayDueResult>(`/dues/${dueId}/pay`, payload, {
-    idempotencyKey: crypto.randomUUID(),
-  });
+/** Settle a due — always redirects to a Bachs checkout. Money-moving — an Idempotency-Key is attached automatically. */
+export function payDue(dueId: string, payload: PayDuePayload = {}) {
+  return apiClient.post<PayDueResult>(
+    `/dues/${dueId}/pay`,
+    { method: "online", ...payload },
+    { idempotencyKey: crypto.randomUUID() },
+  );
 }
 
 export type PaymentStatus = {
@@ -65,7 +52,6 @@ export type PaymentStatus = {
   /** Snapshotted at creation — lets a dedicated payment page render the full invoice from just the reference, e.g. on a page reload. */
   amount?: number;
   checkoutUrl?: string;
-  bankTransfer?: BankTransferInvoice;
 };
 
 /** Poll a pending online payment by its provider reference — actively re-checks with the gateway (see backend), so this also drives the "I've made payment" tap. */

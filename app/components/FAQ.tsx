@@ -10,11 +10,11 @@ const faqs = [
   },
   {
     q: "How is my money kept safe?",
-    a: "Student funds sit in a separate, partitioned account from platform revenue, on Paystack's secure rails.",
+    a: "Student funds sit in a separate, partitioned account from platform revenue, on Bachs's secure rails.",
   },
   {
     q: "Can a rep run away with the money?",
-    a: "No. Payouts require quorum approval before any funds are released.",
+    a: "No. Every department has its own verified payout account, and every withdrawal is logged and traceable back to who requested it.",
   },
   {
     q: "How do you know a payer is a real student?",
