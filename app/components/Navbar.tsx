@@ -38,12 +38,12 @@ export default function Navbar() {
             : "max-w-6xl mt-0 h-18 px-6 md:px-12 rounded-none border border-transparent bg-[#fbfaf7]/70 backdrop-blur-md"
         }`}
       >
-        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+        <Link href="/" className="flex items-center cursor-pointer">
           <Image
             src="/newlogo.png"
             alt="Duevy Logo"
-            width={25}
-            height={32}
+            width={36}
+            height={40}
             className="h-7 w-auto"
             priority
           />
