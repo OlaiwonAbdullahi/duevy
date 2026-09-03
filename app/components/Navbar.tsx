@@ -40,7 +40,7 @@ export default function Navbar() {
       >
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <Image
-            src="/icons/logo2.svg"
+            src="/newlogo.png"
             alt="Duevy Logo"
             width={25}
             height={32}
