@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "./config";
 import { ApiError, NetworkError } from "./errors";
 import type { ApiMeta, ApiResponse } from "./types";
+import { DEMO_MODE } from "@/lib/demo/config";
 
 /** A list response plus its pagination envelope (`meta`). */
 export type Page<T> = { data: T; meta?: ApiMeta };
@@ -60,6 +61,13 @@ export async function refreshAccessToken(): Promise<string> {
 
 async function rawRequestFull<T>(path: string, options: RequestOptions = {}): Promise<Page<T>> {
   const { auth = true, retryOn401 = true, idempotencyKey, headers, body, ...init } = options;
+
+  // Demo mode short-circuits every request to the local fixture store. Dynamically
+  // imported so a production build with the flag off never bundles the fixtures.
+  if (DEMO_MODE) {
+    const { handleDemoRequest } = await import("@/lib/demo/api");
+    return handleDemoRequest<T>(String(init.method ?? "GET").toUpperCase(), path, body);
+  }
 
   const finalHeaders = new Headers(headers);
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
@@ -133,6 +141,11 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
 
 /** GET a binary file (report export, receipt PDF, …) with the bearer token attached. */
 async function fetchBlob(path: string, retryOn401 = true): Promise<Blob> {
+  if (DEMO_MODE) {
+    const { demoBlob } = await import("@/lib/demo/api");
+    return demoBlob(path);
+  }
+
   const headers = new Headers();
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 

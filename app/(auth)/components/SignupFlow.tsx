@@ -17,6 +17,7 @@ import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
 import SpaceSettingsStep, { type SpaceSettings } from "./SpaceSettingsStep";
 import { CheckEmailNotice } from "./CheckEmailNotice";
+import DemoSignIn from "./DemoSignIn";
 
 type StepId = "role" | "account" | "space" | "settings";
 
@@ -356,6 +357,12 @@ export default function SignupFlow() {
           onBack={goBack}
           onSubmit={handleSpaceSettingsSubmit}
         />
+      )}
+
+      {/* Skip straight into a ready-made account — entry steps only, so it never
+          interrupts a signup already in progress. */}
+      {(currentId === "role" || currentId === "account") && (
+        <DemoSignIn label="Or skip signup" />
       )}
 
       {/* Footer — only on the entry steps */}
