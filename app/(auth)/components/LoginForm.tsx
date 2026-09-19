@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import { ArrowRightIcon } from "../../components/icons";
 import { EmailUnverifiedNotice } from "./EmailUnverifiedNotice";
+import DemoSignIn from "./DemoSignIn";
 
 /** Only ever follow an internal path — never let `next` redirect off-site. */
 function safeNext(raw: string | null): string | null {
@@ -132,6 +133,8 @@ export default function LoginForm() {
           )}
         </button>
       </form>
+
+      <DemoSignIn />
 
       {/* Footer */}
       <p className="mt-8 text-center text-[#7a847f] text-[14px]">
