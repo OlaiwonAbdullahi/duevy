@@ -12,6 +12,9 @@ import {
 import { Modal } from "../../_components/Modal";
 import { STATUS_META, TXN_META, formatDateTime } from "./data";
 import { printReceipt, signedAmount } from "./receipt";
+import { apiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
+import { transactionReceiptPath } from "@/lib/api/transactions";
 import type { Transaction } from "./types";
 
 export function ReceiptModal({
@@ -22,6 +25,30 @@ export function ReceiptModal({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  // The official receipt is the server's PDF. A transaction without one (e.g.
+  // still pending → 404) falls back to a printable summary of this row.
+  const downloadReceipt = async () => {
+    setDownloading(true);
+    try {
+      const blob = await apiClient.getBlob(transactionReceiptPath(txn.id));
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Duevy-receipt-${txn.reference}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        printReceipt(txn);
+      } else {
+        toast.error("Couldn't download the receipt. Please try again.");
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
   const status = STATUS_META[txn.status];
 
   const copyRef = async () => {
@@ -74,11 +101,12 @@ export function ReceiptModal({
         </button>
         <button
           type="button"
-          onClick={() => printReceipt(txn)}
+          onClick={downloadReceipt}
+          disabled={downloading}
           className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           <HugeiconsIcon icon={Download01Icon} size={16} />
-          Download PDF
+          {downloading ? "Downloading…" : "Download PDF"}
         </button>
       </div>
     </Modal>

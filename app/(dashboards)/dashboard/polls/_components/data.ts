@@ -1,4 +1,5 @@
 import type { EditorCategory, EditorNominee, Poll, PollStatus } from "./types";
+import { siteOrigin } from "@/lib/site-url";
 
 export { naira } from "../../create-dues/_components/data";
 
@@ -11,11 +12,9 @@ export const POLL_STATUS_META: Record<
   closed: { label: "Closed", className: "bg-amber-100 text-amber-700" },
 };
 
-/** Base for every voting link. Students open this to cast their vote. */
-export const VOTE_BASE_URL = "https://duevy.app/vote";
-
+/** A poll's voting link. Students open this to cast their vote. */
 export function voteLink(slug: string) {
-  return `${VOTE_BASE_URL}/${slug}`;
+  return `${siteOrigin()}/vote/${slug}`;
 }
 
 export type LeaderboardEntry = {

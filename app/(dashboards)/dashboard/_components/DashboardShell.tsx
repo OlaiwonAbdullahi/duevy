@@ -4,7 +4,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock01Icon, MailAtSign01Icon } from "@hugeicons/core-free-icons";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
+import { getKycStatus } from "@/lib/api/payouts";
+import type { KycState } from "@/lib/api/types";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
 import { TourProvider } from "./DashboardTour";
@@ -15,21 +18,68 @@ import { RepOnlyNotice } from "./RepOnlyNotice";
 import { FeatureUnavailableNotice } from "./FeatureUnavailableNotice";
 import { CommandPalette } from "./CommandPalette";
 
-/** Shown across the dashboard while a rep application is under admin review. */
+/**
+ * Shown across the dashboard while a rep application is open. KYC comes first
+ * (NIN via Bachs + student ID), then an admin gives final approval.
+ */
 function PendingRepBanner() {
+  const pathname = usePathname();
+  const [kyc, setKyc] = useState<KycState | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getKycStatus()
+      .then((s) => {
+        if (!cancelled) setKyc(s.mine);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  const notStarted =
+    !!kyc &&
+    (kyc.kycStatus === "rejected" ||
+      (kyc.kycStatus !== "verified" && !kyc.providerReference) ||
+      kyc.studentId.status === null ||
+      kyc.studentId.status === "rejected");
+  const kycPassed = !!kyc && kyc.kycStatus === "verified" && kyc.studentId.status !== null;
+
+  const title = !kyc
+    ? "Your rep application is under review"
+    : notStarted
+      ? "Complete verification to continue your application"
+      : kycPassed
+        ? "Your application is with an admin for final approval"
+        : "Your verification is pending";
+  const body = notStarted
+    ? kyc?.kycStatus === "rejected"
+      ? "Your NIN couldn't be verified. Check your details and try again."
+      : kyc?.studentId.status === "rejected"
+        ? "Your student ID wasn't accepted. Upload a clearer photo."
+        : "Verify your NIN and upload your student ID so an admin can approve your department."
+    : kycPassed
+      ? "Your identity is verified. We'll email you once your department is approved — then your rep tools unlock."
+      : "We're checking your NIN and student ID. You can use Duevy as a student in the meantime; we'll email you once you're approved.";
+
   return (
-    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700">
         <HugeiconsIcon icon={Clock01Icon} size={18} />
       </span>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink">Your rep application is under review</p>
-        <p className="mt-0.5 text-xs text-ink-soft">
-          You&apos;re signed in as a student for now. We&apos;ll email you once an admin
-          approves your department — then your rep tools unlock. Some actions are paused
-          until then.
-        </p>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="mt-0.5 text-xs text-ink-soft">{body}</p>
       </div>
+      {notStarted && pathname !== "/dashboard/kyc" && (
+        <Link
+          href="/dashboard/kyc"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
+        >
+          Complete verification
+        </Link>
+      )}
     </div>
   );
 }
@@ -60,7 +110,9 @@ function ShellInner({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Students who reach a rep-only route by URL get a graceful notice, not the tool.
-  const repBlocked = !isRep && isRepOnlyPath(pathname);
+  // Rep applicants still need the KYC page — it's part of their application.
+  const repBlocked =
+    !isRep && isRepOnlyPath(pathname) && !(isPendingRep && pathname.startsWith("/dashboard/kyc"));
   // Anyone who reaches a pilot-cut route by URL gets the same treatment.
   const featureBlocked = isFeatureGatedPath(pathname);
 

@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert02Icon } from "@hugeicons/core-free-icons";
+import { resendVerification } from "@/lib/api/auth";
 
 /** Shown on the login screen when credentials are correct but the email isn't verified yet. */
 export function EmailUnverifiedNotice({
@@ -9,6 +14,20 @@ export function EmailUnverifiedNotice({
   email: string;
   onBack: () => void;
 }) {
+  const [resending, setResending] = useState(false);
+
+  const resend = async () => {
+    setResending(true);
+    try {
+      await resendVerification(email);
+      toast.success("Verification email sent", { description: `Check ${email}.` });
+    } catch {
+      toast.error("Couldn't resend the email. Please try again in a moment.");
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
     <div className="flex flex-col text-center">
       <span className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-2xl bg-amber-500/15 text-amber-700">
@@ -42,6 +61,14 @@ export function EmailUnverifiedNotice({
             </li>
           ))}
         </ul>
+        <button
+          type="button"
+          onClick={resend}
+          disabled={resending}
+          className="mt-4 text-[13px] font-semibold text-[#0b6e4f] hover:text-[#08583f] transition-colors duration-300 cursor-pointer disabled:opacity-60"
+        >
+          {resending ? "Sending…" : "Resend verification email"}
+        </button>
       </div>
 
       <button

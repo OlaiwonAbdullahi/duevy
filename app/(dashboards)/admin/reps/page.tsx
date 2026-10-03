@@ -26,10 +26,83 @@ import {
   getRepApplication,
   verifyRep,
   rejectRep,
+  reviewStudentId,
+  applicationKycReady,
   type AdminRep,
+  type ApplicationKyc,
   type RepApplication,
   type RepApplicationStatus,
 } from "@/lib/api/admin";
+
+/** The applicant's KYC inside the review modal: NIN verdict from Bachs, and the student ID to look at. */
+function KycReview({
+  kyc,
+  canReject,
+  busy,
+  onRejectId,
+}: {
+  kyc: ApplicationKyc | null;
+  canReject: boolean;
+  busy: boolean;
+  onRejectId: () => void;
+}) {
+  if (!kyc) return null;
+  const nin = NIN_META[kyc.identity.status];
+  const id = studentIdMeta(kyc.studentId.status);
+  return (
+    <>
+      <ModalField label="NIN verification (Bachs)">
+        <StatusBadge tone={nin.tone}>{nin.label}</StatusBadge>
+        {kyc.identity.status === "rejected" && kyc.identity.rejectionReason && (
+          <p className="mt-1 text-xs text-ink-soft">{kyc.identity.rejectionReason}</p>
+        )}
+        {kyc.identity.requirementsDue.length > 0 && (
+          <p className="mt-1 text-xs text-ink-soft">
+            Bachs needs: {kyc.identity.requirementsDue.join(", ")}
+          </p>
+        )}
+      </ModalField>
+      <ModalField label="Student ID card">
+        <StatusBadge tone={id.tone}>{id.label}</StatusBadge>
+        {kyc.studentId.reviewNote && (
+          <p className="mt-1 text-xs text-ink-soft">Note: {kyc.studentId.reviewNote}</p>
+        )}
+      </ModalField>
+      {kyc.studentId.viewUrl && (
+        <div className="sm:col-span-2 overflow-hidden rounded-2xl border border-cloud bg-paper">
+          {kyc.studentId.mimeType === "application/pdf" ? (
+            <p className="p-4 text-xs text-ink-soft">This student ID is a PDF.</p>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived private URL
+            <img
+              src={kyc.studentId.viewUrl}
+              alt="Applicant's student ID card"
+              className="max-h-80 w-full object-contain bg-white"
+            />
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-cloud p-3">
+            <a
+              href={kyc.studentId.viewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-brand hover:underline"
+            >
+              Open full size
+            </a>
+            {canReject && kyc.studentId.status === "pending" && (
+              <Button variant="danger-outline" size="pill" disabled={busy} onClick={onRejectId}>
+                Ask for a new ID
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      <p className="sm:col-span-2 text-xs text-ink-soft">
+        Giving final approval also approves this student ID and creates the department.
+      </p>
+    </>
+  );
+}
 
 const STATUS_TONES: Record<AdminRep["status"], StatusTone> = {
   active: "ok",
@@ -42,6 +115,34 @@ const VERIFICATION_TONES: Record<string, StatusTone> = {
   pending: "warn",
   unverified: "neutral",
 };
+
+/** NIN (Bachs) verdict → badge. */
+const NIN_META: Record<ApplicationKyc["identity"]["status"], { tone: StatusTone; label: string }> = {
+  unverified: { tone: "neutral", label: "NIN not submitted" },
+  pending: { tone: "warn", label: "NIN pending" },
+  verified: { tone: "ok", label: "NIN verified" },
+  rejected: { tone: "bad", label: "NIN failed" },
+};
+
+/** Student ID review state → badge. */
+function studentIdMeta(status: ApplicationKyc["studentId"]["status"]): { tone: StatusTone; label: string } {
+  if (status === "approved") return { tone: "ok", label: "ID approved" };
+  if (status === "pending") return { tone: "warn", label: "ID to review" };
+  if (status === "rejected") return { tone: "bad", label: "ID rejected" };
+  return { tone: "neutral", label: "No ID yet" };
+}
+
+function KycBadges({ kyc }: { kyc: ApplicationKyc | null }) {
+  if (!kyc) return <span className="text-xs text-ink-soft">—</span>;
+  const nin = NIN_META[kyc.identity.status];
+  const id = studentIdMeta(kyc.studentId.status);
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <StatusBadge tone={nin.tone}>{nin.label}</StatusBadge>
+      <StatusBadge tone={id.tone}>{id.label}</StatusBadge>
+    </div>
+  );
+}
 
 const APPLICATION_TONES: Record<RepApplicationStatus, StatusTone> = {
   pending: "warn",
@@ -216,12 +317,30 @@ export default function AdminRepsPage() {
       .finally(() => setAppDetailLoading(false));
   }
 
+  // Ask the applicant to upload a better student ID (their NIN result stands).
+  const rejectStudentId = async (app: RepApplication) => {
+    const note = window.prompt("What's wrong with the student ID? The applicant will see this.")?.trim();
+    if (!note) return;
+    setAppBusy(true);
+    try {
+      await reviewStudentId(app.userId, { decision: "rejected", note });
+      toast.success("Asked the applicant for a new student ID.");
+      const fresh = await getRepApplication(app.userId);
+      setAppDetail(fresh);
+      setApplications((prev) => prev.map((a) => (a.userId === app.userId ? fresh : a)));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't update the student ID.");
+    } finally {
+      setAppBusy(false);
+    }
+  };
+
   const verify = async (app: RepApplication) => {
     setAppBusy(true);
     try {
       const rep = await verifyRep(app.userId);
       toast.success(
-        `${app.applicant?.name ?? "Applicant"} verified — ${app.requestedSpace.name} is live.`,
+        `${app.applicant?.name ?? "Applicant"} approved — ${app.requestedSpace.name} is live.`,
       );
       setApplications((prev) => prev.filter((a) => a.userId !== app.userId));
       setReps((prev) =>
@@ -468,6 +587,7 @@ export default function AdminRepsPage() {
                   { label: "Applicant" },
                   { label: "Requested space" },
                   { label: "School" },
+                  { label: "Verification" },
                   { label: "Submitted" },
                   { label: "Status" },
                   { label: "", align: "right" },
@@ -492,6 +612,9 @@ export default function AdminRepsPage() {
                       <p className="mt-0.5 text-xs text-ink-soft">{app.requestedSpace.short}</p>
                     </td>
                     <td className="p-4 font-medium">{app.requestedSpace.school}</td>
+                    <td className="p-4">
+                      <KycBadges kyc={app.kyc} />
+                    </td>
                     <td className="p-4 text-ink-soft">{formatDate(app.submittedAt)}</td>
                     <td className="p-4">
                       <StatusBadge tone={APPLICATION_TONES[app.status]}>{app.status}</StatusBadge>
@@ -500,8 +623,12 @@ export default function AdminRepsPage() {
                       {app.status === "pending" && (
                         <RowActions
                           actions={[
-                            { label: "Verify rep", onSelect: () => verify(app) },
-                            { label: "Reject", tone: "danger", onSelect: () => reject(app) },
+                            // Final approval only once KYC is in; open the row to review the ID.
+                            ...(applicationKycReady(app.kyc)
+                              ? [{ label: "Give final approval", onSelect: () => verify(app) }]
+                              : []),
+                            { label: "Review", onSelect: () => openApplication(app.userId) },
+                            { label: "Reject", tone: "danger" as const, onSelect: () => reject(app) },
                           ]}
                         />
                       )}
@@ -533,10 +660,15 @@ export default function AdminRepsPage() {
                     <Button
                       variant="brand"
                       size="pill"
-                      disabled={appBusy}
+                      disabled={appBusy || !applicationKycReady(appDetail.kyc)}
+                      title={
+                        applicationKycReady(appDetail.kyc)
+                          ? undefined
+                          : "Available once the NIN is verified and a student ID is on file"
+                      }
                       onClick={() => verify(appDetail)}
                     >
-                      Verify rep
+                      Give final approval
                     </Button>
                   </>
                 ) : undefined
@@ -573,11 +705,12 @@ export default function AdminRepsPage() {
                   <ModalField label="Faculty" className="sm:col-span-2">
                     {appDetail.requestedSpace.faculty ?? "—"}
                   </ModalField>
-                  <ModalField label="Co-rep invites" className="sm:col-span-2">
-                    {appDetail.coRepInvites.length > 0
-                      ? appDetail.coRepInvites.join(", ")
-                      : "None invited"}
-                  </ModalField>
+                  <KycReview
+                    kyc={appDetail.kyc}
+                    canReject={appDetail.status === "pending"}
+                    busy={appBusy}
+                    onRejectId={() => rejectStudentId(appDetail)}
+                  />
                   {appDetail.status !== "pending" && (
                     <>
                       <ModalField label="Reviewed">

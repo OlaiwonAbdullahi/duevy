@@ -87,20 +87,22 @@ function formatTime(iso: string) {
 /**
  * Rep verification. A space can only collect once its lead rep passes both
  * checks: Bachs verifies identity (NIN + date of birth), and a Duevy admin
- * reviews the rep's student ID card. Hidden once both have passed.
+ * reviews the rep's student ID card. Shows a verified state once both pass.
  */
-export function OnboardingCard({
+export function KycCard({
   spaceId,
   isLead,
   onChanged,
 }: {
-  spaceId: string;
+  /** Omit for a rep applicant whose space doesn't exist yet (uses `/me/kyc*`). */
+  spaceId?: string;
   isLead: boolean;
   /** Called after a submission, so the page can refresh what depends on KYC. */
   onChanged?: () => void;
 }) {
   const [status, setStatus] = useState<SpaceKycStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
 
   async function refresh() {
     try {
@@ -126,9 +128,31 @@ export function OnboardingCard({
   if (loading) {
     return <div className="h-56 animate-pulse rounded-3xl border border-cloud bg-canvas" />;
   }
-  // Stay visible until withdrawals open: Bachs can still ask for documents
+  if (!status) {
+    return (
+      <section className="rounded-3xl border border-cloud bg-canvas p-6 text-center">
+        <p className="text-sm font-semibold text-ink">Couldn&apos;t load your verification status</p>
+        <p className="mt-1 text-xs text-ink-soft">Refresh the page to try again.</p>
+      </section>
+    );
+  }
+  // Fully done only once withdrawals open: Bachs can still ask for documents
   // (`requirementsDue`) after collection is enabled.
-  if (!status || status.canWithdraw) return null;
+  if (status.canWithdraw) {
+    return (
+      <section className="flex items-start gap-3 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
+        </span>
+        <div>
+          <h2 className="text-base font-semibold tracking-tight text-ink">You&apos;re verified</h2>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            Your department can collect dues and withdraw to its payout account.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   // Collections settle to the lead rep, so it's their verification that counts.
   const kyc = isLead ? status.mine : status;
@@ -207,7 +231,31 @@ export function OnboardingCard({
         </p>
       )}
 
-      {isLead && canSubmit && !lockedUntil && <KycForm spaceId={spaceId} onSubmitted={apply} />}
+      {isLead && canSubmit && !lockedUntil &&
+        (formOpen ? (
+          <KycForm spaceId={spaceId} onSubmitted={apply} onCancel={() => setFormOpen(false)} />
+        ) : (
+          <div className="mt-5 rounded-2xl border border-cloud bg-paper/50 p-4">
+            <p className="text-xs font-semibold text-ink">
+              {identity === "failed" ? "Try verification again" : "What you'll need"}
+            </p>
+            <ul className="mt-2 flex flex-col gap-1 text-[11px] leading-relaxed text-ink-soft">
+              <li>• Your 11-digit NIN and date of birth</li>
+              <li>• A clear photo or scan of your student ID card (JPEG, PNG, WebP or PDF, up to 5 MB)</li>
+              <li>• About two minutes</li>
+            </ul>
+            <Button variant="brand" size="pill" className="mt-4 w-full" onClick={() => setFormOpen(true)}>
+              <HugeiconsIcon icon={ShieldIcon} size={15} />
+              {identity === "failed" ? "Try again" : "Start verification"}
+            </Button>
+          </div>
+        ))}
+
+      {!isLead && identity !== "done" && (
+        <p className="mt-4 rounded-2xl bg-paper px-4 py-3 text-xs text-ink-soft">
+          Only your department&apos;s lead rep can submit verification.
+        </p>
+      )}
 
       {isLead && !canSubmit && studentId !== "pending" && studentId !== "done" && (
         <DocumentUpload
@@ -295,7 +343,15 @@ function normalisePhone(raw: string) {
   return `+234${digits}`;
 }
 
-function KycForm({ spaceId, onSubmitted }: { spaceId: string; onSubmitted: (state: KycState) => void }) {
+function KycForm({
+  spaceId,
+  onSubmitted,
+  onCancel,
+}: {
+  spaceId?: string;
+  onSubmitted: (state: KycState) => void;
+  onCancel: () => void;
+}) {
   const [nin, setNin] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState<"" | "male" | "female">("");
@@ -416,9 +472,19 @@ function KycForm({ spaceId, onSubmitted }: { spaceId: string; onSubmitted: (stat
         kept privately for review.
       </label>
 
-      <Button variant="brand" size="pill" className="w-full" disabled={!valid || submitting} onClick={submit}>
-        {submitting ? "Submitting…" : "Submit for verification"}
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row-reverse">
+        <Button variant="brand" size="pill" className="flex-1" disabled={!valid || submitting} onClick={submit}>
+          {submitting ? "Submitting…" : "Submit for verification"}
+        </Button>
+        <Button variant="brand-outline" size="pill" disabled={submitting} onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+      {!valid && !submitting && (
+        <p className="-mt-2 text-center text-[11px] text-ink-soft">
+          Fill in your NIN, date of birth, gender and student ID, and tick the consent box to continue.
+        </p>
+      )}
     </div>
   );
 }

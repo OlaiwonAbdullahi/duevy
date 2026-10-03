@@ -12,6 +12,7 @@ import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { getSpace } from "@/lib/api/spaces";
 import { updateSpaceProfile } from "@/lib/api/rep";
+import { ApiError } from "@/lib/api/errors";
 
 function Field({
   label,
@@ -84,12 +85,16 @@ export function DepartmentProfileCard() {
     if (!spaceId) return;
     setSaving(true);
     try {
-      // `faculty` isn't part of the profile patch (§4.6) — name/short/about only.
-      await updateSpaceProfile(spaceId, { name, short: acronym, about });
+      await updateSpaceProfile(spaceId, {
+        name,
+        short: acronym,
+        about,
+        faculty: faculty.trim() || null,
+      });
       setDirty(false);
       toast.success("Department details saved", { description: name });
-    } catch {
-      toast.error("Couldn't save your changes.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't save your changes.");
     } finally {
       setSaving(false);
     }

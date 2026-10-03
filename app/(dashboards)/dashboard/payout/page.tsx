@@ -9,7 +9,7 @@ import type { BankAccount, Payout } from "./_components/types";
 const EMPTY_ACCOUNT: BankAccount = { bankName: "", accountName: "", accountNumber: "" };
 import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { PayoutAccountCard } from "./_components/PayoutAccountCard";
-import { OnboardingCard } from "./_components/OnboardingCard";
+import Link from "next/link";
 import { PayoutHistory } from "./_components/PayoutHistory";
 import { WithdrawModal } from "./_components/WithdrawModal";
 import { EditAccountModal } from "./_components/EditAccountModal";
@@ -46,7 +46,7 @@ function adaptPayout(p: ApiPayout): Payout {
 
 /** API error code → what the rep should do about it. */
 const PAYOUT_ERRORS: Record<string, string> = {
-  KYC_NOT_VERIFIED: "Finish verification above before withdrawing.",
+  KYC_NOT_VERIFIED: "Finish verification on the Verification page before withdrawing.",
   NO_PAYOUT_ACCOUNT: "Add a payout account first.",
   ACCOUNT_COOLDOWN: "Withdrawals are on hold for 24 hours after an account change.",
   WITHDRAWAL_IN_PROGRESS: "Another withdrawal is still in progress. Try again once it settles.",
@@ -211,14 +211,21 @@ export default function PayoutPage() {
         </div>
       ) : (
         <>
-          {spaceId && (
-            <div className="mt-6">
-              <OnboardingCard
-                spaceId={spaceId}
-                isLead={isLead}
-                onChanged={() => void refresh(spaceId).catch(() => {})}
-              />
-            </div>
+          {summary && !summary.kyc.canWithdraw && (
+            <Link
+              href="/dashboard/kyc"
+              className="mt-6 flex items-center justify-between gap-4 rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 transition-colors hover:bg-amber-100/60"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">Finish verification to withdraw</p>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  {isLead
+                    ? "Verify your identity and student ID on the Verification page."
+                    : "Your lead rep needs to finish verification."}
+                </p>
+              </div>
+              <span className="shrink-0 text-[13px] font-semibold text-brand">Go to verification →</span>
+            </Link>
           )}
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
             <PayoutBalanceCard

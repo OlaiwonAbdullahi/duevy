@@ -29,6 +29,7 @@ import { nairaFromKobo } from "../format";
 import { timeAgo } from "../notifications-data";
 import { useRepSpace } from "../use-rep-space";
 import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
+import { KycBanner } from "./KycBanner";
 import { FEATURES } from "@/lib/features";
 
 export function RepOverview() {
@@ -86,6 +87,11 @@ export function RepOverview() {
           {spaceShort ? ` for ${spaceShort}` : ""}.
         </p>
       </div>
+
+      {/* Heads-up until the space can collect and withdraw (KYC lives on /dashboard/payout). */}
+      {repSpace && (
+        <KycBanner spaceId={repSpace.id} isLead={repSpace.membership !== "co"} />
+      )}
 
       {error && !loading ? (
         <EmptyState

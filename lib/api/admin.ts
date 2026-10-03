@@ -157,6 +157,59 @@ export type AdminRep = {
 
 export type RepApplicationStatus = "pending" | "approved" | "rejected";
 
+/** `GET /admin/health` — payment pipeline and review-queue health. */
+export type AdminHealth = {
+  deadWebhooks: number;
+  retryingWebhooks: number;
+  stuckPayouts: number;
+  checkoutsNeedingReview: number;
+  unresolvedCheckouts: number;
+  unsettledWithdrawalFees: number;
+  pendingStudentIds: number;
+  healthy: boolean;
+  recentWebhookFailures: {
+    eventId: string;
+    type: string;
+    status: string;
+    attempts: number;
+    error: string | null;
+    receivedAt: string;
+  }[];
+};
+
+export function getAdminHealth() {
+  return apiClient.get<AdminHealth>("/admin/health");
+}
+
+export type ApplicationKyc = {
+  identity: {
+    status: "unverified" | "pending" | "verified" | "rejected";
+    rejectionReason: string | null;
+    requirementsDue: string[];
+    submittedAt: string | null;
+    resolvedAt: string | null;
+  };
+  studentId: {
+    status: "pending" | "approved" | "rejected" | null;
+    mimeType: string | null;
+    uploadedAt: string | null;
+    reviewedAt: string | null;
+    reviewNote: string | null;
+    /** Signed, short-lived link to the private image. */
+    viewUrl: string | null;
+    viewUrlExpiresInSeconds: number;
+  };
+};
+
+/** Final approval needs the NIN verified and a student ID on file (approval approves it). */
+export function applicationKycReady(kyc: ApplicationKyc | null) {
+  return (
+    !!kyc &&
+    kyc.identity.status === "verified" &&
+    (kyc.studentId.status === "pending" || kyc.studentId.status === "approved")
+  );
+}
+
 export type RepApplication = {
   /** The applicant's user id — also the `{repId}` path param for the review endpoints. */
   userId: string;
@@ -165,9 +218,12 @@ export type RepApplication = {
     id: string;
     name: string;
     email: string;
+    emailVerified?: boolean;
     matricNo?: string | null;
     level?: string | null;
   } | null;
+  /** NIN verification (Bachs) and the student ID card — reviewed before final approval. */
+  kyc: ApplicationKyc | null;
   requestedSpace: {
     name: string;
     short: string;

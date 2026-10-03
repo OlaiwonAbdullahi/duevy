@@ -20,7 +20,13 @@ import PageHeader from "../_components/PageHeader";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { nairaFromKobo, formatPercent01 } from "../_components/format";
-import { getAdminOverview, listAdminSpaces, type AdminOverview } from "@/lib/api/admin";
+import {
+  getAdminHealth,
+  getAdminOverview,
+  listAdminSpaces,
+  type AdminHealth,
+  type AdminOverview,
+} from "@/lib/api/admin";
 
 /** API attention tone → admin badge tone. */
 function toneOf(tone: string): StatusTone {
@@ -33,6 +39,7 @@ function toneOf(tone: string): StatusTone {
 export default function AdminOverviewPage() {
   const [data, setData] = useState<AdminOverview | null>(null);
   const [spaceCount, setSpaceCount] = useState<number | null>(null);
+  const [health, setHealth] = useState<AdminHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -42,13 +49,15 @@ export default function AdminOverviewPage() {
       setLoading(true);
       setError(false);
       try {
-        const [overview, spaces] = await Promise.all([
+        const [overview, spaces, healthResult] = await Promise.all([
           getAdminOverview(),
           listAdminSpaces({ perPage: 1 }), // meta.total is the space count
+          getAdminHealth().catch(() => null), // the card degrades on its own
         ]);
         if (cancelled) return;
         setData(overview);
         setSpaceCount(spaces.meta?.total ?? spaces.data.length);
+        setHealth(healthResult);
       } catch {
         if (!cancelled) {
           setError(true);
@@ -126,9 +135,13 @@ export default function AdminOverviewPage() {
             />
             <StatCard
               icon={CreditCardIcon}
-              label="Payment provider"
-              value="Bachs"
-              hint="Connected accounts per department"
+              label="Payments health"
+              value={!health ? "—" : health.healthy ? "Healthy" : "Needs attention"}
+              hint={
+                !health
+                  ? "Couldn't load system health"
+                  : `${health.stuckPayouts} stuck payouts · ${health.checkoutsNeedingReview} payments to review · ${health.deadWebhooks} failed webhooks`
+              }
             />
           </div>
 

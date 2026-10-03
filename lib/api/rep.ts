@@ -117,6 +117,18 @@ export function listMembers(
   return apiClient.getPage<SpaceMember[]>(`/spaces/${spaceId}/members${toQuery(query)}`);
 }
 
+/** The whole roster, following pages (100 at a time, the API's ceiling). */
+export async function listAllMembers(spaceId: string): Promise<SpaceMember[]> {
+  const first = await listMembers(spaceId, { page: 1, perPage: 100 });
+  const members = [...first.data];
+  const totalPages = first.meta?.totalPages ?? 1;
+  for (let page = 2; page <= totalPages; page++) {
+    const next = await listMembers(spaceId, { page, perPage: 100 });
+    members.push(...next.data);
+  }
+  return members;
+}
+
 export function removeMember(spaceId: string, userId: string) {
   return apiClient.delete<void>(`/spaces/${spaceId}/members/${userId}`);
 }
@@ -151,6 +163,7 @@ export type SpaceProfilePatch = {
   name?: string;
   short?: string;
   about?: string;
+  faculty?: string | null;
   hue?: string;
   theme?: SpaceThemeId;
 };

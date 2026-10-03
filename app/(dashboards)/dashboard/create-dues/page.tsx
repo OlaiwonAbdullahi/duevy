@@ -171,10 +171,10 @@ export default function CreateDuesPage() {
 
   const toastKycRequired = (title: string, action: string) =>
     toast.info(title, {
-      description: `Your space can't collect payments until verification (identity and student ID) is complete. Finish it on the Payout page, then ${action}.`,
+      description: `Your space can't collect payments until verification (identity and student ID) is complete. Finish it on the Verification page, then ${action}.`,
       action: {
-        label: "Go to Payout",
-        onClick: () => router.push("/dashboard/payout"),
+        label: "Verify now",
+        onClick: () => router.push("/dashboard/kyc"),
       },
       duration: 10000,
     });

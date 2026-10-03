@@ -50,6 +50,7 @@ const PAGE_DESC: Record<string, string> = {
   "/dashboard/create-dues": "Raise and manage department dues",
   "/dashboard/circle": "Members and join requests",
   "/dashboard/polls": "Award votes, results and links",
+  "/dashboard/kyc": "Verify your identity and student ID (KYC)",
   "/dashboard/payout": "Withdraw collected funds",
   "/dashboard/manage": "Department profile, reps and settings",
 };

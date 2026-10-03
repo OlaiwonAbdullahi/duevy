@@ -9,7 +9,7 @@ import { StudentsTable } from "./_components/StudentsTable";
 import { useRepSpace } from "../_components/use-rep-space";
 import { timeAgo } from "../_components/notifications-data";
 import { StatRowSkeleton, ListSkeleton } from "../_components/Skeleton";
-import { listMembers, getRepOverview, regenerateJoinCode } from "@/lib/api/rep";
+import { listAllMembers, getRepOverview, regenerateJoinCode } from "@/lib/api/rep";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -31,15 +31,15 @@ export default function CirclePage() {
         // Members roster + join code — the join code comes from the same
         // `/spaces/{spaceId}/overview` the rep dashboard uses.
         const [members, overview] = await Promise.all([
-          listMembers(spaceId, { perPage: 100 }),
+          listAllMembers(spaceId),
           getRepOverview(spaceId),
         ]);
         if (cancelled) return;
         const weekAgo = Date.now() - WEEK_MS;
         setRecentCount(
-          members.data.filter((m) => new Date(m.joinedAt).getTime() >= weekAgo).length,
+          members.filter((m) => new Date(m.joinedAt).getTime() >= weekAgo).length,
         );
-        setStudents(members.data.map((m) => ({ ...m, joinedAt: timeAgo(m.joinedAt) })));
+        setStudents(members.map((m) => ({ ...m, joinedAt: timeAgo(m.joinedAt) })));
         setCode(overview.joinCode);
       } catch {
         if (!cancelled) toast.error("Couldn't load your circle.");
@@ -58,7 +58,7 @@ export default function CirclePage() {
     return students.filter(
       (student) =>
         student.name.toLowerCase().includes(q) ||
-        student.matricNo.toLowerCase().includes(q) ||
+        (student.matricNo ?? "").toLowerCase().includes(q) ||
         student.email.toLowerCase().includes(q),
     );
   }, [query, students]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { ProfileCard } from "./_components/ProfileCard";
+import { VerificationCard } from "./_components/VerificationCard";
 import { NotificationsCard } from "./_components/NotificationsCard";
 import { AppearanceCard } from "./_components/AppearanceCard";
 import { TourCard } from "./_components/TourCard";
@@ -21,6 +22,7 @@ export default function SettingsPage() {
 
       <div className="mt-6 flex flex-col gap-5">
         <ProfileCard />
+        <VerificationCard />
         <NotificationsCard />
         <AppearanceCard />
         <TourCard />

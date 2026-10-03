@@ -43,13 +43,21 @@ Base URL: `/v1`. Request and response bodies are JSON.
 ```
 
 - `201`: `{ user, accessToken }` for a student.
-- `403 REP_APPROVAL_PENDING`: returned for a rep, together with `data: { user, accessToken }`. The rep can sign in, but rep actions wait for admin approval.
+- `403 REP_APPROVAL_PENDING`: returned for a rep, together with `data: { user, emailVerificationRequired: true }`. No session is created: the rep verifies their email, then signs in.
 - Every account is a student. Rep is a permission added on top (`isRep`) when an admin approves the application.
+
+**Rep onboarding:** sign up → verify email → sign in → KYC (`POST /me/kyc`) → an admin reviews the NIN result and student ID and gives final approval (`POST /admin/reps/:repId/verify`), which creates the space.
 
 ### `POST /auth/login`
 
 - Body: `{ "email", "password" }`.
 - `200`: `{ user, accessToken }`.
+- `403 EMAIL_NOT_VERIFIED`: a rep applicant whose email isn't verified yet. No session is created.
+- `403 REP_APPROVAL_PENDING`: a verified rep applicant, with `data: { user, accessToken }`. They can sign in and do KYC while the application is reviewed.
+
+### `POST /auth/resend-verification`
+
+- Body: `{ "email" }`. Public. Always `200 { sent: true }`, so it can't reveal which emails have accounts.
 
 ### `GET /auth/me`
 
@@ -202,6 +210,8 @@ KYC has two parts, and a space collects only when **both** pass:
 - **Identity, verified by Bachs:** NIN + date of birth. A BVN is not required; Bachs may ask for one (or an ID document) later, and `requirementsDue` says so.
 - **Student status, verified by a Duevy admin:** the rep's student ID card.
 
+KYC state lives on the user. Rep applicants (no space yet) and reps can use the same endpoints at **`/me`**: `POST /me/kyc`, `POST /me/kyc/student-id`, `POST /me/kyc/government-id`, and `GET /me/kyc-status` (the caller's own state). The `/spaces/:spaceId/payout/kyc*` forms below act on the caller too. `403 REP_NOT_APPROVED` now means the caller is neither a rep nor a pending applicant.
+
 ### `POST /payout/kyc` (`multipart/form-data`)
 
 | Part | Required | Notes |
@@ -320,8 +330,8 @@ Withdrawal status moves `pending → processing → success | failed | reversed`
 
 | Endpoint | Permission | Notes |
 |---|---|---|
-| `GET /admin/reps/applications?status=pending` | userManagement | Reps waiting for approval. Each row: `{ userId, applicant, status, requestedSpace, submittedAt, … }`. |
-| `POST /admin/reps/:repId/verify` | userManagement | Approves the rep: sets `isRep` and creates the space from the application. Body: `{ note? }`. |
+| `GET /admin/reps/applications?status=pending` | userManagement | Reps waiting for approval. Each row: `{ userId, applicant, status, requestedSpace, submittedAt, kyc, … }`. `kyc` is `{ identity: { status, rejectionReason, requirementsDue, … }, studentId: { status, mimeType, viewUrl, viewUrlExpiresInSeconds, … } }` — the NIN verdict and a signed link to the student ID. `GET /admin/reps/:repId/application` returns one. |
+| `POST /admin/reps/:repId/verify` | userManagement | Final approval: sets `isRep`, creates the space from the application, and approves the pending student ID. Body: `{ note? }`. `409 KYC_INCOMPLETE` until the NIN is verified and a student ID is on file. |
 | `POST /admin/reps/:repId/reject` | userManagement | Body: `{ reason }`. |
 | `GET /admin/reps` | userManagement | Reps with their collections. |
 | `GET /admin/kyc/student-ids?status=pending` | userManagement | Student ID cards to review: `[{ userId, name, email, matricNo, institution, kycStatus, studentId: { status, mimeType, uploadedAt, reviewedAt, reviewNote, viewUrl, viewUrlExpiresInSeconds } }]`. `viewUrl` is a signed ImageKit link that expires after 10 minutes. |

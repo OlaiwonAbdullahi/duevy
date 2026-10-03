@@ -170,7 +170,7 @@ export default function SignupFlow() {
   const { title, subtitle } = headerFor(currentId, role, joinFlow);
 
   if (submittedEmail) {
-    return <CheckEmailNotice email={submittedEmail} loginHref={loginHref} />;
+    return <CheckEmailNotice email={submittedEmail} loginHref={loginHref} isRep={role === "rep"} />;
   }
 
   return (

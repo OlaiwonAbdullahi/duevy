@@ -171,30 +171,42 @@ export type KycSubmission = {
 /** Max size of each KYC document, enforced by the API (`413 FILE_TOO_LARGE`). */
 export const MAX_KYC_DOCUMENT_BYTES = 5 * 1024 * 1024;
 
-export function getKycStatus(spaceId: string) {
-  return apiClient.get<SpaceKycStatus>(`/spaces/${spaceId}/payout/kyc-status`);
+/**
+ * KYC lives on the user. With a `spaceId` these hit the space's mount (whose
+ * status is the space lead's state, plus `mine`); without one — a rep
+ * applicant whose space doesn't exist yet — they hit `/me/kyc*` for the caller.
+ */
+function kycBase(spaceId?: string) {
+  return spaceId ? `/spaces/${spaceId}/payout/kyc` : "/me/kyc";
+}
+
+export async function getKycStatus(spaceId?: string): Promise<SpaceKycStatus> {
+  if (spaceId) return apiClient.get<SpaceKycStatus>(`/spaces/${spaceId}/payout/kyc-status`);
+  // The caller's own state is also the "space" state for an applicant.
+  const mine = await apiClient.get<KycState>("/me/kyc-status");
+  return { ...mine, leadRepId: null, mine };
 }
 
 /** `multipart/form-data`. Returns `202` with the new state; the Bachs verdict arrives by webhook. */
-export function submitKyc(spaceId: string, input: KycSubmission) {
+export function submitKyc(spaceId: string | undefined, input: KycSubmission) {
   const form = new FormData();
   for (const [key, value] of Object.entries(input)) {
     if (value === undefined || value === "") continue;
     form.append(key, value);
   }
-  return apiClient.post<KycState>(`/spaces/${spaceId}/payout/kyc`, form);
+  return apiClient.post<KycState>(kycBase(spaceId), form);
 }
 
 /** Replace the student ID card after an admin rejected it. */
-export function resubmitStudentId(spaceId: string, file: File) {
+export function resubmitStudentId(spaceId: string | undefined, file: File) {
   const form = new FormData();
   form.append("studentIdCard", file);
-  return apiClient.post<KycState>(`/spaces/${spaceId}/payout/kyc/student-id`, form);
+  return apiClient.post<KycState>(`${kycBase(spaceId)}/student-id`, form);
 }
 
 /** Send Bachs a government ID document, when `requirementsDue` asks for one. */
-export function submitGovernmentId(spaceId: string, file: File) {
+export function submitGovernmentId(spaceId: string | undefined, file: File) {
   const form = new FormData();
   form.append("governmentId", file);
-  return apiClient.post<KycState>(`/spaces/${spaceId}/payout/kyc/government-id`, form);
+  return apiClient.post<KycState>(`${kycBase(spaceId)}/government-id`, form);
 }

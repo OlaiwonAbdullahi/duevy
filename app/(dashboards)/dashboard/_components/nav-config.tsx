@@ -81,9 +81,11 @@ export const REP_LINKS: NavLink[] = [
  * Rep-only route prefixes — every REP_LINK except the shared Overview root.
  * Used to gate these routes for students who reach them by URL.
  */
-export const REP_ONLY_PREFIXES = REP_LINKS.map((link) => link.href).filter(
-  (href) => href !== "/dashboard",
-);
+export const REP_ONLY_PREFIXES = [
+  ...REP_LINKS.map((link) => link.href).filter((href) => href !== "/dashboard"),
+  // Not in the sidebar — reached from the dashboard banner, Payout and Settings.
+  "/dashboard/kyc",
+];
 
 export function isRepOnlyPath(pathname: string) {
   return REP_ONLY_PREFIXES.some(

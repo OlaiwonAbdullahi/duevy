@@ -63,3 +63,8 @@ export function resetPassword(payload: { token: string; password: string }) {
 export function verifyEmail(token: string) {
   return apiClient.post<void>("/auth/verify-email", { token }, { auth: false });
 }
+
+/** Public — always resolves; the API never reveals whether the email exists. */
+export function resendVerification(email: string) {
+  return apiClient.post<{ sent: boolean }>("/auth/resend-verification", { email }, { auth: false });
+}
