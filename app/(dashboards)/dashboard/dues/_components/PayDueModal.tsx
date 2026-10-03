@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BankIcon, ArrowUpRight01Icon, InvoiceIcon, Discount01Icon } from "@hugeicons/core-free-icons";
+import { BankIcon, ArrowRight01Icon, InvoiceIcon } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
 import type { Due, Space } from "./types";
 import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
@@ -16,11 +15,14 @@ export function PayDueModal({
   space: Space;
   pending: boolean;
   onClose: () => void;
-  onConfirm: (discountCode?: string) => void;
+  onConfirm: () => void;
 }) {
-  const total = dues.reduce((sum, d) => sum + d.amount, 0);
+  // Face values only: the service fee (2% + ₦20) is charged once per basket,
+  // so for several dues it's less than the sum of each due's own fee — the
+  // exact figure comes back with the checkout on the next screen.
+  const face = dues.reduce((sum, d) => sum + d.faceAmount, 0);
   const multi = dues.length > 1;
-  const [discountCode, setDiscountCode] = useState("");
+  const singleFee = !multi && dues[0].fee > 0 ? dues[0].fee : null;
 
   const title = multi ? `Pay ${dues.length} dues` : "Confirm payment";
 
@@ -45,7 +47,7 @@ export function PayDueModal({
                   </p>
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-ink">
-                  {naira(d.amount)}
+                  {naira(d.faceAmount)}
                 </p>
               </li>
             ))}
@@ -61,16 +63,41 @@ export function PayDueModal({
               </p>
             </div>
             <p className="shrink-0 text-lg font-semibold tracking-tight text-ink">
-              {naira(dues[0].amount)}
+              {naira(dues[0].faceAmount)}
             </p>
           </div>
         )}
 
-        <div className="mt-3 flex items-center justify-between border-t border-cloud pt-3">
-          <span className="text-xs font-medium text-ink-soft">Total</span>
-          <span className="text-lg font-semibold tracking-tight text-ink">
-            {naira(total)}
-          </span>
+        <div className="mt-3 flex flex-col gap-1.5 border-t border-cloud pt-3">
+          {singleFee !== null ? (
+            <>
+              <div className="flex items-center justify-between text-xs text-ink-soft">
+                <span>Service fee (2% + ₦20)</span>
+                <span className="font-medium text-ink">{naira(singleFee)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-ink-soft">Total to transfer</span>
+                <span className="text-lg font-semibold tracking-tight text-ink">
+                  {naira(face + singleFee)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-ink-soft">
+                  {multi ? "Dues total" : "Due amount"}
+                </span>
+                <span className="text-lg font-semibold tracking-tight text-ink">
+                  {naira(face)}
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-ink-soft">
+                Plus a service fee of 2% + ₦20{multi ? ", charged once for all of these" : ""}.
+                You&apos;ll see the exact total on the next screen.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -79,34 +106,20 @@ export function PayDueModal({
           <HugeiconsIcon icon={BankIcon} size={18} />
         </span>
         <p className="text-xs leading-relaxed text-ink-soft">
-          You&apos;ll get a secure <span className="font-semibold text-ink">Bachs</span> checkout
-          link, right here in the app.
+          You&apos;ll get <span className="font-semibold text-ink">bank transfer details</span>{" "}
+          — a one-time account number for {multi ? "these dues" : "this due"}. Send the exact
+          amount from any bank app and we&apos;ll confirm it automatically.
         </p>
-      </div>
-
-      {/* Discount code — optional, redeems a referral reward against this payment. */}
-      <div className="mt-4">
-        <label className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
-          <HugeiconsIcon icon={Discount01Icon} size={14} />
-          Discount code (optional)
-        </label>
-        <input
-          value={discountCode}
-          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-          placeholder="e.g. REF-8XQP2K4M"
-          disabled={pending}
-          className="mt-1.5 h-11 w-full rounded-xl border border-cloud bg-canvas px-3.5 text-sm text-ink outline-none transition-colors duration-300 placeholder:text-ink-soft/60 focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
-        />
       </div>
 
       <button
         type="button"
         disabled={pending}
-        onClick={() => onConfirm(discountCode.trim() || undefined)}
+        onClick={onConfirm}
         className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
-        {pending ? "Processing…" : "Get checkout link"}
-        {!pending && <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />}
+        {pending ? "Setting up…" : "Get transfer details"}
+        {!pending && <HugeiconsIcon icon={ArrowRight01Icon} size={16} />}
       </button>
     </Modal>
   );

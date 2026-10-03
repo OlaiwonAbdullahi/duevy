@@ -1,22 +1,16 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { DueCategory } from "../../dues/_components/types";
+import { DUE_TYPES, type DueType } from "@/lib/api/types";
 import { CATEGORY_ICON, CATEGORY_LABEL } from "../../dues/_components/data";
 
-const CATEGORIES: DueCategory[] = [
-  "levy",
-  "dinner",
-  "handout",
-  "welfare",
-  "sport",
-];
+const CATEGORIES: readonly DueType[] = DUE_TYPES;
 
-/** A tile grid for picking the due's category — mirrors the pay-modal tiles. */
+/** A tile grid for picking the due's type — mirrors the pay-modal tiles. */
 export function CategoryPicker({
   value,
   onChange,
 }: {
-  value: DueCategory;
-  onChange: (next: DueCategory) => void;
+  value: DueType;
+  onChange: (next: DueType) => void;
 }) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -35,7 +29,7 @@ export function CategoryPicker({
             }`}
           >
             <HugeiconsIcon icon={CATEGORY_ICON[cat]} size={20} />
-            <span className="text-[11px] font-semibold">
+            <span className="text-center text-[11px] font-semibold leading-tight">
               {CATEGORY_LABEL[cat]}
             </span>
           </button>

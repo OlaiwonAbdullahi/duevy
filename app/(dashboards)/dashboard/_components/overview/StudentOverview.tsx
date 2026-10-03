@@ -22,8 +22,8 @@ import { EmptyState } from "../EmptyState";
 import { nairaFromKobo } from "../format";
 import {
   relativeDue,
-  CATEGORY_ICON,
-  CATEGORY_LABEL,
+  dueTypeIcon,
+  dueTypeLabel,
 } from "../../dues/_components/data";
 import { TXN_META, formatTime } from "../../transactions/_components/data";
 import type { HugeIcon } from "../nav-config";
@@ -65,17 +65,23 @@ export function StudentOverview() {
     };
   }, []);
 
+  // `/me/overview` open dues carry the rep lifecycle `status` ("active") plus a
+  // separate boolean `overdue`; older payloads used status "overdue".
+  type OverviewDue = StudentOverviewData["openDues"][number];
+  const isOverdue = (d: OverviewDue) =>
+    (d as { overdue?: boolean }).overdue === true || (d.status as string) === "overdue";
+
   // Overdue first, then soonest deadline — matches the old mock ordering.
   const openDues = useMemo(() => {
     const dues = data?.openDues ?? [];
     return [...dues].sort((a, b) => {
-      const rank = (s: string) => (s === "overdue" ? 0 : 1);
-      return rank(a.status) - rank(b.status) || +new Date(a.dueDate) - +new Date(b.dueDate);
+      const rank = (d: OverviewDue) => (isOverdue(d) ? 0 : 1);
+      return rank(a) - rank(b) || +new Date(a.dueDate) - +new Date(b.dueDate);
     });
   }, [data]);
 
   const overdueCount = useMemo(
-    () => (data?.openDues ?? []).filter((d) => d.status === "overdue").length,
+    () => (data?.openDues ?? []).filter(isOverdue).length,
     [data],
   );
 
@@ -172,7 +178,7 @@ export function StudentOverview() {
                         className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0"
                       >
                         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cloud text-brand">
-                          <HugeiconsIcon icon={CATEGORY_ICON[due.category]} size={18} />
+                          <HugeiconsIcon icon={dueTypeIcon(due.type ?? due.category)} size={18} />
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-ink">
@@ -183,7 +189,7 @@ export function StudentOverview() {
                               rel.past ? "text-rose-600" : "text-ink-soft"
                             }`}
                           >
-                            {CATEGORY_LABEL[due.category]} · {rel.text}
+                            {dueTypeLabel(due.type ?? due.category)} · {rel.text}
                           </p>
                         </div>
                         <span className="shrink-0 text-sm font-semibold text-ink">

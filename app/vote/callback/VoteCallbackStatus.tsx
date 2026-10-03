@@ -50,7 +50,7 @@ export default function VoteCallbackStatus({ reference }: { reference: string | 
           }
 
           setResult(res);
-          setState(res.status === "completed" ? "completed" : "failed");
+          setState(res.status === "paid" ? "completed" : "failed");
           clearPendingVoteCheckout();
           return;
         } catch (err) {

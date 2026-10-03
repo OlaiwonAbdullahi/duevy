@@ -53,6 +53,11 @@ export type User = {
   phone: string | null;
   avatarUrl: string | null;
   role: UserRole;
+  /** Rep is a permission on top of the student account, set when an admin approves the application. */
+  isRep: boolean;
+  adminSubRole: string | null;
+  institution: string | null;
+  kycStatus: KycStatus | null;
   repApplicationStatus: RepApplicationStatus | null;
   matricNo: string | null;
   level: string | null;
@@ -85,7 +90,23 @@ export type Space = {
   createdAt?: string;
 };
 
-export type DueCategory = "levy" | "dinner" | "handout" | "welfare" | "sport";
+export const DUE_TYPES = [
+  "handout",
+  "departmental_due",
+  "exam_levy",
+  "lab_manual",
+  "association_due",
+  "departmental_wear",
+  "trip_fee",
+  "clearance",
+  "other",
+] as const;
+
+/** Must match the backend `DueType` enum (src/lib/dueTypes.ts). */
+export type DueType = (typeof DUE_TYPES)[number];
+
+/** @deprecated Use `DueType` — the backend still sends `category` as an alias of `type`. */
+export type DueCategory = DueType;
 export type DueStatus = "unpaid" | "paid" | "overdue";
 
 export type Due = {
@@ -95,12 +116,14 @@ export type Due = {
   note?: string | null;
   /** Face amount the rep set (kobo). */
   amount: number;
-  /** 3% processing fee added on top for the payer (kobo). */
+  /** Processing fee (2% + ₦20) added on top for the payer (kobo). */
   processingFee?: number;
   /** What the payer is actually charged — `amount + processingFee` (kobo). */
   payableAmount?: number;
   dueDate: string;
-  category: DueCategory;
+  type: DueType;
+  /** Deprecated alias of `type`. */
+  category: DueType;
   status: DueStatus;
   paidAt: string | null;
   reference: string | null;
@@ -118,9 +141,11 @@ export type TxnStatus = "completed" | "pending" | "failed";
 export type Transaction = {
   id: string;
   type: TxnType;
-  /** "Wallet" · "Bachs". */
+  /** e.g. "Bank transfer". */
   method?: string;
   title?: string;
+  /** Context line, e.g. the space name. */
+  detail?: string | null;
   /** Signed kobo: positive = credit in, negative = debit out. */
   amount: number;
   status: TxnStatus;
@@ -131,7 +156,8 @@ export type Transaction = {
 export type StudentOverview = {
   outstanding: { amount: number; count: number };
   paidThisSession: number;
-  openDues: Due[];
+  /** `status` here is the rep lifecycle value ("active"); overdue is a separate flag. */
+  openDues: (Omit<Due, "status"> & { status: string; overdue?: boolean })[];
   recentTransactions: Transaction[];
 };
 
@@ -167,13 +193,20 @@ export type NotificationItem = {
 
 export type RepDueStatus = "draft" | "active" | "closed";
 
-export type RepDue = Omit<Due, "status"> & {
-  allowGuests: boolean;
+export type RepDue = Omit<
+  Due,
+  "status" | "processingFee" | "payableAmount" | "paidAt" | "reference"
+> & {
+  /** Not returned by the current API; guest payers are refused at checkout. */
+  allowGuests?: boolean;
   status: RepDueStatus;
   paidCount: number;
   memberCount: number;
   /** The rep this due's payout access is scoped to — auto-set to the creator. */
   assignedRepId: string | null;
+  publishedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
 };
 
 export type CollectionTotals = {
@@ -239,48 +272,58 @@ export type RepOverview = {
 
 // ---- Payouts (§10) --------------------------------------------------------
 
-export type PayoutStatus = "pending_approval" | "processing" | "completed" | "failed" | "cancelled";
+/** `pending → processing → success | failed | reversed`. Failed/reversed amounts go back to the balance. */
+export type PayoutStatus = "pending" | "processing" | "success" | "failed" | "reversed";
 
 export type Payout = {
   id: string;
-  /** Set when this payout is scoped to a single due rather than the whole space. */
-  dueId: string | null;
+  /** Gross, debited from the space (kobo). */
   amount: number;
+  /** Withdrawal fee deducted from `amount` (kobo). */
+  fee: number;
+  /** What reaches the bank — `amount - fee` (kobo). */
+  net: number;
   reference: string;
   status: PayoutStatus;
+  /** Masked destination. */
   account: string;
   note?: string | null;
   requestedById: string | null;
   requestedAt: string;
-  cancelledAt: string | null;
+  processingAt: string | null;
   settledAt: string | null;
+  failedAt: string | null;
+  reversedAt: string | null;
   failureReason: string | null;
 };
 
-export type PayoutApprovalDecision = "approved" | "rejected";
+export type WithdrawalFeeTier = { thresholdKobo: number; feeKobo: number };
 
-export type PayoutApprovalStatus = {
-  totalReps: number;
-  approvedCount: number;
-  requiredCount: number;
-  met: boolean;
-};
-
-export type PayoutApprovalVote = {
-  repUserId: string;
-  repName: string;
-  decision: PayoutApprovalDecision;
-  decidedAt: string;
-};
-
-export type PayoutWithApproval = Payout & {
-  approval: PayoutApprovalStatus & { decisions: PayoutApprovalVote[] };
-};
-
+/** All amounts in kobo, derived from the space's ledger. */
 export type PayoutSummary = {
   available: number;
-  pending: number;
-  lifetime: number;
+  balance: number;
+  collected: number;
+  withdrawn: number;
+  withdrawalFees: number;
+  /** Withdrawals still pending/processing. */
+  inFlight: number;
+  /** The space lead's verification state. */
+  kyc: KycState;
+  /** An account is on file and registered with Bachs. */
+  payoutAccountReady: boolean;
+  /** Withdrawals are held until this time after an account change. */
+  cooldownUntil: string | null;
+  minPayout: number;
+  fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
+};
+
+export type PayoutQuote = {
+  amount: number;
+  fee: number;
+  net: number;
+  minPayout: number;
+  belowMinimum: boolean;
 };
 
 export type BankAccount = {
@@ -288,42 +331,42 @@ export type BankAccount = {
   bankName?: string;
   accountNumber: string;
   accountName?: string;
+  cooldownUntil?: string | null;
+  /** Registered with Bachs as a payout destination. */
+  ready?: boolean;
 };
 
-// ---- Bachs connected-account onboarding ------------------------------------
+// ---- Rep KYC ----------------------------------------------------------------
+// Two checks, both required before a space can collect: Bachs verifies the
+// rep's identity (NIN + date of birth), a Duevy admin verifies their student ID.
 
-export type OnboardingStatus = {
-  setupStatus: "incomplete" | "awaiting_review" | "complete";
-  transfersActive: boolean;
+export type StudentIdStatus = "pending" | "approved" | "rejected";
+
+export type KycState = {
+  /** The Bachs identity check. */
+  kycStatus: KycStatus;
   payoutsActive: boolean;
+  canCollect: boolean;
+  canWithdraw: boolean;
+  providerReference: string | null;
+  /** Field keys Bachs still asks for, e.g. "persons.per_x.bvn" or an ID document. */
+  requirementsDue: string[];
+  governmentIdSubmittedAt: string | null;
+  studentId: {
+    /** `null` until a card has been uploaded. */
+    status: StudentIdStatus | null;
+    uploadedAt: string | null;
+    reviewedAt: string | null;
+    reviewNote: string | null;
+  };
+  rejectionReason: string | null;
+  retryLockedUntil: string | null;
+  submittedAt: string | null;
+  resolvedAt: string | null;
 };
 
-export type IdentityMethods = {
-  hostedAvailable: boolean;
-  ninAvailable: boolean;
-  country: string;
-};
-
-/**
- * The Tasks/checklist for a connected account's onboarding. Field shapes here
- * aren't fully confirmed against a live Bachs sandbox yet — kept loose
- * rather than over-committing to an exact structure.
- */
-export type OnboardingChecklist = {
-  checklist?: Array<{
-    key: string;
-    state: string;
-    provided: boolean;
-    errorReason?: string;
-  }>;
-  tasks?: Array<{
-    title: string;
-    type: string;
-    status: string;
-    rejectionReason?: string;
-  }>;
-  errors?: Array<{ field?: string; issue?: string }>;
-};
+/** `GET /payout/kyc-status`: the space lead's state, plus the caller's own. */
+export type SpaceKycStatus = KycState & { leadRepId: string | null; mine: KycState };
 
 // ---- Polls (§11) ----------------------------------------------------------
 

@@ -103,8 +103,9 @@ export default function AdminTransactionsPage() {
   const duesVolume = transactions
     .filter((tx) => tx.type === "dues_payment" && tx.status === "completed")
     .reduce((s, tx) => s + tx.amount, 0);
-  const pendingPayouts = transactions.filter(
-    (tx) => tx.type === "payout" && tx.status === "pending",
+  // Withdrawals no longer create transaction rows, so track pending dues payments here.
+  const pendingPayments = transactions.filter(
+    (tx) => tx.type === "dues_payment" && tx.status === "pending",
   ).length;
 
   async function handleRefund(tx: AdminTransaction) {
@@ -128,8 +129,11 @@ export default function AdminTransactionsPage() {
     }
   }
 
+  // The API answers every refund with 501 REFUND_NOT_SUPPORTED for now, so the
+  // action stays hidden until it ships.
+  const REFUNDS_SUPPORTED = false;
   const canRefund = (tx: AdminTransaction) =>
-    (tx.type === "dues_payment" || tx.type === "deposit") && tx.status === "completed";
+    REFUNDS_SUPPORTED && tx.type === "dues_payment" && tx.status === "completed";
 
   async function handleManualCredit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -155,7 +159,7 @@ export default function AdminTransactionsPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Transactions"
-        description="The money trail — deposits, dues, payouts and refunds."
+        description="The money trail — dues payments, manual credits and refunds."
         right={
           <Button variant="brand-outline" size="pill" onClick={() => setCreditOpen(true)}>
             Credit a due manually
@@ -173,9 +177,9 @@ export default function AdminTransactionsPage() {
         <StatCard icon={Invoice01Icon} label="Dues collected" value={nairaFromKobo(duesVolume)} />
         <StatCard
           icon={MoneySend01Icon}
-          label="Pending payouts"
-          value={String(pendingPayouts)}
-          hint="Awaiting release"
+          label="Pending payments"
+          value={String(pendingPayments)}
+          hint="Awaiting bank transfer"
         />
       </div>
 
@@ -191,9 +195,7 @@ export default function AdminTransactionsPage() {
           label="Filter by type"
           options={[
             { value: "all", label: "All types" },
-            { value: "deposit", label: "Deposits" },
             { value: "dues_payment", label: "Dues payments" },
-            { value: "payout", label: "Payouts" },
             { value: "refund", label: "Refunds" },
           ]}
         />
@@ -206,7 +208,6 @@ export default function AdminTransactionsPage() {
             { value: "completed", label: "Completed" },
             { value: "pending", label: "Pending" },
             { value: "failed", label: "Failed" },
-            { value: "refunded", label: "Refunded" },
           ]}
         />
       </Toolbar>

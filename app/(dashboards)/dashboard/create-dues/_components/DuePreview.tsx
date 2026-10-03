@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock01Icon } from "@hugeicons/core-free-icons";
-import type { DueCategory } from "../../dues/_components/types";
+import type { DueType } from "../../dues/_components/types";
 import {
   naira,
   relativeDue,
@@ -17,7 +17,7 @@ export function DuePreview({
   note,
 }: {
   title: string;
-  category: DueCategory;
+  category: DueType;
   amount: number;
   dueDate: string;
   note: string;

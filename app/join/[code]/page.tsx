@@ -60,14 +60,13 @@ export default function JoinSpacePage() {
       const adapted = adaptJoinable(raw);
       setDept(adapted);
 
-      const membership = user?.spaces.find(
-        (s) => s.id === adapted.id,
-      )?.membership;
-      if (
-        membership === "rep" ||
-        membership === "lead" ||
-        membership === "co"
-      ) {
+      // A rep's own space is listed twice (`member` and `rep`) — the rep entry wins.
+      const entries = (user?.spaces ?? []).filter((s) => s.id === adapted.id);
+      const isOwn = entries.some((s) =>
+        ["rep", "lead", "co"].includes(s.membership),
+      );
+      const membership = entries[0]?.membership;
+      if (isOwn) {
         setPhase("own-space");
       } else if (membership === "member" || membership === "guest") {
         setPhase("already-member");

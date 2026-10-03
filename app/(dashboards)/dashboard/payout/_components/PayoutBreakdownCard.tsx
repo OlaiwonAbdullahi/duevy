@@ -22,8 +22,14 @@ import type { Matcher } from "react-day-picker";
 import { EmptyState } from "../../_components/EmptyState";
 import { ListSkeleton } from "../../_components/Skeleton";
 import { nairaFromKobo } from "../../_components/format";
-import { CATEGORY_ICON, CATEGORY_LABEL } from "../../dues/_components/data";
+import { dueTypeIcon, dueTypeLabel } from "../../dues/_components/data";
 import { getPayoutBreakdown, type PayoutBreakdown } from "@/lib/api/payouts";
+
+/** `byDue` rows carry the due's `type` (older responses sent `category`). */
+function rowDueType(due: PayoutBreakdown["byDue"][number]): string | null | undefined {
+  const row = due as { type?: string | null; category?: string | null };
+  return row.type ?? row.category;
+}
 
 const PER_PAGE = 10;
 
@@ -260,14 +266,14 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cloud text-brand">
-                          <HugeiconsIcon icon={CATEGORY_ICON[due.category]} size={16} />
+                          <HugeiconsIcon icon={dueTypeIcon(rowDueType(due))} size={16} />
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-ink">
                             {due.title}
                           </p>
                           <p className="truncate text-xs text-ink-soft">
-                            {CATEGORY_LABEL[due.category]}
+                            {dueTypeLabel(rowDueType(due))}
                           </p>
                         </div>
                       </div>
@@ -294,7 +300,7 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
           </div>
 
           <p className="mt-3 text-xs text-ink-soft">
-            Fees shown are the 3% processing charge, already paid by the
+            Fees shown are the processing charge (2% + ₦20), already paid by the
             student on top of the due amount.
           </p>
 

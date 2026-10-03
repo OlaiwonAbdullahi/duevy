@@ -14,6 +14,7 @@ import {
   UserGroup03Icon,
   Megaphone01Icon,
   AiChat01Icon,
+  IdIcon,
 } from "@hugeicons/core-free-icons";
 import { FEATURES } from "@/lib/features";
 
@@ -124,6 +125,7 @@ export const ADMIN_LINKS: NavLink[] = [
   { label: "Overview", href: "/admin", icon: Home01Icon },
   { label: "Users", href: "/admin/users", icon: UserMultipleIcon },
   { label: "Reps", href: "/admin/reps", icon: UserGroup03Icon },
+  { label: "Student IDs", href: "/admin/student-ids", icon: IdIcon },
   { label: "Spaces", href: "/admin/spaces", icon: Building03Icon },
   {
     label: "Transactions",

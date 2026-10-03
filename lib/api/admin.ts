@@ -4,8 +4,10 @@ import type {
   Dispute,
   DisputeType,
   DisputeStatus,
+  KycState,
   KycStatus,
   Poll,
+  StudentIdStatus,
   SpaceKind,
   UserRole,
 } from "./types";
@@ -98,6 +100,42 @@ export function reviewKyc(
   payload: { decision: "verified" | "rejected"; note?: string },
 ) {
   return apiClient.post<{ kycStatus: KycStatus }>(`/admin/users/${userId}/kyc/review`, payload);
+}
+
+// Rep student ID review — Bachs verifies identity (NIN); an admin confirms the
+// rep is a student. A space can only collect once its lead's card is approved.
+
+export type StudentIdReviewRow = {
+  userId: string;
+  name: string;
+  email: string;
+  matricNo: string | null;
+  institution: string | null;
+  kycStatus: KycStatus;
+  studentId: {
+    status: StudentIdStatus;
+    mimeType: string | null;
+    uploadedAt: string | null;
+    reviewedAt: string | null;
+    reviewNote: string | null;
+    /** Signed link; expires after `viewUrlExpiresInSeconds`. */
+    viewUrl: string | null;
+    viewUrlExpiresInSeconds: number;
+  };
+};
+
+export function listStudentIdsForReview(
+  query: { status?: StudentIdStatus; page?: number; perPage?: number } = {},
+): Promise<Page<StudentIdReviewRow[]>> {
+  return apiClient.getPage<StudentIdReviewRow[]>(`/admin/kyc/student-ids${toQuery(query)}`);
+}
+
+/** A note is required to reject; the rep is notified either way. */
+export function reviewStudentId(
+  userId: string,
+  payload: { decision: "approved" | "rejected"; note?: string },
+) {
+  return apiClient.post<KycState>(`/admin/users/${userId}/student-id/review`, payload);
 }
 
 // ---------------------------------------------------------------------------

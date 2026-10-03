@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,23 +15,18 @@ import { SpaceCard } from "./_components/SpaceCard";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
 import { PayDueModal } from "./_components/PayDueModal";
-import { ReceiptModal } from "./_components/ReceiptModal";
-import { buildReceipts, type Receipt } from "./_components/receipt";
+import { payPageHref, toastCheckoutError } from "./_components/checkout";
 import { listSpaces, joinSpace } from "@/lib/api/spaces";
-import { listDues, payDue } from "@/lib/api/dues";
-import { useRole } from "../_components/role-context";
-import { useAuth } from "@/lib/auth/auth-context";
+import { listDues, payDue, payDues as payDuesApi } from "@/lib/api/dues";
 
 export default function DuesPage() {
-  const { isPendingRep } = useRole();
-  const { user } = useAuth();
+  const router = useRouter();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [dues, setDues] = useState<Due[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +86,13 @@ export default function DuesPage() {
         memberCount: dept.memberCount,
       };
       setSpaces((list) => [space, ...list]);
-      setDues((list) => [...dept.dues, ...list]);
+      // Lookup previews dues without fees or the student's status, so load the
+      // real student view of the new space's dues.
+      const joined = await listDues({ spaceId: dept.id, perPage: 100 }).catch(() => null);
+      if (joined) {
+        const fresh = joined.data.map(adaptDue);
+        setDues((list) => [...fresh, ...list.filter((d) => d.spaceId !== dept.id)]);
+      }
       toast.success(`Joined ${dept.short}`, {
         description: "It's now under Your spaces.",
       });
@@ -99,57 +101,35 @@ export default function DuesPage() {
     }
   };
 
-  const finishPayment = (targetDues: Due[], space: Space, refs: string[]) => {
-    const targetIds = targetDues.map((d) => d.id);
-    const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
-    setDues((list) =>
-      list.map((d) => (targetIds.includes(d.id) ? { ...d, status: "paid" } : d)),
-    );
-    setPendingIds([]);
-    setPayDues([]);
-    const payer = {
-      name: user?.name ?? "",
-      detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
-        .filter(Boolean)
-        .join(" · "),
-    };
-    setReceipts(buildReceipts(targetDues, space, payer, refs));
-    toast.success(`${naira(total)} paid`, {
-      description: targetDues.length === 1 ? targetDues[0].title : `${targetDues.length} dues settled`,
-    });
-  };
-
-  const confirmPay = async (discountCode?: string) => {
+  // One bank-transfer checkout for the whole basket, then the dedicated pay
+  // page shows the account to transfer into and waits for confirmation.
+  const confirmPay = async () => {
+    // Every account is a student, so a pending rep application doesn't block paying.
     if (payDues.length === 0 || !selected) return;
-    if (isPendingRep) {
-      toast.info("Paused during review", {
-        description: "Payments unlock once your rep application is approved.",
-      });
-      return;
-    }
     const targetDues = payDues;
-    const space = selected;
     setPendingIds(targetDues.map((d) => d.id));
 
-    try {
-      const results = await Promise.all(
-        targetDues.map((d) => payDue(d.id, { discountCode })),
+    const goToPayment = (reference: string) =>
+      router.push(
+        payPageHref(reference, {
+          // A single due links straight to its receipt once paid.
+          dueId: targetDues.length === 1 ? targetDues[0].id : null,
+          from: "dues",
+        }),
       );
 
-      // Every due payment redirects to a Bachs checkout — one checkout for
-      // the whole batch (mirrors the pre-migration single-checkout
-      // simplification for multi-due batches).
-      const pendingInvoice = results.find((r) => r.checkoutUrl);
-      if (pendingInvoice?.checkoutUrl) {
-        window.location.href = pendingInvoice.checkoutUrl;
-        return;
-      }
-
-      const refs = results.map((r) => r.reference ?? "");
-      finishPayment(targetDues, space, refs);
-    } catch {
+    try {
+      const checkout =
+        targetDues.length === 1
+          ? await payDue(targetDues[0].id)
+          : await payDuesApi(targetDues.map((d) => d.id));
+      goToPayment(checkout.reference);
+    } catch (err) {
       setPendingIds([]);
-      toast.error("Payment failed. Please try again.");
+      toastCheckoutError(err, (reference) => {
+        setPayDues([]);
+        goToPayment(reference);
+      });
     }
   };
 
@@ -285,10 +265,6 @@ export default function DuesPage() {
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}
         />
-      )}
-
-      {receipts.length > 0 && (
-        <ReceiptModal receipts={receipts} onClose={() => setReceipts([])} />
       )}
     </div>
   );

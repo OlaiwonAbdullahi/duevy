@@ -29,7 +29,7 @@ const personas = [
     challenge:
       "Pays dues, departmental levies, and event fees across the year. Never sure if her money reached the right place.",
     gives: [
-      "A card she saves once",
+      "Pay by transfer from any bank app",
       "Instant payment confirmation",
       "A clear view of what every naira funded",
     ],
@@ -43,7 +43,6 @@ const personas = [
       "Runs money across multiple levels and hundreds of students. No unified record for handover to the next set of execs.",
     gives: [
       "One dashboard for all levels",
-      "Verified identities via matric number",
       "A clean audit trail for handover",
     ],
   },

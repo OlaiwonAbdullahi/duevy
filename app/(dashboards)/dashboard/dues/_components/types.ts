@@ -1,3 +1,5 @@
+import type { DueType } from "@/lib/api/types";
+
 /** What kind of body a space represents — drives the emblem glyph + label. */
 export type SpaceKind = "department" | "association" | "faculty" | "club";
 
@@ -21,18 +23,27 @@ export type Space = {
 
 export type DueStatus = "unpaid" | "paid" | "overdue";
 
-export type DueCategory = "levy" | "dinner" | "handout" | "welfare" | "sport";
+export type { DueType };
+
+/** @deprecated Use `DueType`; kept so existing imports keep working. */
+export type DueCategory = DueType;
 
 export type Due = {
   id: string;
   spaceId: string;
   title: string;
   note: string;
+  /** What the student pays for this due on its own — face + per-due fee (naira). */
   amount: number;
+  /** Face amount the rep set (naira). */
+  faceAmount: number;
+  /** Processing fee for this due on its own (naira). A basket charges the ₦20 once. */
+  fee: number;
   /** ISO date the due is expected by. */
   dueDate: string;
   status: DueStatus;
-  category: DueCategory;
+  /** The due's type (named `category` here for historic reasons). */
+  category: DueType;
 };
 
 export type EmblemHue = "emerald" | "indigo" | "amber" | "rose" | "slate";

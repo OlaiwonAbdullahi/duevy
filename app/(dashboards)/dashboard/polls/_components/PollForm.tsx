@@ -338,11 +338,12 @@ export function PollForm({
                   description={
                     locked
                       ? "Locked once the poll is live."
-                      : "Each vote must be paid for before it counts."
+                      : "Coming soon — paid votes aren't accepted yet."
                   }
                   checked={paid}
                   onChange={setPaid}
-                  disabled={locked}
+                  // The API refuses paid votes (501), so only allow switching it off.
+                  disabled={locked || !paid}
                 />
               </div>
 

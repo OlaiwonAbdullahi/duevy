@@ -36,7 +36,7 @@ function adapt(t: ApiTransaction): Transaction {
     id: t.id,
     type,
     title: t.title ?? meta.label,
-    detail: t.method ?? meta.label,
+    detail: t.detail ?? t.method ?? meta.label,
     amount: t.amount / 100, // kobo → naira for the whole-naira `naira()` helper
     method: t.method ?? "—",
     date: t.createdAt,

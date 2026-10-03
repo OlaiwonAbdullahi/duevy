@@ -70,7 +70,7 @@ export function RepsCard() {
     <SettingsCard
       icon={Shield01Icon}
       title="Reps & roles"
-      description="People who can manage dues and approvals for this department."
+      description="People who can manage dues and collections for this department."
       action={
         isLead && (
           <Button variant="brand" size="pill" onClick={() => setInviteOpen(true)}>
@@ -100,7 +100,7 @@ export function RepsCard() {
         <EmptyState
           icon={Shield01Icon}
           title="No reps yet"
-          description="Invite a co-rep to help you manage dues, approvals, and payouts."
+          description="Invite a co-rep to help you manage dues and collections."
         />
       ) : (
         <ul className="flex flex-col">

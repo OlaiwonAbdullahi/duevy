@@ -15,14 +15,13 @@ import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
-import SpaceSettingsStep, { type SpaceSettings } from "./SpaceSettingsStep";
 import { CheckEmailNotice } from "./CheckEmailNotice";
 
-type StepId = "role" | "account" | "space" | "settings";
+type StepId = "role" | "account" | "space";
 
 const STEPS: Record<SignupRole, StepId[]> = {
   student: ["role", "account"],
-  rep: ["role", "account", "space", "settings"],
+  rep: ["role", "account", "space"],
 };
 
 const ROLE_META: Record<SignupRole, { label: string; icon: typeof UserIcon }> =
@@ -87,9 +86,6 @@ export default function SignupFlow() {
     acceptedTerms: false,
   });
   const [space, setSpace] = useState<SpaceDetails>(EMPTY_SPACE);
-  const [settings, setSettings] = useState<SpaceSettings>({
-    theme: "emerald",
-  });
 
   const steps = joinFlow ? (["account"] as StepId[]) : STEPS[role];
   const currentId = steps[stepIndex];
@@ -138,8 +134,9 @@ export default function SignupFlow() {
     }
   }
 
-  async function handleSpaceSettingsSubmit(data: SpaceSettings) {
-    setSettings(data);
+  // The space theme isn't chosen at signup; the rep can change it later from Manage.
+  async function handleSpaceSubmit(data: SpaceDetails) {
+    setSpace(data);
     setSubmitting(true);
     try {
       await register({
@@ -150,12 +147,11 @@ export default function SignupFlow() {
         password: account.password,
         acceptedTerms: account.acceptedTerms,
         space: {
-          name: space.spaceName,
-          short: space.short,
-          kind: space.kind,
-          school: space.school,
-          faculty: space.faculty || undefined,
-          theme: data.theme,
+          name: data.spaceName,
+          short: data.short,
+          kind: data.kind,
+          school: data.school,
+          faculty: data.faculty || undefined,
         },
       });
       setSubmittedEmail(account.email);
@@ -171,7 +167,7 @@ export default function SignupFlow() {
   }
 
   const RoleIcon = ROLE_META[role].icon;
-  const { title, subtitle } = headerFor(currentId, role, space.spaceName, joinFlow);
+  const { title, subtitle } = headerFor(currentId, role, joinFlow);
 
   if (submittedEmail) {
     return <CheckEmailNotice email={submittedEmail} loginHref={loginHref} />;
@@ -340,21 +336,9 @@ export default function SignupFlow() {
       {currentId === "space" && (
         <SpaceDetailsStep
           defaultValues={space}
-          submitLabel="Continue"
-          onBack={goBack}
-          onSubmit={(data) => {
-            setSpace(data);
-            goNext();
-          }}
-        />
-      )}
-
-      {currentId === "settings" && (
-        <SpaceSettingsStep
-          defaultValues={settings}
           submitLabel={submitting ? "Finishing setup…" : "Finish setup"}
           onBack={goBack}
-          onSubmit={handleSpaceSettingsSubmit}
+          onSubmit={handleSpaceSubmit}
         />
       )}
 
@@ -377,10 +361,8 @@ export default function SignupFlow() {
 function headerFor(
   step: StepId,
   role: SignupRole,
-  spaceName: string,
   joinFlow: boolean,
 ): { title: string; subtitle: string } {
-  const space = spaceName || "your department";
   switch (step) {
     case "role":
       return {
@@ -400,11 +382,6 @@ function headerFor(
       return {
         title: "Your department",
         subtitle: "Set up the space you'll collect dues for.",
-      };
-    case "settings":
-      return {
-        title: "Finishing touches",
-        subtitle: `A few defaults for ${space} — change them anytime.`,
       };
   }
 }

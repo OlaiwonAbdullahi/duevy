@@ -13,11 +13,6 @@ const ROWS = [
     checked: true,
   },
   {
-    title: "Require matric to join",
-    description: "Ask for a matric number when joining, and only accept ones on your class list.",
-    checked: false,
-  },
-  {
     title: "Allow guest payments",
     description: "Non-members can pay dues you mark as open to guests.",
     checked: false,

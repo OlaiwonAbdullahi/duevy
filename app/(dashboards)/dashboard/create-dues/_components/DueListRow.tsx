@@ -5,6 +5,7 @@ import {
   Clock01Icon,
   UserMultipleIcon,
   SquareLock02Icon,
+  SentIcon,
 } from "@hugeicons/core-free-icons";
 import {
   relativeDue,
@@ -19,12 +20,14 @@ export function DueListRow({
   onEdit,
   onDelete,
   onClose,
+  onPublish,
   onViewCollections,
 }: {
   due: RepDue;
   onEdit: (due: RepDue) => void;
   onDelete: (due: RepDue) => void;
   onClose: (due: RepDue) => void;
+  onPublish: (due: RepDue) => void;
   onViewCollections: (due: RepDue) => void;
 }) {
   const rel = relativeDue(due.dueDate);
@@ -95,14 +98,28 @@ export function DueListRow({
           >
             <HugeiconsIcon icon={UserMultipleIcon} size={16} />
           </button>
-          <button
-            type="button"
-            onClick={() => onEdit(due)}
-            aria-label={`Edit ${due.title}`}
-            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer"
-          >
-            <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-          </button>
+          {due.status === "draft" && (
+            <button
+              type="button"
+              onClick={() => onPublish(due)}
+              aria-label={`Publish ${due.title}`}
+              title="Publish due"
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-brand cursor-pointer"
+            >
+              <HugeiconsIcon icon={SentIcon} size={16} />
+            </button>
+          )}
+          {/* Closed dues can't be edited (409 DUE_CLOSED). */}
+          {due.status !== "closed" && (
+            <button
+              type="button"
+              onClick={() => onEdit(due)}
+              aria-label={`Edit ${due.title}`}
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer"
+            >
+              <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+            </button>
+          )}
           {due.status === "active" && (
             <button
               type="button"
@@ -114,14 +131,17 @@ export function DueListRow({
               <HugeiconsIcon icon={SquareLock02Icon} size={16} />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onDelete(due)}
-            aria-label={`Delete ${due.title}`}
-            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-          >
-            <HugeiconsIcon icon={Delete02Icon} size={16} />
-          </button>
+          {/* Only drafts can be deleted (409 ONLY_DRAFTS_DELETABLE). */}
+          {due.status === "draft" && (
+            <button
+              type="button"
+              onClick={() => onDelete(due)}
+              aria-label={`Delete ${due.title}`}
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={16} />
+            </button>
+          )}
         </div>
       </div>
     </li>

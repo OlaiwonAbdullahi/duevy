@@ -45,7 +45,7 @@ const rows = [
   },
   {
     old: "Reps get accused of eating the money",
-    fixed: "Payouts need quorum approval to release",
+    fixed: "Withdrawals go only to a verified rep's own account",
   },
   {
     old: "Trust breaks down, every single semester",

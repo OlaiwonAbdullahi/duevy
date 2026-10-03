@@ -3,8 +3,8 @@ import { CardIcon, EyeIcon, ShieldIcon } from "./icons";
 const blocks = [
   {
     icon: CardIcon,
-    title: "Direct card & transfer collection",
-    body: "Students pay dues, levies, and fees straight from a saved card or bank transfer in seconds. No chasing transfers or counting cash.",
+    title: "Direct bank transfer collection",
+    body: "Students pay dues, levies, and fees by bank transfer in seconds. No chasing transfers or counting cash.",
   },
   {
     icon: EyeIcon,

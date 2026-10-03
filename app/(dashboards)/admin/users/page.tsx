@@ -18,7 +18,6 @@ import {
   suspendUser,
   unsuspendUser,
   deactivateUser,
-  reviewKyc,
   type AdminUser,
 } from "@/lib/api/admin";
 import type { KycStatus, UserRole } from "@/lib/api/types";
@@ -110,21 +109,6 @@ export default function AdminUsersPage() {
       toast.success(`${u.name} deactivated.`);
     } catch {
       toast.error("Action failed. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const decideKyc = async (u: AdminUser, decision: "verified" | "rejected") => {
-    setBusy(true);
-    try {
-      const { kycStatus } = await reviewKyc(u.id, { decision });
-      setUsers((list) =>
-        list.map((x) => (x.id === u.id ? { ...x, kycStatus } : x)),
-      );
-      toast.success(`KYC ${decision} for ${u.name}.`);
-    } catch {
-      toast.error("Couldn't update KYC.");
     } finally {
       setBusy(false);
     }
@@ -250,26 +234,9 @@ export default function AdminUsersPage() {
           onClose={() => setSelectedId(null)}
           footer={
             <>
-              {selected.kycStatus === "pending" && (
-                <>
-                  <Button
-                    variant="brand-outline"
-                    size="pill"
-                    disabled={busy}
-                    onClick={() => decideKyc(selected, "verified")}
-                  >
-                    Approve KYC
-                  </Button>
-                  <Button
-                    variant="danger-outline"
-                    size="pill"
-                    disabled={busy}
-                    onClick={() => decideKyc(selected, "rejected")}
-                  >
-                    Reject KYC
-                  </Button>
-                </>
-              )}
+              {/* Identity KYC is decided by Bachs (synced by webhook) — a manual
+                  override would be overwritten. Admins review student ID cards
+                  under Student IDs instead. */}
               <Button
                 variant={
                   selected.isSuspended ? "brand-outline" : "danger-outline"

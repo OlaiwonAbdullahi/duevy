@@ -1,10 +1,15 @@
-export type PayoutStatus = "pending_approval" | "processing" | "completed" | "failed" | "cancelled";
+import type { PayoutStatus } from "@/lib/api/types";
+
+export type { PayoutStatus };
 
 export type Payout = {
   id: string;
-  /** Set when this payout is scoped to a single due rather than the whole space. */
-  dueId: string | null;
+  /** Gross, in naira. */
   amount: number;
+  /** Withdrawal fee deducted from `amount`, in naira. */
+  fee: number;
+  /** What reaches the bank, in naira. */
+  net: number;
   /** Display string, e.g. "Today, 8:15 AM" or "Jun 20, 2026". */
   requestedAt: string;
   reference: string;
@@ -12,6 +17,7 @@ export type Payout = {
   requestedById: string | null;
   /** Masked destination, e.g. "GTBank •••• 4021". */
   account: string;
+  failureReason: string | null;
 };
 
 export type BankAccount = {

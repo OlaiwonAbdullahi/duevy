@@ -1,4 +1,5 @@
 import { apiClient, type Page } from "./client";
+import type { DueType } from "./types";
 
 function toQuery(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
@@ -21,12 +22,8 @@ export type AssistantIntent =
 
 export type AssistantQuickReply = { label: string; value: string };
 
-export type AssistantDueCategory =
-  | "levy"
-  | "dinner"
-  | "handout"
-  | "welfare"
-  | "sport";
+/** The assistant's create_due slots still use the `category` key, carrying a `DueType`. */
+export type AssistantDueCategory = DueType;
 
 export type AssistantAction =
   | { type: "open_payment_modal"; dueId: string }

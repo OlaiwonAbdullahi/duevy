@@ -115,9 +115,16 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
     );
   }
 
+  // Rep is a permission on the student account (`isRep`); co-reps keep
+  // `role: "student"` and are only visible through a `rep` space membership.
+  const isRepUser =
+    user.isRep ||
+    user.role === "rep" ||
+    (user.spaces ?? []).some((s) => s.membership === "rep");
+
   return (
     <RoleProvider
-      initialRole={user.role === "rep" ? "rep" : "student"}
+      initialRole={isRepUser ? "rep" : "student"}
       isPendingRep={user.repApplicationStatus === "pending"}
     >
       <SpaceThemeProvider>

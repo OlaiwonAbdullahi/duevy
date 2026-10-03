@@ -1,10 +1,10 @@
 import { apiClient, type Page } from "./client";
-import type { Due, DueCategory, DueStatus, Transaction } from "./types";
+import type { Due, DueStatus, DueType, Transaction } from "./types";
 
 export type DuesQuery = {
   spaceId?: string;
   status?: DueStatus;
-  category?: DueCategory;
+  type?: DueType;
   page?: number;
   perPage?: number;
 };
@@ -28,35 +28,94 @@ export function getDue(dueId: string) {
   return apiClient.get<Due>(`/dues/${dueId}`);
 }
 
-export type PayDuePayload = { discountCode?: string };
+export type CheckoutStatus = "pending" | "paid" | "expired" | "underpaid";
 
-export type PayDueResult = {
-  reference?: string;
-  amount?: number;
-  /** Redirect the payer here to complete the Bachs checkout. */
-  checkoutUrl?: string;
+/** The one-time account the student transfers into. `null` once the checkout is no longer open. */
+export type CheckoutBankTransfer = {
+  accountNumber: string;
+  bankName: string;
+  accountName: string;
+  /** Exact amount to send (kobo) — equals the checkout total. */
+  amountKobo: number;
+  expiresAt: string;
 };
 
-/** Settle a due — always redirects to a Bachs checkout. Money-moving — an Idempotency-Key is attached automatically. */
-export function payDue(dueId: string, payload: PayDuePayload = {}) {
-  return apiClient.post<PayDueResult>(
-    `/dues/${dueId}/pay`,
-    { method: "online", ...payload },
+export type CheckoutItem = {
+  dueId: string;
+  title: string;
+  /** Face amount (kobo). */
+  amount: number;
+  /** This line's share of the basket fee (kobo). */
+  fee: number;
+};
+
+/**
+ * One bank-transfer checkout covering every due in the basket. All amounts in
+ * kobo. `face` goes to the space in full; `fee` (2% of face + ₦20, charged once
+ * per basket) is paid by the student on top; `total` is what they transfer.
+ */
+export type Checkout = {
+  reference: string;
+  status: CheckoutStatus;
+  spaceId?: string;
+  amount: number;
+  breakdown: { face: number; fee: number; total: number };
+  items: CheckoutItem[];
+  bankTransfer: CheckoutBankTransfer | null;
+  /** Always `null` — bank transfer is the only method. Kept for older clients. */
+  checkoutUrl: null;
+  expiresAt: string;
+  paidAt: string | null;
+  receivedKobo: number | null;
+  overpaidKobo: number;
+  createdAt?: string;
+  /** `true` when an open checkout for the same basket was returned instead of a new one. */
+  reused?: boolean;
+};
+
+/**
+ * Open one bank-transfer checkout for a basket of dues (all from one space).
+ * Money-moving — an Idempotency-Key is attached automatically.
+ *
+ * Errors: `422 MIXED_SPACES`, `403 NOT_A_MEMBER`, `409 DUE_ALREADY_PAID`,
+ * `409 SPACE_NOT_VERIFIED`, `409 CHECKOUT_OVERLAP`, `409 CHECKOUT_OPENING`.
+ */
+export function payDues(dueIds: string[]) {
+  return apiClient.post<Checkout>(
+    "/dues/pay",
+    { dueIds },
     { idempotencyKey: crypto.randomUUID() },
   );
 }
 
-export type PaymentStatus = {
-  status: "pending" | "completed" | "failed";
+/** Open a checkout for a single due — a basket of one. */
+export function payDue(dueId: string) {
+  return apiClient.post<Checkout>(
+    `/dues/${dueId}/pay`,
+    {},
+    { idempotencyKey: crypto.randomUUID() },
+  );
+}
+
+export type PaymentStatus = Checkout & {
+  /** Set once paid — download via `receiptPdfPath`. */
+  receiptNumber?: string | null;
+  /** The student's history row, present once paid. */
   transaction?: Transaction;
-  /** Snapshotted at creation — lets a dedicated payment page render the full invoice from just the reference, e.g. on a page reload. */
-  amount?: number;
-  checkoutUrl?: string;
 };
 
-/** Poll a pending online payment by its provider reference — actively re-checks with the gateway (see backend), so this also drives the "I've made payment" tap. */
+/**
+ * Read a checkout by its reference. Polling only reads — the status is moved
+ * by the provider's webhook (and its reconciliation job), never by this call.
+ * Legacy (pre-checkout) references come back with only `reference`/`status`.
+ */
 export function getPaymentStatus(reference: string) {
   return apiClient.get<PaymentStatus>(`/payments/${reference}/status`);
+}
+
+/** URL for a checkout receipt's PDF (`GET /receipts/:number?format=pdf`). */
+export function receiptPdfPath(receiptNumber: string) {
+  return `/receipts/${encodeURIComponent(receiptNumber)}?format=pdf`;
 }
 
 /** URL for a settled due's PDF receipt (served with `Content-Type: application/pdf`). */

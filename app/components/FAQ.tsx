@@ -17,12 +17,8 @@ const faqs = [
     a: "No. Every department has its own verified payout account, and every withdrawal is logged and traceable back to who requested it.",
   },
   {
-    q: "How do you know a payer is a real student?",
-    a: "Every account is verified by matric number through an admin approval queue.",
-  },
-  {
     q: "What does it cost?",
-    a: "3% per transaction.",
+    a: "2% + ₦20 per dues payment, capped at ₦2,020. Withdrawals cost ₦100 under ₦50,000 and ₦200 from ₦50,000. Paid votes carry a 2.5% fee.",
   },
   {
     q: "Which schools can use it?",

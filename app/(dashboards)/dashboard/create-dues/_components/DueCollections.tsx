@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -13,14 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { fromKobo } from "../../_components/format";
 import { timeAgo } from "../../_components/notifications-data";
-import { useAuth } from "@/lib/auth/auth-context";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { getCollections, remindUnpaid, listReps, reassignDue } from "@/lib/api/rep";
+import { getAllCollections, remindUnpaid, listReps, reassignDue } from "@/lib/api/rep";
 import { ApiError } from "@/lib/api/errors";
 import { CollectionSummary } from "../../collections/_components/CollectionSummary";
 import { CollectionTable } from "../../collections/_components/CollectionTable";
 import { downloadCollectionCsv } from "../../collections/_components/csv";
-import { DuePayoutModal } from "./DuePayoutModal";
 import type {
   CollectionStudent,
   CollectionTotals,
@@ -74,7 +73,6 @@ export function DueCollections({
   due: RepDue;
   onBack: () => void;
 }) {
-  const { user } = useAuth();
   const repSpace = useRepSpace();
   const isLead = repSpace?.membership !== "co";
 
@@ -87,7 +85,6 @@ export function DueCollections({
   const [sendingReminders, setSendingReminders] = useState(false);
   const [reps, setReps] = useState<SpaceRep[]>([]);
   const [reassigning, setReassigning] = useState(false);
-  const [payoutOpen, setPayoutOpen] = useState(false);
 
   const assignedRep = reps.find((r) => r.id === due.assignedRepId);
   const coReps = reps.filter((r) => r.role === "co");
@@ -97,7 +94,6 @@ export function DueCollections({
   // creator, who may well be the lead.
   const selectableReps =
     assignedRep && assignedRep.role === "lead" ? [assignedRep, ...coReps] : coReps;
-  const canRequestPayout = isLead || due.assignedRepId === user?.id;
 
   useEffect(() => {
     listReps(spaceId)
@@ -124,26 +120,14 @@ export function DueCollections({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      console.log(`[collections] REQUEST ${due.title}`, { spaceId, dueId: due.id });
       try {
-        const res = await getCollections(spaceId, due.id);
-        console.log(`[collections] SUCCESS ${due.title}`, {
-          totals: res.data?.totals,
-          students: res.data?.students,
-          meta: res.meta,
-          raw: res,
-        });
+        // The roster is paginated server-side; load every page so the tab
+        // counts, search and CSV cover the whole class.
+        const data = await getAllCollections(spaceId, due.id);
         if (cancelled) return;
-        const { data } = res;
         setStudents((data.students ?? []).map(adaptStudent));
         setTotals(data.totals ? adaptTotals(data.totals) : EMPTY_TOTALS);
       } catch (err) {
-        console.error(`[collections] FAILED ${due.title}`, {
-          status: err instanceof ApiError ? err.status : undefined,
-          code: err instanceof ApiError ? err.code : undefined,
-          message: err instanceof Error ? err.message : String(err),
-          err,
-        });
         if (cancelled) return;
         // No roster yet (e.g. a fresh/draft due) can 404 — show it as empty.
         if (err instanceof ApiError && err.status === 404) {
@@ -167,7 +151,7 @@ export function DueCollections({
     return students.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
-        s.matricNo.toLowerCase().includes(q) ||
+        (s.matricNo ?? "").toLowerCase().includes(q) ||
         s.email.toLowerCase().includes(q),
     );
   }, [query, students]);
@@ -243,10 +227,13 @@ export function DueCollections({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {canRequestPayout && (
-            <Button variant="brand" size="pill" onClick={() => setPayoutOpen(true)}>
-              <HugeiconsIcon icon={MoneySend01Icon} size={15} />
-              Request payout
+          {/* Withdrawals are space-wide and lead-only; no per-due payouts. */}
+          {isLead && (
+            <Button variant="brand" size="pill" asChild>
+              <Link href="/dashboard/payout">
+                <HugeiconsIcon icon={MoneySend01Icon} size={15} />
+                Withdraw funds
+              </Link>
             </Button>
           )}
           <Button
@@ -327,19 +314,6 @@ export function DueCollections({
         </>
       )}
 
-      {payoutOpen && (
-        <DuePayoutModal
-          spaceId={spaceId}
-          dueId={due.id}
-          dueTitle={due.title}
-          onClose={() => setPayoutOpen(false)}
-          onRequested={() =>
-            toast.success("Payout requested", {
-              description: "Awaiting approval from your department's reps.",
-            })
-          }
-        />
-      )}
     </div>
   );
 }

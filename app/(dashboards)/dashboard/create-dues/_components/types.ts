@@ -1,4 +1,4 @@
-import type { DueCategory } from "../../dues/_components/types";
+import type { DueType } from "../../dues/_components/types";
 
 /** A rep-raised due's lifecycle: collecting, not yet published, or wound up. */
 export type RepDueStatus = "active" | "draft" | "closed";
@@ -10,7 +10,8 @@ export type RepDue = {
   amount: number;
   /** yyyy-mm-dd deadline. */
   dueDate: string;
-  category: DueCategory;
+  /** The due's `type`. */
+  category: DueType;
   allowGuests: boolean;
   status: RepDueStatus;
   /** Members who've settled it — drives the collection progress. */

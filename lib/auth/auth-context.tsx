@@ -94,23 +94,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = err.data as AuthSession | undefined;
         if (data?.accessToken && data.user) {
           setAccessToken(data.accessToken);
-          setUser(data.user);
+          const me = await authApi.getMe();
+          setUser(me);
           setStatus("authenticated");
-          return data.user;
+          return me;
         }
       }
       throw err;
     }
+    // The login payload is the raw account row (no `spaces`, no rep flags), so
+    // load the real session shape from /auth/me.
     setAccessToken(session.accessToken);
-    setUser(session.user);
+    const me = await authApi.getMe();
+    setUser(me);
     setStatus("authenticated");
-    return session.user;
+    return me;
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload): Promise<RegisterResult> => {
     try {
       const session = await authApi.register(payload);
-      // Registration does NOT establish a session — the user signs in afterwards.
+      // The signup flow sends the user to /login afterwards (the API does set a
+      // refresh cookie, so a reload would also sign them in).
       return {
         user: session.user,
         pending: session.user.repApplicationStatus === "pending",

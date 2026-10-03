@@ -162,6 +162,8 @@ export default function VotePage() {
           ? "You've already voted in that award."
           : code === "POLL_CLOSED"
             ? "Voting has closed for this poll."
+            : code === "PAID_VOTING_UNAVAILABLE"
+              ? "Paid voting isn't available yet."
             : err instanceof ApiError
               ? err.message
               : "Couldn't cast your vote. Please try again.";
@@ -177,11 +179,12 @@ export default function VotePage() {
       router.push(`/login?next=${encodeURIComponent(`/vote/${slug}`)}`);
       return;
     }
-    if (!poll?.paid) {
-      submitVote({ selections: buildVoteSelections() });
+    if (poll?.paid) {
+      // The API refuses paid votes for now (501 PAID_VOTING_UNAVAILABLE).
+      toast.info("Paid voting isn't available yet.");
       return;
     }
-    setPayOpen(true);
+    submitVote({ selections: buildVoteSelections() });
   };
 
   const confirmPay = () => {
@@ -336,13 +339,13 @@ export default function VotePage() {
             <button
               type="button"
               onClick={castNow}
-              disabled={submitting}
+              disabled={submitting || (authenticated && poll.paid)}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
             >
               {!authenticated
                 ? "Sign in to vote"
                 : poll.paid
-                  ? "Continue"
+                  ? "Paid voting unavailable"
                   : "Cast vote"}
             </button>
           </div>

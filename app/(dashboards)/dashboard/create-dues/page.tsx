@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -27,9 +27,12 @@ import {
   updateDue,
   deleteDue,
   closeDue,
+  publishDue,
   type DueDraft as ApiDueDraft,
 } from "@/lib/api/rep";
 import type { RepDue as ApiRepDue } from "@/lib/api/types";
+import { ApiError } from "@/lib/api/errors";
+import { normalizeDueType } from "../dues/_components/adapt";
 
 /** API rep due (kobo) → the page's RepDue (whole naira). */
 function adaptRepDue(api: ApiRepDue): RepDue {
@@ -39,8 +42,8 @@ function adaptRepDue(api: ApiRepDue): RepDue {
     note: api.note ?? "",
     amount: api.amount / 100,
     dueDate: api.dueDate,
-    category: api.category,
-    allowGuests: api.allowGuests,
+    category: normalizeDueType(api.type ?? api.category),
+    allowGuests: api.allowGuests ?? false,
     status: api.status as RepDueStatus,
     paidCount: api.paidCount,
     memberCount: api.memberCount,
@@ -55,7 +58,7 @@ function toApiDraft(draft: DueDraft): ApiDueDraft {
     note: draft.note,
     amount: draft.amount * 100,
     dueDate: draft.dueDate,
-    category: draft.category,
+    type: draft.category,
     allowGuests: draft.allowGuests,
   };
 }
@@ -63,6 +66,7 @@ function toApiDraft(draft: DueDraft): ApiDueDraft {
 export default function CreateDuesPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  const router = useRouter();
   const searchParams = useSearchParams();
   const dueParam = searchParams.get("due");
 
@@ -142,8 +146,52 @@ export default function CreateDuesPage() {
       }
       setEditing(null);
       setMode("list");
-    } catch {
-      toast.error("Couldn't save the due. Please try again.");
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "KYC_REQUIRED" && !editing) {
+        // Drafts are allowed before verification — keep the rep's work and let
+        // them publish it from the list once they're verified.
+        try {
+          const draftDue = await createDue(spaceId, { ...toApiDraft(draft), publish: false });
+          setDues((list) => [adaptRepDue(draftDue), ...list]);
+          setEditing(null);
+          setMode("list");
+          toastKycRequired("Saved as a draft", "publish it");
+        } catch (draftErr) {
+          toast.error(
+            draftErr instanceof ApiError ? draftErr.message : "Couldn't save the due. Please try again.",
+          );
+        }
+        return;
+      }
+      toast.error(
+        err instanceof ApiError ? err.message : "Couldn't save the due. Please try again.",
+      );
+    }
+  };
+
+  const toastKycRequired = (title: string, action: string) =>
+    toast.info(title, {
+      description: `Your space can't collect payments until verification (identity and student ID) is complete. Finish it on the Payout page, then ${action}.`,
+      action: {
+        label: "Go to Payout",
+        onClick: () => router.push("/dashboard/payout"),
+      },
+      duration: 10000,
+    });
+
+  const publish = async (due: RepDue) => {
+    if (!spaceId) return;
+    try {
+      const published = await publishDue(spaceId, due.id);
+      const row = adaptRepDue(published);
+      setDues((list) => list.map((d) => (d.id === due.id ? row : d)));
+      toast.success("Due published", { description: `${due.title} · ${naira(due.amount)}` });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "KYC_REQUIRED") {
+        toastKycRequired("Verification needed to publish", "try again");
+        return;
+      }
+      toast.error(err instanceof ApiError ? err.message : "Couldn't publish the due.");
     }
   };
 
@@ -155,9 +203,9 @@ export default function CreateDuesPage() {
     try {
       await deleteDue(spaceId, due.id);
       toast.success("Due deleted", { description: due.title });
-    } catch {
+    } catch (err) {
       setDues(prev);
-      toast.error("Couldn't delete the due.");
+      toast.error(err instanceof ApiError ? err.message : "Couldn't delete the due.");
     }
   };
 
@@ -293,6 +341,7 @@ export default function CreateDuesPage() {
                           onEdit={openEdit}
                           onDelete={setToDelete}
                           onClose={setToClose}
+                          onPublish={publish}
                           onViewCollections={openCollections}
                         />
                       ))}
@@ -307,10 +356,10 @@ export default function CreateDuesPage() {
 
       <ConfirmDialog
         open={!!toDelete}
-        title="Delete this due?"
+        title="Delete this draft?"
         description={
           toDelete
-            ? `"${toDelete.title}" and its collection records will be removed. This can't be undone.`
+            ? `"${toDelete.title}" hasn't been published, so no one has paid it. This can't be undone.`
             : ""
         }
         confirmLabel="Delete due"

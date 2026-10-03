@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { listReps } from "@/lib/api/rep";
 import type { SpaceMembershipSummary } from "@/lib/api/types";
 
 const REP_MEMBERSHIPS = new Set(["rep", "lead", "co"]);
 
 /**
- * A raw membership row from `/auth/me`. The API has used two shapes: a flat
- * `spaces` array (`{ id, membership, joinCode, ... }`) and a `spaceMemberships`
- * array (`{ spaceId, role, joinCode, space: {...} }`). We normalize either.
+ * A raw membership row. `/auth/me` sends a flat `spaces` array
+ * (`{ id, membership, ... }`); older payloads sent `spaceMemberships`
+ * (`{ spaceId, role, space: {...} }`). We normalize either.
  */
 type RawMembership = {
   id?: string;
@@ -48,10 +49,32 @@ function normalize(m: RawMembership): SpaceMembershipSummary | null {
 }
 
 /**
- * The department the signed-in rep manages, resolved from the session user's
- * memberships (no network call). Prefers a `rep`/`lead`/`co` membership; if the
- * account is a rep but nothing is flagged, falls back to its first space.
- * Returns null for students (or before the session loads).
+ * `/auth/me` only says `membership: "rep"` — it doesn't say whether the caller
+ * is the space's lead or a co-rep. Resolve that from `GET /spaces/:id/reps`,
+ * once per space+user (several components on a page use this hook).
+ */
+const repRoleCache = new Map<string, Promise<"lead" | "co" | null>>();
+
+function fetchRepRole(spaceId: string, userId: string) {
+  const key = `${spaceId}:${userId}`;
+  let pending = repRoleCache.get(key);
+  if (!pending) {
+    pending = listReps(spaceId)
+      .then((reps) => reps.find((r) => r.id === userId)?.role ?? null)
+      .catch(() => {
+        repRoleCache.delete(key); // retry on next mount
+        return null;
+      });
+    repRoleCache.set(key, pending);
+  }
+  return pending;
+}
+
+/**
+ * The department the signed-in rep manages, from the session user's
+ * memberships. `membership` is refined to `lead` / `co` once the reps list
+ * loads (it reads `rep` until then). Returns null for students (or before the
+ * session loads).
  */
 export function useRepSpace(): SpaceMembershipSummary | null {
   const { user } = useAuth();
@@ -59,21 +82,39 @@ export function useRepSpace(): SpaceMembershipSummary | null {
   // Memoize on `user` so the returned object is referentially stable across
   // re-renders — otherwise every render makes a new object and any effect that
   // depends on it (e.g. RepOverview) refetches in a loop.
-  return useMemo(() => {
+  const base = useMemo(() => {
     if (!user) return null;
 
     const raw: RawMembership[] =
-      (user as unknown as { spaceMemberships?: RawMembership[] }).spaceMemberships ??
       (user.spaces as unknown as RawMembership[] | undefined) ??
+      (user as unknown as { spaceMemberships?: RawMembership[] }).spaceMemberships ??
       [];
 
     const memberships = raw
       .map(normalize)
       .filter((m): m is SpaceMembershipSummary => m !== null);
 
-    return (
-      memberships.find((s) => REP_MEMBERSHIPS.has(s.membership)) ??
-      (user.role === "rep" ? (memberships[0] ?? null) : null)
-    );
+    // A rep's own space is listed twice (as `member` and as `rep`) — take the rep entry.
+    return memberships.find((s) => REP_MEMBERSHIPS.has(s.membership)) ?? null;
   }, [user]);
+
+  const [role, setRole] = useState<{ key: string; role: "lead" | "co" | null } | null>(null);
+  const key = base && user ? `${base.id}:${user.id}` : null;
+
+  useEffect(() => {
+    if (!base || !user || base.membership === "lead" || base.membership === "co") return;
+    let cancelled = false;
+    fetchRepRole(base.id, user.id).then((r) => {
+      if (!cancelled) setRole({ key: `${base.id}:${user.id}`, role: r });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [base, user]);
+
+  return useMemo(() => {
+    if (!base) return null;
+    const resolved = role && role.key === key ? role.role : null;
+    return resolved ? { ...base, membership: resolved } : base;
+  }, [base, role, key]);
 }

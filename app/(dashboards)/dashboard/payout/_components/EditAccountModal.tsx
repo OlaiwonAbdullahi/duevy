@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   BankIcon,
@@ -36,11 +37,14 @@ export function EditAccountModal({
   const [banks, setBanks] = useState<Bank[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
   const [bankCode, setBankCode] = useState("");
-  const [accountNumber, setAccountNumber] = useState(account.accountNumber);
+  // The saved number comes back masked ("•••• 4021"), so start blank.
+  const [accountNumber, setAccountNumber] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Name-enquiry state — the resolved holder name the rep confirms before saving.
   const [resolvedName, setResolvedName] = useState<string | null>(null);
+  // Withdrawals only go to an account in the rep's own name; the API refuses others on save.
+  const [nameMatches, setNameMatches] = useState(true);
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
 
@@ -49,14 +53,16 @@ export function EditAccountModal({
   useEffect(() => {
     let cancelled = false;
     setBanksLoading(true);
-    listBanks(spaceId)
+    listBanks()
       .then((list) => {
         if (cancelled) return;
         setBanks(list);
         const current = list.find((b) => b.name === account.bankName);
         if (current) setBankCode(current.code);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) toast.error("Couldn't load the bank list. Close this and try again.");
+      })
       .finally(() => {
         if (!cancelled) setBanksLoading(false);
       });
@@ -79,26 +85,20 @@ export function EditAccountModal({
   useEffect(() => {
     setResolvedName(null);
     setResolveError(null);
-    if (!spaceId || !inputsReady) {
-      // Diagnostic: shows which precondition blocked the name-enquiry.
-      console.warn("[payout lookup skipped]", {
-        spaceId,
-        bankCode,
-        accountNumberLength: accountNumber.length,
-        inputsReady,
-      });
-      return;
-    }
+    if (!spaceId || !inputsReady) return;
 
     let cancelled = false;
     setResolving(true);
     (async () => {
       try {
-        const { accountName } = await lookupPayoutAccount(spaceId, {
+        const { accountName, matchesYourName } = await lookupPayoutAccount(spaceId, {
           bankCode,
           accountNumber,
         });
-        if (!cancelled) setResolvedName(accountName);
+        if (!cancelled) {
+          setResolvedName(accountName);
+          setNameMatches(matchesYourName);
+        }
       } catch (err) {
         if (!cancelled) {
           setResolveError(
@@ -117,7 +117,7 @@ export function EditAccountModal({
     };
   }, [spaceId, bankCode, accountNumber, inputsReady]);
 
-  const canSave = inputsReady && resolvedName !== null;
+  const canSave = inputsReady && resolvedName !== null && nameMatches;
 
   const save = async () => {
     if (!canSave) return;
@@ -178,8 +178,10 @@ export function EditAccountModal({
             <div className="min-w-0">
               <p className="text-[11px] font-medium text-ink-soft">Account name</p>
               <p className="truncate text-sm font-semibold text-ink">{resolvedName}</p>
-              <p className="mt-0.5 text-[11px] text-ink-soft">
-                Confirm this is correct before saving.
+              <p className={cn("mt-0.5 text-[11px]", nameMatches ? "text-ink-soft" : "font-medium text-rose-600")}>
+                {nameMatches
+                  ? "Confirm this is correct before saving."
+                  : "This doesn't match your name. Withdrawals can only go to an account in your own name."}
               </p>
             </div>
           </div>

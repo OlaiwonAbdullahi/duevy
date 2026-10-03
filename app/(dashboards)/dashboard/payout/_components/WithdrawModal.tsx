@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert01Icon,
@@ -11,16 +11,25 @@ import { Modal } from "../../_components/Modal";
 import { BARE_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { getPayoutQuote } from "@/lib/api/payouts";
+import type { PayoutQuote } from "@/lib/api/types";
+import { fromKobo } from "../../_components/format";
 import { accountLabel, naira } from "./data";
 import type { BankAccount } from "./types";
 
 export function WithdrawModal({
+  spaceId,
   available,
+  minPayout,
   account,
   onClose,
   onConfirm,
 }: {
+  spaceId: string;
+  /** Naira. */
   available: number;
+  /** Naira. */
+  minPayout: number;
   account: BankAccount;
   onClose: () => void;
   onConfirm: (amount: number) => Promise<void>;
@@ -29,7 +38,28 @@ export function WithdrawModal({
   const [submitting, setSubmitting] = useState(false);
   const parsed = Number(amount.replace(/[^0-9]/g, ""));
   const tooMuch = parsed > available;
-  const valid = parsed > 0 && !tooMuch;
+  const tooLittle = parsed > 0 && parsed < minPayout;
+  const valid = parsed > 0 && !tooMuch && !tooLittle;
+
+  // The fee is deducted from the withdrawal; quote it so the rep sees what lands.
+  const [latestQuote, setQuote] = useState<PayoutQuote | null>(null);
+  // Only show a quote for the amount currently typed.
+  const quote = latestQuote?.amount === parsed * 100 ? latestQuote : null;
+  useEffect(() => {
+    if (!valid) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      getPayoutQuote(spaceId, parsed * 100)
+        .then((q) => {
+          if (!cancelled) setQuote(q);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [spaceId, parsed, valid]);
 
   const confirm = async () => {
     if (!valid) return;
@@ -67,7 +97,7 @@ export function WithdrawModal({
           />
           <button
             type="button"
-            onClick={() => setAmount(String(available))}
+            onClick={() => setAmount(String(Math.floor(available)))}
             className="shrink-0 rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand transition-colors hover:bg-brand hover:text-white cursor-pointer"
           >
             Max
@@ -78,6 +108,24 @@ export function WithdrawModal({
             <HugeiconsIcon icon={Alert01Icon} size={13} />
             Amount is more than your available balance.
           </p>
+        )}
+        {tooLittle && (
+          <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
+            <HugeiconsIcon icon={Alert01Icon} size={13} />
+            The minimum withdrawal is {naira(minPayout)}.
+          </p>
+        )}
+        {quote && valid && (
+          <dl className="mt-3 flex flex-col gap-1.5 rounded-2xl border border-cloud bg-paper/50 px-4 py-3 text-xs">
+            <div className="flex justify-between text-ink-soft">
+              <dt>Withdrawal fee</dt>
+              <dd className="tabular-nums">−{naira(fromKobo(quote.fee))}</dd>
+            </div>
+            <div className="flex justify-between font-semibold text-ink">
+              <dt>You&apos;ll receive</dt>
+              <dd className="tabular-nums">{naira(fromKobo(quote.net))}</dd>
+            </div>
+          </dl>
         )}
       </div>
 
@@ -96,8 +144,8 @@ export function WithdrawModal({
       </div>
 
       <p className="mt-3 text-xs leading-5 text-ink-soft">
-        Payouts are reviewed and typically settle to your bank within 24 hours.
-        You&apos;ll get a notification once it clears.
+        Withdrawals usually reach your bank within minutes. If one fails, the full
+        amount goes back to your balance.
       </p>
 
       <div className="mt-6 flex gap-3">

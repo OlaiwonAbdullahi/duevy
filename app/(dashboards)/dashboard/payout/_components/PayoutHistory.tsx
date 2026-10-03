@@ -46,6 +46,14 @@ export function PayoutHistory({ payouts }: { payouts: Payout[] }) {
                   <p className="truncate text-xs text-ink-soft">
                     {payout.account} · {payout.reference}
                   </p>
+                  {payout.fee > 0 && (
+                    <p className="truncate text-[11px] text-ink-soft">
+                      {naira(payout.net)} received after {naira(payout.fee)} fee
+                    </p>
+                  )}
+                  {payout.failureReason && (payout.status === "failed" || payout.status === "reversed") && (
+                    <p className="truncate text-[11px] text-rose-600">{payout.failureReason}</p>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5 text-right">
                   <span

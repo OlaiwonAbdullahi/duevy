@@ -1,16 +1,20 @@
 import {
   Book02Icon,
-  Restaurant01Icon,
   Coins01Icon,
-  FootballIcon,
-  FavouriteIcon,
+  Pen01Icon,
+  TestTube01Icon,
+  UserGroupIcon,
+  TShirtIcon,
+  Bus01Icon,
+  CheckmarkBadge01Icon,
+  Tag01Icon,
   Building03Icon,
   UserMultipleIcon,
   MortarboardIcon,
   StarIcon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
-import type { DueCategory, EmblemHue, Due, SpaceKind } from "./types";
+import type { DueType, EmblemHue, Due, SpaceKind } from "./types";
 
 export { naira } from "../../_components/format";
 
@@ -42,21 +46,40 @@ export const SPACE_KIND_LABEL: Record<SpaceKind, string> = {
   club: "Club",
 };
 
-export const CATEGORY_ICON: Record<DueCategory, HugeIcon> = {
-  levy: Coins01Icon,
-  dinner: Restaurant01Icon,
+export const CATEGORY_ICON: Record<DueType, HugeIcon> = {
   handout: Book02Icon,
-  welfare: FavouriteIcon,
-  sport: FootballIcon,
+  departmental_due: Coins01Icon,
+  exam_levy: Pen01Icon,
+  lab_manual: TestTube01Icon,
+  association_due: UserGroupIcon,
+  departmental_wear: TShirtIcon,
+  trip_fee: Bus01Icon,
+  clearance: CheckmarkBadge01Icon,
+  other: Tag01Icon,
 };
 
-export const CATEGORY_LABEL: Record<DueCategory, string> = {
-  levy: "Levy",
-  dinner: "Dinner",
+/** Mirrors the backend's DUE_TYPE_LABELS (src/lib/dueTypes.ts). */
+export const CATEGORY_LABEL: Record<DueType, string> = {
   handout: "Handout",
-  welfare: "Welfare",
-  sport: "Sports",
+  departmental_due: "Departmental due",
+  exam_levy: "Exam levy",
+  lab_manual: "Lab manual",
+  association_due: "Association due",
+  departmental_wear: "Departmental wear",
+  trip_fee: "Trip fee",
+  clearance: "Clearance",
+  other: "Other",
 };
+
+/** Label for a type that may be missing or unknown (older rows, other clients). */
+export function dueTypeLabel(type: string | null | undefined): string {
+  return (type && CATEGORY_LABEL[type as DueType]) || "Other";
+}
+
+/** Icon for a type that may be missing or unknown. */
+export function dueTypeIcon(type: string | null | undefined): HugeIcon {
+  return (type && CATEGORY_ICON[type as DueType]) || Tag01Icon;
+}
 
 /** Glyph struck into the emblem medallion — reads the kind of body it is. */
 export const KIND_GLYPH: Record<SpaceKind, HugeIcon> = {

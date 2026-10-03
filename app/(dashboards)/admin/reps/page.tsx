@@ -17,6 +17,7 @@ import { nairaFromKobo, formatPercent01 } from "../_components/format";
 import { ApiError } from "@/lib/api/errors";
 import {
   listAdminReps,
+  listAdminSpaces,
   suspendRep,
   reinstateRep,
   freezeRepPayouts,
@@ -87,8 +88,19 @@ export default function AdminRepsPage() {
   async function load() {
     setLoading(true);
     try {
-      const { data } = await listAdminReps({ q: debouncedSearch || undefined, perPage: 100 });
-      setReps(data);
+      // `/admin/reps` doesn't say whether payouts are frozen; that flag lives on
+      // the rep's spaces, so read it from `/admin/spaces`.
+      const [{ data }, spaces] = await Promise.all([
+        listAdminReps({ q: debouncedSearch || undefined, perPage: 100 }),
+        listAdminSpaces({ perPage: 100 }).then((p) => p.data).catch(() => []),
+      ]);
+      const frozen = new Set(spaces.filter((s) => s.payoutsFrozen).map((s) => s.id));
+      setReps(
+        data.map((r) => ({
+          ...r,
+          payoutsFrozen: r.payoutsFrozen ?? (r.departmentIds ?? []).some((id) => frozen.has(id)),
+        })),
+      );
     } catch {
       toast.error("Couldn't load reps.");
     } finally {
@@ -152,8 +164,9 @@ export default function AdminRepsPage() {
       }
       patch(r.id, { payoutsFrozen: next });
       toast.success(`Payouts ${next ? "frozen" : "unfrozen"} for ${r.name}.`);
-    } catch {
-      toast.error("Action failed.");
+    } catch (err) {
+      // e.g. 404 "Rep leads no spaces" for a co-rep — say why.
+      toast.error(err instanceof ApiError ? err.message : "Action failed.");
     } finally {
       setBusy(false);
     }

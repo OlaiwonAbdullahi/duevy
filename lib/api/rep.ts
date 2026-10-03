@@ -3,7 +3,7 @@ import type {
   AuditEntry,
   CollectionStudent,
   CollectionTotals,
-  DueCategory,
+  DueType,
   RepDue,
   RepOverview,
   Space,
@@ -26,10 +26,10 @@ export function getRepOverview(spaceId: string) {
   return apiClient.get<RepOverview>(`/spaces/${spaceId}/overview`);
 }
 
-/** All dues the space has raised. */
+/** All dues the space has raised (unpaginated). */
 export function listRepDues(
   spaceId: string,
-  query: { status?: string; category?: DueCategory } = {},
+  query: { status?: string; type?: DueType } = {},
 ) {
   return apiClient.get<RepDue[]>(`/spaces/${spaceId}/dues${toQuery(query)}`);
 }
@@ -39,7 +39,7 @@ export type DueDraft = {
   note?: string;
   amount: number;
   dueDate: string;
-  category: DueCategory;
+  type: DueType;
   allowGuests?: boolean;
   publish?: boolean;
 };
@@ -74,9 +74,27 @@ export type CollectionsResponse = {
   students: CollectionStudent[];
 };
 
-/** Per-student payment roster for a due. */
-export function getCollections(spaceId: string, dueId: string): Promise<Page<CollectionsResponse>> {
-  return apiClient.getPage<CollectionsResponse>(`/spaces/${spaceId}/dues/${dueId}/collections`);
+/** Per-student payment roster for a due (one page; `meta.total` has the full count). */
+export function getCollections(
+  spaceId: string,
+  dueId: string,
+  query: { page?: number; perPage?: number; status?: "all" | "paid" | "unpaid"; q?: string } = {},
+): Promise<Page<CollectionsResponse>> {
+  return apiClient.getPage<CollectionsResponse>(
+    `/spaces/${spaceId}/dues/${dueId}/collections${toQuery({ perPage: 100, ...query })}`,
+  );
+}
+
+/** Every student on the roster, following pages until `meta.totalPages`. */
+export async function getAllCollections(spaceId: string, dueId: string): Promise<CollectionsResponse> {
+  const first = await getCollections(spaceId, dueId, { page: 1 });
+  const students = [...first.data.students];
+  const totalPages = first.meta?.totalPages ?? 1;
+  for (let page = 2; page <= totalPages; page++) {
+    const next = await getCollections(spaceId, dueId, { page });
+    students.push(...next.data.students);
+  }
+  return { totals: first.data.totals, students };
 }
 
 /** Nudge unpaid members. Omit `userIds` to remind all unpaid. */

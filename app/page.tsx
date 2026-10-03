@@ -1,12 +1,11 @@
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import DashboardPreview from "./components/DashboardPreview";
 import TrustBar from "./components/TrustBar";
 import Problem from "./components/Problem";
-import Solution from "./components/Solution";
 import Personas from "./components/Personas";
 import Features from "./components/Features";
 import HowItWorks from "./components/HowItWorks";
-import Stats from "./components/Stats";
 import FAQ from "./components/FAQ";
 import Pricing from "./components/Pricing";
 import CTA from "./components/CTA";
@@ -48,13 +47,6 @@ export default function Page() {
         <Reveal>
           <Hero />
         </Reveal>
-        <Reveal>
-          <TrustBar />
-        </Reveal>
-        <Reveal>
-          <Problem />
-        </Reveal>
-        {/* <Solution /> */}
         <Reveal>
           <Personas />
         </Reveal>

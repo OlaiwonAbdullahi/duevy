@@ -13,8 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
-import { ToggleRow } from "../../settings/_components/Toggle";
-import type { DueCategory } from "../../dues/_components/types";
+import type { DueType } from "../../dues/_components/types";
 import type { DueDraft, RepDue } from "./types";
 import { CategoryPicker } from "./CategoryPicker";
 import { DatePicker } from "./DatePicker";
@@ -44,13 +43,14 @@ export function DueForm({
 }) {
   const editing = !!initial;
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [category, setCategory] = useState<DueCategory>(initial?.category ?? "levy");
+  const [category, setCategory] = useState<DueType>(initial?.category ?? "departmental_due");
   const [amountDigits, setAmountDigits] = useState(
     initial ? String(initial.amount) : "",
   );
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
-  const [allowGuests, setAllowGuests] = useState(initial?.allowGuests ?? false);
+  // Guest payers are refused at checkout, so the form no longer offers it.
+  const allowGuests = false;
   const [submitting, setSubmitting] = useState(false);
 
   const amount = Number(amountDigits || 0);
@@ -121,7 +121,7 @@ export function DueForm({
               />
             </Field>
 
-            <Field label="Category">
+            <Field label="Type">
               <CategoryPicker value={category} onChange={setCategory} />
             </Field>
 
@@ -152,15 +152,6 @@ export function DueForm({
                 className="min-h-[84px] w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand placeholder:text-ink-soft"
               />
             </Field>
-
-            <div className="border-t border-cloud pt-1">
-              <ToggleRow
-                title="Allow guests to pay"
-                description="Non-members can pay this due with a shared link."
-                checked={allowGuests}
-                onChange={setAllowGuests}
-              />
-            </div>
           </div>
         </SettingsCard>
 
@@ -216,7 +207,7 @@ export function DueForm({
                 size={13}
                 className="mt-px shrink-0"
               />
-              Members can pay by saved card or bank transfer once
+              Members can pay by bank transfer once
               published.
             </p>
           </div>

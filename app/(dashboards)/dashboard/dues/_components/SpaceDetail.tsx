@@ -62,7 +62,13 @@ export function SpaceDetail({
 
   const openDues = ordered.filter((d) => d.status !== "paid");
   const selectedDues = openDues.filter((d) => selected.has(d.id));
-  const selectedTotal = selectedDues.reduce((sum, d) => sum + d.amount, 0);
+  // One checkout charges 2% of the basket's face value plus ₦20 *once* (mirrors
+  // the backend's `checkoutFee`), so summing each due's own payable overstates it.
+  const selectedFaceKobo = selectedDues.reduce((sum, d) => sum + Math.round(d.faceAmount * 100), 0);
+  const selectedTotal =
+    selectedFaceKobo === 0
+      ? 0
+      : (selectedFaceKobo + Math.floor((selectedFaceKobo * 2 * 2 + 100) / 200) + 2_000) / 100;
   const allSelected = openDues.length > 0 && selectedDues.length === openDues.length;
 
   const toggle = (due: Due) =>

@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { CheckIcon, ShieldIcon } from "../components/icons";
 
 const points = [
-  "Collect dues and levies by card or bank transfer",
-  "Payouts only move after students approve them",
+  "Collect dues and levies by bank transfer",
+  "Withdrawals only go to a verified rep's own bank account",
   "Every naira tracked with an automatic receipt trail",
 ];
 
@@ -71,7 +71,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="relative flex items-center gap-3 text-white/70">
           <ShieldIcon size={18} />
           <p className="text-[13px] leading-snug">
-            Just 3% per transaction. No setup or monthly fees.
+            Just 2% + ₦20 per payment. No setup or monthly fees.
           </p>
         </div>
       </aside>

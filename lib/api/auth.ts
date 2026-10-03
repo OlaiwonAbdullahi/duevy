@@ -1,6 +1,5 @@
 import { apiClient } from "./client";
 import type { SpaceKind } from "@/app/(auth)/components/SpaceDetailsStep";
-import type { SpaceThemeId } from "@/app/(dashboards)/dashboard/_components/space-theme";
 import type { User } from "./types";
 
 export type AuthSession = { user: User; accessToken: string };
@@ -26,7 +25,6 @@ export type RegisterRepPayload = BaseRegisterPayload & {
     kind: SpaceKind;
     school: string;
     faculty?: string;
-    theme: SpaceThemeId;
     coRepInvites?: string[];
   };
 };

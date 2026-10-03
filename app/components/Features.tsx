@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  CreditCardIcon,
+  BankIcon,
   SecurityCheckIcon,
   Analytics01Icon,
   Invoice01Icon,
@@ -12,14 +12,14 @@ import {
 
 const features = [
   {
-    icon: CreditCardIcon,
-    title: "Pay by card or bank transfer",
-    body: "Save a card once, or pay by transfer — settles in seconds, no float sitting anywhere.",
+    icon: BankIcon,
+    title: "Pay by bank transfer",
+    body: "Pay straight from any Nigerian bank app — settles in seconds, no float sitting anywhere.",
   },
   {
     icon: SecurityCheckIcon,
-    title: "Approval-based payouts",
-    body: "Funds release only after a quorum of students or execs approve.",
+    title: "Verified withdrawals",
+    body: "Only a verified lead rep can withdraw, and only to a bank account in their own name.",
   },
   {
     icon: Analytics01Icon,

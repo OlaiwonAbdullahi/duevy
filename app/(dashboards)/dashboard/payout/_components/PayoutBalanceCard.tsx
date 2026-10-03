@@ -9,20 +9,24 @@ import { naira } from "./data";
 
 /**
  * Hero card for the payout page. Shows what can be withdrawn now, with the
- * collected total and pending clearance as context chips.
+ * collected total and withdrawals still in flight as context chips.
  */
 export function PayoutBalanceCard({
   available,
   collected,
-  pending,
+  inFlight,
   canWithdraw = true,
+  blockedReason,
   onWithdraw,
 }: {
   available: number;
   collected: number;
-  pending: number;
-  /** Space-wide withdrawal is lead-only — co-reps request against an assigned due instead. */
+  /** Withdrawals requested but not yet settled. */
+  inFlight: number;
+  /** Withdrawal is lead-only. */
   canWithdraw?: boolean;
+  /** Why the lead can't withdraw right now (verification, account, cooldown, …). */
+  blockedReason?: string | null;
   onWithdraw: () => void;
 }) {
   return (
@@ -60,7 +64,7 @@ export function PayoutBalanceCard({
 
       <div className="relative mt-6 flex flex-wrap gap-3">
         <Chip label="Total collected" value={naira(collected)} />
-        <Chip label="Pending clearance" value={naira(pending)} />
+        <Chip label="Withdrawal in progress" value={naira(inFlight)} />
       </div>
 
       <div className="relative mt-8 flex flex-wrap gap-3">
@@ -68,7 +72,7 @@ export function PayoutBalanceCard({
           <button
             type="button"
             onClick={onWithdraw}
-            disabled={available <= 0}
+            disabled={available <= 0 || !!blockedReason}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             <HugeiconsIcon icon={MoneySend01Icon} size={16} />
@@ -83,6 +87,9 @@ export function PayoutBalanceCard({
           View breakdown
         </Link>
       </div>
+      {canWithdraw && blockedReason && (
+        <p className="relative mt-3 text-xs text-white/80">{blockedReason}</p>
+      )}
     </div>
   );
 }

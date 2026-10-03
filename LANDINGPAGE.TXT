@@ -33,7 +33,7 @@ Pays dues, departmental levies, and event fees across the year. Never sure if he
 What Duevy gives her: A wallet she tops up once, instant payment confirmation, and a clear view of what every naira funded.
 The Department — Faculty association exec
 Runs money across multiple levels and hundreds of students. No unified record for handover to the next set of execs.
-What Duevy gives them: One dashboard for all levels, verified student identities via matric number, and a clean audit trail for handover.
+What Duevy gives them: One dashboard for all levels, and a clean audit trail for handover.
 
 Features
 The whole platform, in plain words.
@@ -70,8 +70,7 @@ FAQ
 Do students need to download an app? No but they hace the option to add shortcut on their phone app list. Reps get a full dashboard.
 How is my money kept safe? Student funds sit in a separate, partitioned account from platform revenue, on Bachs's secure rails.
 Can a rep run away with the money? No. Every department has its own verified payout account, and every withdrawal is logged and traceable back to who requested it.
-How do you know a payer is a real student? Every account is verified by matric number through an admin approval queue.
-What does it cost? 3% per transaction
+What does it cost? 2% + ₦20 per dues payment (capped at ₦2,020), ₦100/₦200 per withdrawal, 2.5% per paid vote
 Which schools can use it? Duevy is launching at LAUTECH and is built to expand to any Nigerian university.
 
 

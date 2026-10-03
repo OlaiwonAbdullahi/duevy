@@ -26,13 +26,10 @@ import { EmptyState } from "../_components/EmptyState";
 import { getDue, payDue as payDueApi } from "@/lib/api/dues";
 import { getSpace } from "@/lib/api/spaces";
 import { ApiError } from "@/lib/api/errors";
-import { useAuth } from "@/lib/auth/auth-context";
 import { adaptDue, adaptSpace } from "../dues/_components/adapt";
 import type { Due, Space } from "../dues/_components/types";
 import { PayDueModal } from "../dues/_components/PayDueModal";
-import { ReceiptModal } from "../dues/_components/ReceiptModal";
-import { buildReceipts, type Receipt } from "../dues/_components/receipt";
-import { naira } from "../_components/format";
+import { payPageHref, toastCheckoutError } from "../dues/_components/checkout";
 
 type ChatMessage = {
   id: number;
@@ -59,7 +56,6 @@ const exampleQuestions = [
 ];
 
 export default function AssistantPage() {
-  const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -75,7 +71,6 @@ export default function AssistantPage() {
   const [paySpace, setPaySpace] = useState<Space | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const [payPending, setPayPending] = useState(false);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
 
   // Create-due confirm state (rep-only), keyed by the chat message offering it.
   const [creatingDueId, setCreatingDueId] = useState<number | null>(null);
@@ -276,37 +271,28 @@ export default function AssistantPage() {
     }
   };
 
-  const finishPayment = (due: Due, space: Space, ref: string) => {
-    const payer = {
-      name: user?.name ?? "",
-      detail: [user?.level ? `${user.level} level` : null, user?.matricNo]
-        .filter(Boolean)
-        .join(" · "),
-    };
-    setReceipts(buildReceipts([due], space, payer, [ref]));
-    pushMessage("bot", `Payment confirmed! ${naira(due.amount)} for ${due.title} is settled. 🎉`);
-  };
-
-  const confirmPay = async (discountCode?: string) => {
+  // Opens one bank-transfer checkout, then hands off to the dedicated pay page
+  // (which links back here with the conversation restored).
+  const confirmPay = async () => {
     if (!payDue || !paySpace) return;
-    setPayPending(true);
-    try {
-      const result = await payDueApi(payDue.id, { discountCode });
-
-      // Every due payment redirects to a Bachs-hosted checkout page.
-      if (result.checkoutUrl && result.reference) {
-        setPayDue(null);
-        setPaySpace(null);
-        window.location.href = result.checkoutUrl;
-        return;
-      }
-
-      const ref = result.reference ?? "";
-      finishPayment(payDue, paySpace, ref);
+    const due = payDue;
+    const goToPayment = (reference: string) => {
       setPayDue(null);
       setPaySpace(null);
-    } catch {
-      toast.error("Payment failed. Please try again.");
+      router.push(
+        payPageHref(reference, {
+          dueId: due.id,
+          from: "assistant",
+          conversationId,
+        }),
+      );
+    };
+    setPayPending(true);
+    try {
+      const checkout = await payDueApi(due.id);
+      goToPayment(checkout.reference);
+    } catch (err) {
+      toastCheckoutError(err, goToPayment);
     } finally {
       setPayPending(false);
     }
@@ -554,10 +540,6 @@ export default function AssistantPage() {
           onClose={closePaymentModal}
           onConfirm={confirmPay}
         />
-      )}
-
-      {receipts.length > 0 && (
-        <ReceiptModal receipts={receipts} onClose={() => setReceipts([])} />
       )}
 
       {historyOpen && (

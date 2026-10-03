@@ -11,7 +11,6 @@ import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { PayoutAccountCard } from "./_components/PayoutAccountCard";
 import { OnboardingCard } from "./_components/OnboardingCard";
 import { PayoutHistory } from "./_components/PayoutHistory";
-import { PendingApprovalsCard } from "./_components/PendingApprovalsCard";
 import { WithdrawModal } from "./_components/WithdrawModal";
 import { EditAccountModal } from "./_components/EditAccountModal";
 import { useRepSpace } from "../_components/use-rep-space";
@@ -26,50 +25,86 @@ import {
   listPayouts,
 } from "@/lib/api/payouts";
 import type { AccountEdit } from "./_components/EditAccountModal";
-import type { Payout as ApiPayout } from "@/lib/api/types";
+import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
 
 /** API payout (kobo, ISO date) → history row. */
 function adaptPayout(p: ApiPayout): Payout {
   return {
     id: p.id,
-    dueId: p.dueId,
     amount: fromKobo(p.amount),
+    fee: fromKobo(p.fee),
+    net: fromKobo(p.net),
     requestedAt: timeAgo(p.requestedAt),
     reference: p.reference,
     status: p.status,
     requestedById: p.requestedById,
     account: p.account,
+    failureReason: p.failureReason,
   };
+}
+
+/** API error code → what the rep should do about it. */
+const PAYOUT_ERRORS: Record<string, string> = {
+  KYC_NOT_VERIFIED: "Finish verification above before withdrawing.",
+  NO_PAYOUT_ACCOUNT: "Add a payout account first.",
+  ACCOUNT_COOLDOWN: "Withdrawals are on hold for 24 hours after an account change.",
+  WITHDRAWAL_IN_PROGRESS: "Another withdrawal is still in progress. Try again once it settles.",
+  INSUFFICIENT_BALANCE: "That's more than your available balance.",
+  BELOW_MIN_PAYOUT: "That's below the minimum withdrawal.",
+  PAYOUTS_FROZEN: "Withdrawals for this space are paused. Contact support.",
+  FORBIDDEN: "Only the department's lead rep can withdraw.",
+};
+
+const ACCOUNT_ERRORS: Record<string, { title: string; description: string }> = {
+  ACCOUNT_UNVERIFIABLE: {
+    title: "We couldn't verify that account",
+    description: "Double-check the bank and account number and try again.",
+  },
+  ACCOUNT_NAME_MISMATCH: {
+    title: "That account isn't in your name",
+    description: "Withdrawals can only go to a bank account in your own name.",
+  },
+  KYC_NOT_VERIFIED: {
+    title: "Verify your identity first",
+    description: "You can add a payout account once your NIN is verified.",
+  },
+  FORBIDDEN: {
+    title: "Only the lead rep can change this",
+    description: "Ask your department's lead rep to update the payout account.",
+  },
+};
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleString("en-NG", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export default function PayoutPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
-  // Space-wide payout requests are lead-only — co-reps request against a due
-  // assigned to them instead, from that due's collections view.
+  // Withdrawals and the payout account are lead-only.
   const isLead = repSpace?.membership !== "co";
 
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [account, setAccount] = useState<BankAccount>(EMPTY_ACCOUNT);
   const [hasAccount, setHasAccount] = useState(false);
-  const [available, setAvailable] = useState(0);
-  const [pending, setPending] = useState(0);
-  const [collected, setCollected] = useState(0);
+  const [summary, setSummary] = useState<PayoutSummary | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function refresh(id: string) {
-    const [summary, acct, history] = await Promise.all([
+    const [nextSummary, acct, history] = await Promise.all([
       getPayoutSummary(id),
       getPayoutAccount(id).catch(() => null), // no account set yet is fine
       listPayouts(id),
     ]);
-    setAvailable(fromKobo(summary.available));
-    setPending(fromKobo(summary.pending));
-    // Total ever in the department's favour — available + in-flight + paid out.
-    setCollected(fromKobo(summary.available + summary.pending + summary.lifetime));
+    setSummary(nextSummary);
     if (acct && acct.accountNumber) {
       setAccount({
         bankName: acct.bankName ?? "",
@@ -93,14 +128,24 @@ export default function PayoutPage() {
   const handleWithdraw = async (amount: number) => {
     if (!spaceId) return;
     try {
-      await requestPayout(spaceId, { amount: amount * 100 });
+      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100) });
       setWithdrawOpen(false);
-      toast.success("Payout requested", {
-        description: "We're processing it now — check the history below for status.",
-      });
+      // A 201 can already carry a provider refusal; the balance is restored then.
+      if (payout.status === "failed" || payout.status === "reversed") {
+        toast.error("The withdrawal didn't go through", {
+          description: payout.failureReason ?? "Your balance has been restored. Please try again later.",
+        });
+      } else {
+        toast.success("Withdrawal requested", {
+          description: "We're processing it now — check the history below for status.",
+        });
+      }
       await refresh(spaceId);
-    } catch {
-      toast.error("Couldn't request the payout. Please try again.");
+    } catch (err) {
+      toast.error("Couldn't request the withdrawal", {
+        description:
+          (err instanceof ApiError && PAYOUT_ERRORS[err.code]) || "Something went wrong. Please try again.",
+      });
     }
   };
 
@@ -123,18 +168,27 @@ export default function PayoutPage() {
       });
       await refresh(spaceId);
     } catch (err) {
-      const unverifiable =
-        err instanceof ApiError && err.code === "ACCOUNT_UNVERIFIABLE";
-      toast.error(
-        unverifiable ? "We couldn't verify that account" : "Couldn't update the account",
-        {
-          description: unverifiable
-            ? "Double-check the bank and account number and try again."
-            : "Something went wrong. Please try again.",
-        },
-      );
+      const known = err instanceof ApiError ? ACCOUNT_ERRORS[err.code] : undefined;
+      toast.error(known?.title ?? "Couldn't update the account", {
+        description: known?.description ?? "Something went wrong. Please try again.",
+      });
     }
   };
+
+  const available = fromKobo(summary?.available ?? 0);
+  const cooldownUntil =
+    summary?.cooldownUntil && new Date(summary.cooldownUntil) > new Date() ? summary.cooldownUntil : null;
+  const withdrawBlockedReason = !summary
+    ? null
+    : !summary.kyc.canWithdraw
+      ? "Withdrawals open once verification is complete."
+      : !summary.payoutAccountReady
+        ? "Add a payout account to withdraw."
+        : cooldownUntil
+          ? `Withdrawals are on hold until ${formatTime(cooldownUntil)} after the account change.`
+          : summary.inFlight > 0
+            ? "A withdrawal is still in progress."
+            : null;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -159,15 +213,20 @@ export default function PayoutPage() {
         <>
           {spaceId && (
             <div className="mt-6">
-              <OnboardingCard spaceId={spaceId} />
+              <OnboardingCard
+                spaceId={spaceId}
+                isLead={isLead}
+                onChanged={() => void refresh(spaceId).catch(() => {})}
+              />
             </div>
           )}
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
             <PayoutBalanceCard
               available={available}
-              collected={collected}
-              pending={pending}
+              collected={fromKobo(summary?.collected ?? 0)}
+              inFlight={fromKobo(summary?.inFlight ?? 0)}
               canWithdraw={isLead}
+              blockedReason={withdrawBlockedReason}
               onWithdraw={() => setWithdrawOpen(true)}
             />
             <PayoutAccountCard
@@ -177,16 +236,6 @@ export default function PayoutPage() {
             />
           </div>
         </>
-      )}
-
-      {!loading && spaceId && (
-        <div className="mt-6">
-          <PendingApprovalsCard
-            spaceId={spaceId}
-            payoutIds={payouts.filter((p) => p.status === "pending_approval").map((p) => p.id)}
-            onChanged={() => refresh(spaceId)}
-          />
-        </div>
       )}
 
       <div className="mt-6">
@@ -199,7 +248,9 @@ export default function PayoutPage() {
 
       {withdrawOpen && (
         <WithdrawModal
+          spaceId={spaceId ?? ""}
           available={available}
+          minPayout={fromKobo(summary?.minPayout ?? 0)}
           account={account}
           onClose={() => setWithdrawOpen(false)}
           onConfirm={handleWithdraw}

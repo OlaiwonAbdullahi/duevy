@@ -2,13 +2,12 @@ import { apiClient, type Page } from "./client";
 import type {
   BankAccount,
   DueCategory,
-  IdentityMethods,
-  OnboardingChecklist,
-  OnboardingStatus,
+  DueType,
+  KycState,
   Payout,
-  PayoutApprovalDecision,
+  PayoutQuote,
   PayoutSummary,
-  PayoutWithApproval,
+  SpaceKycStatus,
 } from "./types";
 
 function toQuery(params: Record<string, string | number | undefined>) {
@@ -22,15 +21,12 @@ function toQuery(params: Record<string, string | number | undefined>) {
 
 export type Bank = { code: string; name: string };
 
-/**
- * Live Nigerian bank list (name + CBN code), scoped to the space's own Bachs
- * connected account — creating one on first use if it doesn't exist yet.
- */
-export function listBanks(spaceId: string) {
-  return apiClient.get<Bank[]>(`/banks?spaceId=${encodeURIComponent(spaceId)}`);
+/** Live Nigerian bank list (name + CBN code) from Bachs. */
+export function listBanks() {
+  return apiClient.get<Bank[]>(`/banks`);
 }
 
-/** Available / pending / lifetime — all net of the 3% processing charge. */
+/** Ledger balance, the lead rep's KYC state, account readiness and the withdrawal fee schedule. */
 export function getPayoutSummary(spaceId: string) {
   return apiClient.get<PayoutSummary>(`/spaces/${spaceId}/payout/summary`);
 }
@@ -45,8 +41,14 @@ export type BankAccountInput = {
 };
 
 export type ResolvedAccount = {
+  bankCode: string;
+  bankName: string;
+  /** Masked. */
+  accountNumber: string;
   /** Holder name resolved via Bachs name-enquiry. */
   accountName: string;
+  /** Withdrawals only go to an account in the rep's own name. */
+  matchesYourName: boolean;
 };
 
 /**
@@ -57,14 +59,17 @@ export function lookupPayoutAccount(
   spaceId: string,
   payload: BankAccountInput,
 ) {
-  console.log("lookupPayoutAccount", spaceId, payload);
   return apiClient.post<ResolvedAccount>(
     `/spaces/${spaceId}/payout/account/lookup`,
     payload,
   );
 }
 
-/** Replace the destination account (triggers a 24h payout hold + security email). */
+/**
+ * Lead rep only. Needs a passed identity check (`409 KYC_NOT_VERIFIED`) and an
+ * account in the rep's own name (`422 ACCOUNT_NAME_MISMATCH`). Changing the
+ * account holds withdrawals for 24 hours and emails every rep.
+ */
 export function setPayoutAccount(spaceId: string, payload: BankAccountInput) {
   return apiClient.put<BankAccount>(
     `/spaces/${spaceId}/payout/account`,
@@ -73,64 +78,32 @@ export function setPayoutAccount(spaceId: string, payload: BankAccountInput) {
 }
 
 /**
- * Request a whole-space withdrawal. Lead-only — co-reps use `requestDuePayout`
- * against a due assigned to them instead. Every payout now requires 70% of the
- * space's reps to approve before it disburses; the requester's own request
- * counts as an implicit "yes" vote. Money-moving — an Idempotency-Key is
- * attached automatically.
+ * Lead rep only. `amount` is the gross in kobo; the fee is deducted from it.
+ * Money-moving — an Idempotency-Key is attached automatically.
  */
 export function requestPayout(
   spaceId: string,
   payload: { amount: number; note?: string },
+  idempotencyKey: string = crypto.randomUUID(),
 ) {
   return apiClient.post<Payout>(`/spaces/${spaceId}/payout/request`, payload, {
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey,
   });
 }
 
-export function listPayouts(spaceId: string) {
-  return apiClient.get<Payout[]>(`/spaces/${spaceId}/payouts`);
+/** Most recent 100 withdrawals (the API's page-size ceiling). */
+export async function listPayouts(spaceId: string) {
+  const page = await apiClient.getPage<Payout[]>(`/spaces/${spaceId}/payouts?perPage=100`);
+  return page.data;
 }
 
-/** A single payout with its live approval progress (who's voted so far). */
 export function getPayout(spaceId: string, payoutId: string) {
-  return apiClient.get<PayoutWithApproval>(`/spaces/${spaceId}/payout/${payoutId}`);
+  return apiClient.get<Payout>(`/spaces/${spaceId}/payout/${payoutId}`);
 }
 
-/** Balance available against a single due (for the due-scoped request flow). */
-export function getDuePayoutSummary(spaceId: string, dueId: string) {
-  return apiClient.get<PayoutSummary>(`/spaces/${spaceId}/dues/${dueId}/payout/summary`);
-}
-
-/**
- * Request a payout scoped to one due's collected funds. Allowed for the lead,
- * or the co-rep this due is assigned to.
- */
-export function requestDuePayout(
-  spaceId: string,
-  dueId: string,
-  payload: { amount: number; note?: string },
-) {
-  return apiClient.post<Payout>(`/spaces/${spaceId}/dues/${dueId}/payout/request`, payload, {
-    idempotencyKey: crypto.randomUUID(),
-  });
-}
-
-/** Cast or change your approve/reject vote on a payout awaiting approval. */
-export function castPayoutApproval(
-  spaceId: string,
-  payoutId: string,
-  decision: PayoutApprovalDecision,
-) {
-  return apiClient.post<{ payout: Payout; approval: PayoutWithApproval["approval"] }>(
-    `/spaces/${spaceId}/payout/${payoutId}/approve`,
-    { decision },
-  );
-}
-
-/** Withdraw a payout still awaiting approval. Requester or lead only. */
-export function cancelPayout(spaceId: string, payoutId: string, reason?: string) {
-  return apiClient.post<Payout>(`/spaces/${spaceId}/payout/${payoutId}/cancel`, { reason });
+/** The fee and net for a withdrawal of `amount` kobo, shown before confirming. */
+export function getPayoutQuote(spaceId: string, amount: number) {
+  return apiClient.get<PayoutQuote>(`/spaces/${spaceId}/payout/quote?amount=${amount}`);
 }
 
 export type PayoutBreakdownTotals = {
@@ -144,7 +117,9 @@ export type PayoutBreakdownTotals = {
 export type PayoutBreakdownDue = {
   dueId: string;
   title: string;
-  category: DueCategory;
+  type: DueType | null;
+  /** Deprecated alias of `type`; not sent by current API versions. */
+  category?: DueCategory;
   paidCount: number;
   collected: number;
   fees: number;
@@ -171,52 +146,55 @@ export function getPayoutBreakdown(
 }
 
 // ---------------------------------------------------------------------------
-// Bachs connected-account onboarding — in-app, no redirect to a hosted page.
+// Rep KYC — Bachs verifies identity (NIN + date of birth), a Duevy admin
+// verifies the student ID card. A space collects only once both pass.
 // ---------------------------------------------------------------------------
 
-/** Status badge off the space's connected-account row — cheap, no full checklist fetch. */
-export function getOnboardingStatus(spaceId: string) {
-  return apiClient.get<OnboardingStatus>(`/spaces/${spaceId}/payout/onboarding-status`);
+export type KycSubmission = {
+  /** 11 digits. Sent to Bachs; never stored. */
+  nin: string;
+  /** YYYY-MM-DD. */
+  dob: string;
+  gender: "male" | "female";
+  /** JPEG, PNG, WebP or PDF, max 5 MB. */
+  studentIdCard: File;
+  /** Only useful when Bachs asks for an ID document. */
+  governmentId?: File;
+  /** Only if Bachs asks for one. */
+  bvn?: string;
+  firstName?: string;
+  lastName?: string;
+  /** `+234` followed by 10 digits. */
+  phone?: string;
+};
+
+/** Max size of each KYC document, enforced by the API (`413 FILE_TOO_LARGE`). */
+export const MAX_KYC_DOCUMENT_BYTES = 5 * 1024 * 1024;
+
+export function getKycStatus(spaceId: string) {
+  return apiClient.get<SpaceKycStatus>(`/spaces/${spaceId}/payout/kyc-status`);
 }
 
-/** The Tasks/checklist to render as a form. Field shapes here aren't fully confirmed yet — kept loosely typed. */
-export function getOnboardingChecklist(spaceId: string) {
-  return apiClient.get<OnboardingChecklist>(`/spaces/${spaceId}/payout/onboarding/checklist`);
-}
-
-/** Upload an onboarding document (ID, proof of address, ...). Returns an `uploadId` to reference in `submitOnboarding`. */
-export function uploadOnboardingDocument(spaceId: string, file: File, scope: string) {
+/** `multipart/form-data`. Returns `202` with the new state; the Bachs verdict arrives by webhook. */
+export function submitKyc(spaceId: string, input: KycSubmission) {
   const form = new FormData();
-  form.append("file", file);
-  form.append("scope", scope);
-  return apiClient.post<{ uploadId: string }>(
-    `/spaces/${spaceId}/payout/onboarding/documents`,
-    form,
-  );
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined || value === "") continue;
+    form.append(key, value);
+  }
+  return apiClient.post<KycState>(`/spaces/${spaceId}/payout/kyc`, form);
 }
 
-/** `draft: true` for a partial save — validation issues come back on the response instead of failing the request. */
-export function submitOnboarding(spaceId: string, data: Record<string, unknown>, draft = false) {
-  return apiClient.post<OnboardingChecklist>(`/spaces/${spaceId}/payout/onboarding/submit`, {
-    draft,
-    data,
-  });
+/** Replace the student ID card after an admin rejected it. */
+export function resubmitStudentId(spaceId: string, file: File) {
+  const form = new FormData();
+  form.append("studentIdCard", file);
+  return apiClient.post<KycState>(`/spaces/${spaceId}/payout/kyc/student-id`, form);
 }
 
-export function getIdentityMethods(spaceId: string) {
-  return apiClient.get<IdentityMethods>(`/spaces/${spaceId}/payout/onboarding/identity/methods`);
-}
-
-/** `consent` must be `true` — the rep is attesting to a government database check; show real consent copy before calling this. */
-export function submitNin(spaceId: string, nin: string, consent: true, selfie?: string) {
-  return apiClient.post<{ status: "verified" | "failed" | "pending"; reason?: string }>(
-    `/spaces/${spaceId}/payout/onboarding/identity/nin`,
-    { nin, consent, selfie },
-  );
-}
-
-export function getIdentityStatus(spaceId: string) {
-  return apiClient.get<{ status: string; failureReason?: string }>(
-    `/spaces/${spaceId}/payout/onboarding/identity/status`,
-  );
+/** Send Bachs a government ID document, when `requirementsDue` asks for one. */
+export function submitGovernmentId(spaceId: string, file: File) {
+  const form = new FormData();
+  form.append("governmentId", file);
+  return apiClient.post<KycState>(`/spaces/${spaceId}/payout/kyc/government-id`, form);
 }
