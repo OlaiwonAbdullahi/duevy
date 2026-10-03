@@ -45,7 +45,7 @@ const STEPS: TourStep[] = [
     id: "nav",
     target: '[data-tour="nav"]',
     title: "Everything lives here",
-    body: "Payment methods, dues, transactions and settings. Reps also get tools for collections, polls and managing the department.",
+    body: "Your dues, transactions and settings. Reps also get tools for collections, payouts and managing the department.",
   },
   {
     id: "menu",

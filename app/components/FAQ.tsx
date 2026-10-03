@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     q: "What does it cost?",
-    a: "2% + ₦20 per dues payment, capped at ₦2,020. Withdrawals cost ₦100 under ₦50,000 and ₦200 from ₦50,000. Paid votes carry a 2.5% fee.",
+    a: "2% + ₦20 per dues payment, capped at ₦2,020. Withdrawals cost ₦100 under ₦50,000 and ₦200 from ₦50,000.",
   },
   {
     q: "Which schools can use it?",

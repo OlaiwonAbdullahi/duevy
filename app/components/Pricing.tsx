@@ -4,7 +4,6 @@ import {
   EyeIcon,
   MoneyBag01Icon,
   BankIcon,
-  Award01Icon,
 } from "@hugeicons/core-free-icons";
 
 const included = [
@@ -17,11 +16,6 @@ const included = [
     icon: BankIcon,
     title: "Flat withdrawal fee",
     body: "₦100 to withdraw under ₦50,000, and ₦200 for ₦50,000 or more — no percentage taken from your payout.",
-  },
-  {
-    icon: Award01Icon,
-    title: "Paid voting at 2.5%",
-    body: "Running an award poll? Each paid vote carries a 2.5% fee, with no flat add-on.",
   },
   {
     icon: EyeIcon,

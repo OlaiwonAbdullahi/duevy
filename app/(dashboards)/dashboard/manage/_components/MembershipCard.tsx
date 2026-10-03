@@ -13,11 +13,6 @@ const ROWS = [
     checked: true,
   },
   {
-    title: "Allow guest payments",
-    description: "Non-members can pay dues you mark as open to guests.",
-    checked: false,
-  },
-  {
     title: "List in student directory",
     description: "Show this department when students search for spaces to join.",
     checked: true,

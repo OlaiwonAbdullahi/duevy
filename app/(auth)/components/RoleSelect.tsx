@@ -20,7 +20,7 @@ const OPTIONS: RoleOption[] = [
   {
     value: "student",
     label: "Student",
-    description: "Join a department, pay dues, and vote.",
+    description: "Join a department and pay your dues.",
     icon: UserIcon,
   },
   {

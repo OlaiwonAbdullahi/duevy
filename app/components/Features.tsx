@@ -5,9 +5,8 @@ import {
   Analytics01Icon,
   Invoice01Icon,
   Building03Icon,
-  AiChat01Icon,
-  BarChartIcon,
-  GiftIcon,
+  ShoppingBasket01Icon,
+  Key01Icon,
 } from "@hugeicons/core-free-icons";
 
 const features = [
@@ -32,14 +31,14 @@ const features = [
     body: "Every payment generates proof for both student and rep.",
   },
   {
-    icon: AiChat01Icon,
-    title: "Ask Duey",
-    body: "Duevy's built-in assistant answers what you owe, finds your rep, and can even take the payment — right in the chat.",
+    icon: ShoppingBasket01Icon,
+    title: "Pay several dues at once",
+    body: "Students tick the dues they owe and clear them all in one bank transfer.",
   },
   {
-    icon: BarChartIcon,
-    title: "Paid polls & voting",
-    body: "Run dinner nights, awards, or elections where students pay to vote, and reps watch tallies and funds raised live.",
+    icon: Key01Icon,
+    title: "Join with a code",
+    body: "Every department gets its own join code. Share it in the class group and students are in.",
   },
 
   {

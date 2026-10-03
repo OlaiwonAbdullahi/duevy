@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { TransferLeadModal } from "./TransferLeadModal";
 import { ArchiveSpaceModal } from "./ArchiveSpaceModal";
+import { FEATURES } from "@/lib/features";
 
 type PendingAction = "transfer" | "archive" | null;
 
@@ -48,13 +49,15 @@ export function DangerZone() {
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          <Row
-            title="Transfer lead role"
-            description="Hand over department ownership to another rep. You'll become a co-rep."
-            action="Transfer"
-            disabled={!spaceId}
-            onClick={() => setPending("transfer")}
-          />
+          {FEATURES.coReps && (
+            <Row
+              title="Transfer lead role"
+              description="Hand over department ownership to another rep. You'll become a co-rep."
+              action="Transfer"
+              disabled={!spaceId}
+              onClick={() => setPending("transfer")}
+            />
+          )}
           <Row
             title="Archive department"
             description="Stop new dues and join requests. Existing records stay available."

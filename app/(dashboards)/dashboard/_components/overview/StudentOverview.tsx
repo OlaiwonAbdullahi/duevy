@@ -5,7 +5,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  CreditCardIcon,
   ReceiptDollarIcon,
   Invoice01Icon,
   ArrowRight01Icon,
@@ -34,6 +33,11 @@ const TXN_FALLBACK = { icon: ReceiptDollarIcon as HugeIcon, label: "Activity" };
 function txnMeta(type: string) {
   return (TXN_META as Record<string, { icon: HugeIcon; label: string }>)[type] ?? TXN_FALLBACK;
 }
+
+// `/me/overview` open dues carry the rep lifecycle `status` ("active") plus a
+// separate boolean `overdue`; older payloads used status "overdue".
+type OverviewDue = StudentOverviewData["openDues"][number];
+const isOverdue = (d: OverviewDue) => d.overdue === true || d.status === "overdue";
 
 export function StudentOverview() {
   const { user } = useAuth();
@@ -64,12 +68,6 @@ export function StudentOverview() {
       cancelled = true;
     };
   }, []);
-
-  // `/me/overview` open dues carry the rep lifecycle `status` ("active") plus a
-  // separate boolean `overdue`; older payloads used status "overdue".
-  type OverviewDue = StudentOverviewData["openDues"][number];
-  const isOverdue = (d: OverviewDue) =>
-    (d as { overdue?: boolean }).overdue === true || (d.status as string) === "overdue";
 
   // Overdue first, then soonest deadline — matches the old mock ordering.
   const openDues = useMemo(() => {
@@ -216,7 +214,7 @@ export function StudentOverview() {
                 <EmptyState
                   icon={ReceiptDollarIcon}
                   title="No activity yet"
-                  description="Your payments and top-ups will appear here."
+                  description="Your payments will appear here."
                 />
               ) : (
                 <ul className="mt-3 flex flex-col">

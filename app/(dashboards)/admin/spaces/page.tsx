@@ -16,6 +16,7 @@ import { Toolbar, SearchInput, FilterSelect } from "../_components/Toolbar";
 import { AdminModal, ModalField } from "../_components/AdminModal";
 import { nairaFromKobo, formatPercent01 } from "../_components/format";
 import { ApiError } from "@/lib/api/errors";
+import { FEATURES } from "@/lib/features";
 import type { SpaceKind } from "@/lib/api/types";
 import {
   listAdminSpaces,
@@ -154,7 +155,7 @@ export default function AdminSpacesPage() {
   const [editForm, setEditForm] = useState<AdminSpaceInput>(EMPTY_FORM);
 
   const [assignUserId, setAssignUserId] = useState("");
-  const [assignRole, setAssignRole] = useState<"lead" | "co">("co");
+  const [assignRole, setAssignRole] = useState<"lead" | "co">(FEATURES.coReps ? "co" : "lead");
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -191,7 +192,7 @@ export default function AdminSpacesPage() {
     setSelectedId(space.id);
     setEditing(false);
     setAssignUserId("");
-    setAssignRole("co");
+    setAssignRole(FEATURES.coReps ? "co" : "lead");
   }
 
   function startEdit(space: AdminSpace) {
@@ -470,15 +471,18 @@ export default function AdminSpacesPage() {
                     placeholder="Rep user id (usr_…)"
                     className={BRAND_INPUT}
                   />
-                  <FilterSelect
-                    value={assignRole}
-                    onChange={(v) => setAssignRole(v as "lead" | "co")}
-                    label="Rep role"
-                    options={[
-                      { value: "co", label: "Co-rep" },
-                      { value: "lead", label: "Lead rep" },
-                    ]}
-                  />
+                  {/* Co-reps are out of MVP scope: assignments are lead-only. */}
+                  {FEATURES.coReps && (
+                    <FilterSelect
+                      value={assignRole}
+                      onChange={(v) => setAssignRole(v as "lead" | "co")}
+                      label="Rep role"
+                      options={[
+                        { value: "co", label: "Co-rep" },
+                        { value: "lead", label: "Lead rep" },
+                      ]}
+                    />
+                  )}
                   <Button type="submit" variant="brand-outline" size="pill" disabled={busy}>
                     Assign
                   </Button>

@@ -19,7 +19,7 @@ export default function ManageDeptPage() {
           Manage department
         </h1>
         <p className="mt-1 text-[13px] text-ink-soft">
-          Edit your department&apos;s details, membership rules, and reps.
+          Edit your department&apos;s details and membership rules.
         </p>
       </header>
 
@@ -27,7 +27,7 @@ export default function ManageDeptPage() {
         <DepartmentProfileCard />
         {FEATURES.themes && <SpaceThemeCard />}
         <MembershipCard />
-        <RepsCard />
+        {FEATURES.coReps && <RepsCard />}
         <AuditTrailCard />
         <DangerZone />
       </div>

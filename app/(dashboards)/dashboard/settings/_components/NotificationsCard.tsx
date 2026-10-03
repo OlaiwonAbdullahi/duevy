@@ -131,7 +131,7 @@ export function NotificationsCard() {
         />
         <ToggleRow
           title="Circle activity"
-          description="New dues, polls and announcements in your spaces."
+          description="New dues and announcements in your spaces."
           checked={prefs.push.circleActivity}
           onChange={set("push", "circleActivity")}
           disabled={savingKey === "push.circleActivity"}

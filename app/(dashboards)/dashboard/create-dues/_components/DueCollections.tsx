@@ -17,6 +17,7 @@ import { timeAgo } from "../../_components/notifications-data";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { getAllCollections, remindUnpaid, listReps, reassignDue } from "@/lib/api/rep";
 import { ApiError } from "@/lib/api/errors";
+import { FEATURES } from "@/lib/features";
 import { CollectionSummary } from "../../collections/_components/CollectionSummary";
 import { CollectionTable } from "../../collections/_components/CollectionTable";
 import { downloadCollectionCsv } from "../../collections/_components/csv";
@@ -96,6 +97,7 @@ export function DueCollections({
     assignedRep && assignedRep.role === "lead" ? [assignedRep, ...coReps] : coReps;
 
   useEffect(() => {
+    if (!FEATURES.coReps) return;
     listReps(spaceId)
       .then(setReps)
       .catch(() => {});
@@ -261,6 +263,8 @@ export function DueCollections({
         </div>
       </header>
 
+      {/* Per-due assignment is co-rep team management — out of MVP scope. */}
+      {FEATURES.coReps && (
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
         <HugeiconsIcon icon={UserAdd01Icon} size={14} />
         {isLead && coReps.length > 0 ? (
@@ -290,6 +294,7 @@ export function DueCollections({
           </span>
         )}
       </div>
+      )}
 
       {loading ? (
         <div className="mt-6 space-y-3">

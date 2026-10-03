@@ -28,7 +28,7 @@ const sections: LegalSection[] = [
   {
     heading: "Fees",
     body: [
-      "Duevy charges 2% + ₦20 on every dues payment, with the fee capped at ₦2,020. Paid votes carry a 2.5% fee. Withdrawals cost ₦100 for amounts under ₦50,000 and ₦200 for ₦50,000 or more. There are no setup fees or monthly subscriptions. The exact fee is shown before each payment is confirmed.",
+      "Duevy charges 2% + ₦20 on every dues payment, with the fee capped at ₦2,020. Withdrawals cost ₦100 for amounts under ₦50,000 and ₦200 for ₦50,000 or more. There are no setup fees or monthly subscriptions. The exact fee is shown before each payment is confirmed.",
     ],
   },
   {
