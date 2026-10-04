@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/auth-context";
 import { readPostAuthNext, clearPostAuthNext } from "@/lib/auth/post-auth-next";
 import { ApiError } from "@/lib/api/errors";
-import type { User } from "@/lib/api/types";
+import { ONBOARDING_PATH, isRepApplicant } from "@/lib/auth/onboarding";
 import AuthField from "./AuthField";
 import { ArrowRightIcon } from "../../components/icons";
 import { EmailUnverifiedNotice } from "./EmailUnverifiedNotice";
@@ -16,14 +16,6 @@ import { EmailUnverifiedNotice } from "./EmailUnverifiedNotice";
 function safeNext(raw: string | null): string | null {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
   return raw;
-}
-
-/** A rep applicant with nothing submitted (or a refused NIN) still has KYC to do. */
-function needsKyc(user: User) {
-  return (
-    user.repApplicationStatus === "pending" &&
-    (user.kycStatus === null || user.kycStatus === "unverified" || user.kycStatus === "rejected")
-  );
 }
 
 export default function LoginForm() {
@@ -59,9 +51,9 @@ export default function LoginForm() {
         description: `Signed in as ${user.name.split(" ")[0]}.`,
       });
       clearPostAuthNext();
-      // A rep applicant who hasn't submitted KYC yet is prompted for it first.
-      if (needsKyc(user)) {
-        router.push("/onboarding/kyc");
+      // Rep applicants go through onboarding (KYC) first; it forwards them on once it's done.
+      if (isRepApplicant(user)) {
+        router.push(ONBOARDING_PATH);
         return;
       }
       router.push(next ?? (user.role === "admin" ? "/admin" : "/dashboard"));

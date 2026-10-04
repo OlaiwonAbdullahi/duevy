@@ -27,82 +27,15 @@ import {
   verifyRep,
   rejectRep,
   reviewStudentId,
+  listStudentIdsForReview,
   applicationKycReady,
   type AdminRep,
   type ApplicationKyc,
   type RepApplication,
   type RepApplicationStatus,
+  type StudentIdReviewRow,
 } from "@/lib/api/admin";
-
-/** The applicant's KYC inside the review modal: NIN verdict from Bachs, and the student ID to look at. */
-function KycReview({
-  kyc,
-  canReject,
-  busy,
-  onRejectId,
-}: {
-  kyc: ApplicationKyc | null;
-  canReject: boolean;
-  busy: boolean;
-  onRejectId: () => void;
-}) {
-  if (!kyc) return null;
-  const nin = NIN_META[kyc.identity.status];
-  const id = studentIdMeta(kyc.studentId.status);
-  return (
-    <>
-      <ModalField label="NIN verification (Bachs)">
-        <StatusBadge tone={nin.tone}>{nin.label}</StatusBadge>
-        {kyc.identity.status === "rejected" && kyc.identity.rejectionReason && (
-          <p className="mt-1 text-xs text-ink-soft">{kyc.identity.rejectionReason}</p>
-        )}
-        {kyc.identity.requirementsDue.length > 0 && (
-          <p className="mt-1 text-xs text-ink-soft">
-            Bachs needs: {kyc.identity.requirementsDue.join(", ")}
-          </p>
-        )}
-      </ModalField>
-      <ModalField label="Student ID card">
-        <StatusBadge tone={id.tone}>{id.label}</StatusBadge>
-        {kyc.studentId.reviewNote && (
-          <p className="mt-1 text-xs text-ink-soft">Note: {kyc.studentId.reviewNote}</p>
-        )}
-      </ModalField>
-      {kyc.studentId.viewUrl && (
-        <div className="sm:col-span-2 overflow-hidden rounded-2xl border border-cloud bg-paper">
-          {kyc.studentId.mimeType === "application/pdf" ? (
-            <p className="p-4 text-xs text-ink-soft">This student ID is a PDF.</p>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived private URL
-            <img
-              src={kyc.studentId.viewUrl}
-              alt="Applicant's student ID card"
-              className="max-h-80 w-full object-contain bg-white"
-            />
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-cloud p-3">
-            <a
-              href={kyc.studentId.viewUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-semibold text-brand hover:underline"
-            >
-              Open full size
-            </a>
-            {canReject && kyc.studentId.status === "pending" && (
-              <Button variant="danger-outline" size="pill" disabled={busy} onClick={onRejectId}>
-                Ask for a new ID
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-      <p className="sm:col-span-2 text-xs text-ink-soft">
-        Giving final approval also approves this student ID and creates the department.
-      </p>
-    </>
-  );
-}
+import { ApplicationReviewModal, IdReuploadModal } from "./_components/RepReview";
 
 const STATUS_TONES: Record<AdminRep["status"], StatusTone> = {
   active: "ok",
@@ -297,10 +230,55 @@ export default function AdminRepsPage() {
     }
   }
 
+  // Loaded up front (not only on the tab) so the tab shows how many are waiting.
   useEffect(() => {
-    if (tab === "applications") loadApplications();
+    loadApplications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, appStatusFilter]);
+  }, [appStatusFilter]);
+
+  // ---- Student ID re-uploads from reps who are already approved -------------
+  // (An applicant's ID is reviewed inside their application instead.)
+  const [idReuploads, setIdReuploads] = useState<StudentIdReviewRow[]>([]);
+  const [idRow, setIdRow] = useState<StudentIdReviewRow | null>(null);
+  const [idBusy, setIdBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      listStudentIdsForReview({ status: "pending", perPage: 100 }),
+      listRepApplications({ status: "pending", perPage: 100 }),
+    ])
+      .then(([ids, apps]) => {
+        if (cancelled) return;
+        const applicants = new Set(apps.data.map((a) => a.userId));
+        setIdReuploads(ids.data.filter((r) => !applicants.has(r.userId)));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openIdReupload = async (row: StudentIdReviewRow) => {
+    // Signed links are short-lived — re-fetch so the image still loads.
+    const fresh = await listStudentIdsForReview({ status: "pending", perPage: 100 }).catch(() => null);
+    setIdRow(fresh?.data.find((r) => r.userId === row.userId) ?? row);
+  };
+
+  const decideIdReupload = async (decision: "approved" | "rejected", note?: string) => {
+    if (!idRow) return;
+    setIdBusy(true);
+    try {
+      await reviewStudentId(idRow.userId, { decision, note });
+      toast.success(decision === "approved" ? `${idRow.name}'s student ID approved.` : `Sent back to ${idRow.name}.`);
+      setIdReuploads((list) => list.filter((r) => r.userId !== idRow.userId));
+      setIdRow(null);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't save the review.");
+    } finally {
+      setIdBusy(false);
+    }
+  };
 
   const pendingCount = applications.filter((a) => a.status === "pending").length;
 
@@ -318,9 +296,7 @@ export default function AdminRepsPage() {
   }
 
   // Ask the applicant to upload a better student ID (their NIN result stands).
-  const rejectStudentId = async (app: RepApplication) => {
-    const note = window.prompt("What's wrong with the student ID? The applicant will see this.")?.trim();
-    if (!note) return;
+  const rejectStudentId = async (app: RepApplication, note: string) => {
     setAppBusy(true);
     try {
       await reviewStudentId(app.userId, { decision: "rejected", note });
@@ -358,11 +334,7 @@ export default function AdminRepsPage() {
     }
   };
 
-  const reject = async (app: RepApplication) => {
-    const reason = window
-      .prompt(`Reason for rejecting ${app.applicant?.name ?? "this"}'s application?`)
-      ?.trim();
-    if (!reason) return;
+  const reject = async (app: RepApplication, reason: string) => {
     setAppBusy(true);
     try {
       await rejectRep(app.userId, reason);
@@ -382,20 +354,47 @@ export default function AdminRepsPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Reps"
-        description="Every rep's spaces, held float and collection performance."
+        description="Approve new reps, and manage every rep's spaces, float and collections."
       />
 
       <Tabs
         value={tab}
         onChange={setTab}
         items={[
-          { value: "directory", label: "Directory" },
+          { value: "directory", label: "All reps" },
           { value: "applications", label: `Applications${pendingCount ? ` (${pendingCount})` : ""}` },
         ]}
       />
 
       {tab === "directory" && (
         <>
+          {idReuploads.length > 0 && (
+            <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4">
+              <p className="text-sm font-semibold text-ink">
+                {idReuploads.length} rep{idReuploads.length === 1 ? "" : "s"} uploaded a new student ID
+              </p>
+              <p className="mt-0.5 text-xs text-ink-soft">
+                Their departments can&apos;t collect until you approve it.
+              </p>
+              <ul className="mt-3 flex flex-col gap-2">
+                {idReuploads.map((row) => (
+                  <li
+                    key={row.userId}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-canvas px-4 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">{row.name}</p>
+                      <p className="truncate text-xs text-ink-soft">{row.email}</p>
+                    </div>
+                    <Button variant="brand-outline" size="pill" onClick={() => void openIdReupload(row)}>
+                      Review ID
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <Toolbar>
             <SearchInput value={search} onChange={setSearch} placeholder="Search by rep…" />
             <FilterSelect
@@ -549,6 +548,16 @@ export default function AdminRepsPage() {
         </>
       )}
 
+      {idRow && (
+        <IdReuploadModal
+          key={idRow.userId}
+          row={idRow}
+          busy={idBusy}
+          onClose={() => setIdRow(null)}
+          onDecide={decideIdReupload}
+        />
+      )}
+
       {tab === "applications" && (
         <>
           <Toolbar>
@@ -625,10 +634,9 @@ export default function AdminRepsPage() {
                           actions={[
                             // Final approval only once KYC is in; open the row to review the ID.
                             ...(applicationKycReady(app.kyc)
-                              ? [{ label: "Give final approval", onSelect: () => verify(app) }]
+                              ? [{ label: "Approve rep", onSelect: () => verify(app) }]
                               : []),
                             { label: "Review", onSelect: () => openApplication(app.userId) },
-                            { label: "Reject", tone: "danger" as const, onSelect: () => reject(app) },
                           ]}
                         />
                       )}
@@ -640,90 +648,16 @@ export default function AdminRepsPage() {
           </TableCard>
 
           {selectedAppId && (
-            <AdminModal
-              wide
-              icon={UserAdd01Icon}
-              title={appDetail?.applicant?.name ?? "Application"}
-              description={appDetail?.applicant?.email}
+            <ApplicationReviewModal
+              key={selectedAppId}
+              app={appDetail}
+              loading={appDetailLoading}
+              busy={appBusy}
               onClose={() => setSelectedAppId(null)}
-              footer={
-                appDetail && appDetail.status === "pending" ? (
-                  <>
-                    <Button
-                      variant="danger-outline"
-                      size="pill"
-                      disabled={appBusy}
-                      onClick={() => reject(appDetail)}
-                    >
-                      Reject
-                    </Button>
-                    <Button
-                      variant="brand"
-                      size="pill"
-                      disabled={appBusy || !applicationKycReady(appDetail.kyc)}
-                      title={
-                        applicationKycReady(appDetail.kyc)
-                          ? undefined
-                          : "Available once the NIN is verified and a student ID is on file"
-                      }
-                      onClick={() => verify(appDetail)}
-                    >
-                      Give final approval
-                    </Button>
-                  </>
-                ) : undefined
-              }
-            >
-              {appDetailLoading || !appDetail ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-12 animate-pulse rounded-xl bg-paper" />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <ModalField label="Status">
-                    <StatusBadge tone={APPLICATION_TONES[appDetail.status]}>
-                      {appDetail.status}
-                    </StatusBadge>
-                  </ModalField>
-                  <ModalField label="Submitted">
-                    <span className="inline-flex items-center gap-1.5 font-medium">
-                      {formatDate(appDetail.submittedAt)}
-                    </span>
-                  </ModalField>
-                  <ModalField label="Matric number">
-                    {appDetail.applicant?.matricNo ?? "—"}
-                  </ModalField>
-                  <ModalField label="Level">{appDetail.applicant?.level ?? "—"}</ModalField>
-                  <ModalField label="Referral code">{appDetail.referralCode ?? "—"}</ModalField>
-                  <ModalField label="Requested space" className="sm:col-span-2">
-                    {appDetail.requestedSpace.name} ({appDetail.requestedSpace.short})
-                  </ModalField>
-                  <ModalField label="Kind">{appDetail.requestedSpace.kind}</ModalField>
-                  <ModalField label="School">{appDetail.requestedSpace.school}</ModalField>
-                  <ModalField label="Faculty" className="sm:col-span-2">
-                    {appDetail.requestedSpace.faculty ?? "—"}
-                  </ModalField>
-                  <KycReview
-                    kyc={appDetail.kyc}
-                    canReject={appDetail.status === "pending"}
-                    busy={appBusy}
-                    onRejectId={() => rejectStudentId(appDetail)}
-                  />
-                  {appDetail.status !== "pending" && (
-                    <>
-                      <ModalField label="Reviewed">
-                        {appDetail.reviewedAt ? formatDate(appDetail.reviewedAt) : "—"}
-                      </ModalField>
-                      <ModalField label="Review note">
-                        {appDetail.reviewNote ?? "—"}
-                      </ModalField>
-                    </>
-                  )}
-                </div>
-              )}
-            </AdminModal>
+              onApprove={verify}
+              onReject={reject}
+              onRejectId={rejectStudentId}
+            />
           )}
         </>
       )}

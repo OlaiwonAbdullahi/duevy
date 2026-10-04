@@ -1,6 +1,6 @@
-import type { PayoutStatus } from "@/lib/api/types";
+import type { Beneficiary, PayoutStatus } from "@/lib/api/types";
 
-export type { PayoutStatus };
+export type { Beneficiary, PayoutStatus };
 
 export type Payout = {
   id: string;
@@ -17,12 +17,7 @@ export type Payout = {
   requestedById: string | null;
   /** Masked destination, e.g. "GTBank •••• 4021". */
   account: string;
+  /** Who it was sent to, as the bank holds the name. */
+  accountName: string | null;
   failureReason: string | null;
-};
-
-export type BankAccount = {
-  bankName: string;
-  accountName: string;
-  /** Full number — masked in the UI. */
-  accountNumber: string;
 };

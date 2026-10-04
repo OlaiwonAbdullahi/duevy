@@ -14,6 +14,7 @@ import {
   Archive02Icon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  BankIcon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
@@ -41,6 +42,8 @@ export const ACTION_ICON: Record<string, HugeIcon> = {
   payout_approval_cast: CheckmarkCircle02Icon,
   payout_disbursement_started: MoneySend01Icon,
   payout_cancelled: Cancel01Icon,
+  beneficiary_added: BankIcon,
+  beneficiary_removed: BankIcon,
 };
 
 export function AuditTrailCard() {

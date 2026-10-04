@@ -2,18 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 import { verifyEmail } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
 import { readPostAuthNext, clearPostAuthNext } from "@/lib/auth/post-auth-next";
+import { ONBOARDING_PATH, isRepApplicant } from "@/lib/auth/onboarding";
 import { ArrowRightIcon, CheckIcon } from "../../components/icons";
 
 type State = "verifying" | "success" | "error";
 
 export default function VerifyEmailStatus({ token }: { token: string | null }) {
-  const { status, refreshUser } = useAuth();
+  const { user, status, refreshUser } = useAuth();
+  const router = useRouter();
   const [state, setState] = useState<State>(token ? "verifying" : "error");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const ran = useRef(false);
@@ -21,7 +24,12 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
   // different tab/device than the one that started signup.
   const [persistedNext] = useState(() => readPostAuthNext());
   const authenticated = status === "authenticated";
-  const continueHref = authenticated
+  // Rep applicants onboard (KYC) before the dashboard. Signed-out applicants get
+  // there via the login form, which routes them the same way.
+  const onboarding = authenticated && isRepApplicant(user);
+  const continueHref = onboarding
+    ? ONBOARDING_PATH
+    : authenticated
     ? (persistedNext ?? "/dashboard")
     : persistedNext
       ? `/login?next=${encodeURIComponent(persistedNext)}`
@@ -46,6 +54,14 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
       }
     })();
   }, [token, status, refreshUser]);
+
+  // Straight into onboarding once the email is confirmed.
+  useEffect(() => {
+    if (state !== "success" || !onboarding) return;
+    clearPostAuthNext();
+    const t = setTimeout(() => router.replace(ONBOARDING_PATH), 1200);
+    return () => clearTimeout(t);
+  }, [state, onboarding, router]);
 
   if (state === "verifying") {
     return (
@@ -72,7 +88,9 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
           Email verified
         </h1>
         <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">
-          Your email address has been confirmed.
+          {onboarding
+            ? "Your email address has been confirmed. Taking you to onboarding…"
+            : "Your email address has been confirmed."}
         </p>
 
         <Link
@@ -80,7 +98,7 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
           onClick={() => authenticated && clearPostAuthNext()}
           className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
         >
-          {authenticated ? "Go to dashboard" : "Sign in"}
+          {onboarding ? "Continue to onboarding" : authenticated ? "Go to dashboard" : "Sign in"}
           <ArrowRightIcon
             size={16}
             className="transition-transform duration-500 group-hover:translate-x-1"

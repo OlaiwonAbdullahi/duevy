@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -10,10 +10,14 @@ import {
   Alert01Icon,
   IdIcon,
   Upload01Icon,
+  CloudUploadIcon,
+  Pdf01Icon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BRAND_INPUT } from "../../_components/form-styles";
+import { DateOfBirthPicker } from "../../_components/DateOfBirthPicker";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -196,34 +200,37 @@ export function KycCard({
         </div>
       </div>
 
-      <ul className="mt-4 flex flex-col gap-2">
-        <Step
-          label="Identity (NIN)"
-          state={identity}
-          detail={
-            identity === "pending"
-              ? "Our payment partner is checking your details."
-              : identity === "failed"
-                ? kyc.rejectionReason ?? "Verification failed. Check your details and try again."
-                : identity === "done"
-                  ? "Verified."
-                  : "Not submitted yet."
-          }
-        />
-        <Step
-          label="Student ID card"
-          state={studentId}
-          detail={
-            studentId === "pending"
-              ? `A Duevy admin is reviewing it${kyc.studentId.uploadedAt ? ` (sent ${formatTime(kyc.studentId.uploadedAt)})` : ""}.`
-              : studentId === "failed"
-                ? kyc.studentId.reviewNote ?? "It wasn't accepted. Upload a clearer photo."
-                : studentId === "done"
-                  ? "Approved."
-                  : "Not submitted yet."
-          }
-        />
-      </ul>
+      {/* While the form is open it's the only thing on the card — the steps come back after. */}
+      {!formOpen && (
+        <ul className="mt-4 flex flex-col gap-2">
+          <Step
+            label="Identity (NIN)"
+            state={identity}
+            detail={
+              identity === "pending"
+                ? "Our payment partner is checking your details."
+                : identity === "failed"
+                  ? kyc.rejectionReason ?? "Verification failed. Check your details and try again."
+                  : identity === "done"
+                    ? "Verified."
+                    : "Not submitted yet."
+            }
+          />
+          <Step
+            label="Student ID card"
+            state={studentId}
+            detail={
+              studentId === "pending"
+                ? `A Duevy admin is reviewing it${kyc.studentId.uploadedAt ? ` (sent ${formatTime(kyc.studentId.uploadedAt)})` : ""}.`
+                : studentId === "failed"
+                  ? kyc.studentId.reviewNote ?? "It wasn't accepted. Upload a clearer photo."
+                  : studentId === "done"
+                    ? "Approved."
+                    : "Not submitted yet."
+            }
+          />
+        </ul>
+      )}
 
       {isLead && lockedUntil && (
         <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-xs text-rose-600">
@@ -302,34 +309,116 @@ function Step({ label, state, detail }: { label: string; state: StepState; detai
   );
 }
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Drop zone for one document; once chosen, shows a preview card with the file's details. */
 function FileField({
   label,
   hint,
+  file,
   onChange,
   error,
   disabled,
-  inputRef,
 }: {
   label: string;
   hint: string;
+  file: File | null;
   onChange: (file: File | null) => void;
   error: string | null;
   disabled?: boolean;
-  inputRef?: React.Ref<HTMLInputElement>;
 }) {
+  const inputId = useId();
+  const [dragging, setDragging] = useState(false);
+  const preview = useMemo(
+    () => (file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null),
+    [file],
+  );
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
   return (
     <div>
       <p className="text-xs font-medium text-ink">{label}</p>
-      <p className="mt-0.5 text-[11px] text-ink-soft">{hint}</p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">{hint}</p>
+
+      {file ? (
+        <div
+          className={cn(
+            "mt-2 flex items-center gap-3 rounded-2xl border bg-canvas p-3",
+            error ? "border-rose-300" : "border-cloud",
+          )}
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-cloud text-brand">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element -- local blob preview
+              <img src={preview} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <HugeiconsIcon icon={Pdf01Icon} size={20} />
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-ink">{file.name}</p>
+            <p className={cn("mt-0.5 text-[11px]", error ? "font-medium text-rose-600" : "text-ink-soft")}>
+              {error ?? `${formatBytes(file.size)} · Ready to upload`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            disabled={disabled}
+            aria-label="Remove file"
+            className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full text-ink-soft transition-colors hover:bg-cloud hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} size={14} />
+          </button>
+        </div>
+      ) : (
+        <label
+          htmlFor={inputId}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!disabled) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            if (!disabled) onChange(e.dataTransfer.files?.[0] ?? null);
+          }}
+          className={cn(
+            "mt-2 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors",
+            disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+            dragging ? "border-brand bg-brand/5" : "border-cloud bg-canvas hover:border-brand/40 hover:bg-brand/5",
+          )}
+        >
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-brand/10 text-brand">
+            <HugeiconsIcon icon={CloudUploadIcon} size={20} />
+          </span>
+          <p className="mt-3 text-xs text-ink">
+            <span className="font-semibold text-brand">Click to upload</span> or drag and drop
+          </p>
+          <p className="mt-1 text-[11px] text-ink-soft">JPEG, PNG, WebP or PDF · up to 5 MB</p>
+        </label>
+      )}
+
       <input
-        ref={inputRef}
+        id={inputId}
         type="file"
         accept={ACCEPTED_DOCUMENTS}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-        className="mt-2 w-full rounded-2xl border border-dashed border-cloud bg-canvas px-3 py-2.5 text-xs text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-cloud file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink"
+        onChange={(e) => {
+          onChange(e.target.files?.[0] ?? null);
+          // Clear so picking the same file again after removing it still fires.
+          e.target.value = "";
+        }}
+        className="sr-only"
       />
-      {error && <p className="mt-1 text-[11px] font-medium text-rose-600">{error}</p>}
     </div>
   );
 }
@@ -410,13 +499,11 @@ function KycForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="text-xs font-medium text-ink">Date of birth</label>
-          <Input
-            type="date"
+          <DateOfBirthPicker
             value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            max={new Date().toISOString().slice(0, 10)}
+            onChange={setDob}
             disabled={submitting}
-            className={cn(BRAND_INPUT, "mt-1.5")}
+            className="mt-1.5"
           />
         </div>
         <div>
@@ -453,7 +540,8 @@ function KycForm({
 
       <FileField
         label="Student ID card"
-        hint="A clear photo or scan showing your name, photo and matric number. JPEG, PNG, WebP or PDF, up to 5 MB."
+        hint="A clear photo or scan showing your name, photo and matric number."
+        file={studentIdCard}
         onChange={setStudentIdCard}
         error={fileError}
         disabled={submitting}
@@ -467,7 +555,7 @@ function KycForm({
           disabled={submitting}
           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-cloud accent-brand"
         />
-        I confirm this is my own NIN and consent to Bachs checking it against the national
+        I confirm this is my own NIN and consent to Duevy verifying it against the national
         identity database. Duevy doesn&apos;t store my NIN or date of birth; my student ID is
         kept privately for review.
       </label>
@@ -502,7 +590,6 @@ function DocumentUpload({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const error = checkDocument(file);
 
   const upload = async () => {
@@ -511,7 +598,6 @@ function DocumentUpload({
     try {
       await onUpload(file);
       setFile(null);
-      if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
       toast.error(errorMessage(err, "Couldn't upload this document."));
     } finally {
@@ -524,10 +610,10 @@ function DocumentUpload({
       <FileField
         label={title}
         hint={hint}
+        file={file}
         onChange={setFile}
         error={error}
         disabled={uploading}
-        inputRef={inputRef}
       />
       <Button variant="brand-outline" size="pill" disabled={!file || !!error || uploading} onClick={upload}>
         <HugeiconsIcon icon={Upload01Icon} size={14} />

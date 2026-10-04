@@ -285,8 +285,11 @@ export type Payout = {
   net: number;
   reference: string;
   status: PayoutStatus;
-  /** Masked destination. */
+  /** Masked destination, e.g. "Guaranty Trust Bank •••• 4021". */
   account: string;
+  /** The beneficiary's name, as the bank holds it. Null on older withdrawals. */
+  accountName?: string | null;
+  beneficiaryId?: string | null;
   note?: string | null;
   requestedById: string | null;
   requestedAt: string;
@@ -310,10 +313,8 @@ export type PayoutSummary = {
   inFlight: number;
   /** The space lead's verification state. */
   kyc: KycState;
-  /** An account is on file and registered with Bachs. */
-  payoutAccountReady: boolean;
-  /** Withdrawals are held until this time after an account change. */
-  cooldownUntil: string | null;
+  /** How many beneficiaries the space can withdraw to. */
+  beneficiaryCount: number;
   minPayout: number;
   fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
 };
@@ -326,14 +327,18 @@ export type PayoutQuote = {
   belowMinimum: boolean;
 };
 
-export type BankAccount = {
+/** A bank account the space can withdraw to (the rep's own, a lecturer's, …). */
+export type Beneficiary = {
+  id: string;
+  /** The rep's own note, e.g. "Dr. Adeyemi (HOD)". */
+  label: string | null;
   bankCode: string;
-  bankName?: string;
+  bankName: string;
+  /** Masked, e.g. "•••• 4021". */
   accountNumber: string;
-  accountName?: string;
-  cooldownUntil?: string | null;
-  /** Registered with Bachs as a payout destination. */
-  ready?: boolean;
+  /** As the bank holds it (name enquiry). */
+  accountName: string;
+  createdAt: string;
 };
 
 // ---- Rep KYC ----------------------------------------------------------------

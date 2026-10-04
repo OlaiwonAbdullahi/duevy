@@ -1,5 +1,5 @@
 import { naira } from "../../create-dues/_components/data";
-import type { BankAccount, PayoutStatus } from "./types";
+import type { Beneficiary, PayoutStatus } from "./types";
 
 export { naira };
 
@@ -10,7 +10,7 @@ export function maskAccount(number: string) {
 }
 
 /** Short destination label for a payout row, e.g. "GTBank •••• 4021". */
-export function accountLabel(account: BankAccount) {
+export function accountLabel(account: Pick<Beneficiary, "bankName" | "accountNumber">) {
   const short = account.bankName.split(" ")[0];
   return `${short} •••• ${account.accountNumber.slice(-4)}`;
 }

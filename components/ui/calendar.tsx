@@ -3,7 +3,12 @@
 import * as React from "react";
 import { DayPicker, type ChevronProps } from "react-day-picker";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  ArrowUp01Icon,
+} from "@hugeicons/core-free-icons";
 
 import { cn } from "@/lib/utils";
 
@@ -50,7 +55,15 @@ function Calendar({
       components={{
         Chevron: ({ orientation, className: chevronClass }: ChevronProps) => (
           <HugeiconsIcon
-            icon={orientation === "left" ? ArrowLeft01Icon : ArrowRight01Icon}
+            icon={
+              orientation === "left"
+                ? ArrowLeft01Icon
+                : orientation === "down"
+                  ? ArrowDown01Icon
+                  : orientation === "up"
+                    ? ArrowUp01Icon
+                    : ArrowRight01Icon
+            }
             size={16}
             className={chevronClass}
           />

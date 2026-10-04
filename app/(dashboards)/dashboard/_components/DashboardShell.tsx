@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getKycStatus } from "@/lib/api/payouts";
 import type { KycState } from "@/lib/api/types";
+import { ONBOARDING_PATH, isRepApplicant, kycOutstanding } from "@/lib/auth/onboarding";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
 import { TourProvider } from "./DashboardTour";
@@ -38,12 +39,7 @@ function PendingRepBanner() {
     };
   }, [pathname]);
 
-  const notStarted =
-    !!kyc &&
-    (kyc.kycStatus === "rejected" ||
-      (kyc.kycStatus !== "verified" && !kyc.providerReference) ||
-      kyc.studentId.status === null ||
-      kyc.studentId.status === "rejected");
+  const notStarted = !!kyc && kycOutstanding(kyc);
   const kycPassed = !!kyc && kyc.kycStatus === "verified" && kyc.studentId.status !== null;
 
   const title = !kyc
@@ -149,6 +145,9 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   const { user, status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const applicant = isRepApplicant(user);
+  // Rep applicants finish onboarding (KYC) before they see the dashboard.
+  const [onboarded, setOnboarded] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -159,7 +158,23 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
     }
   }, [status, user, router, pathname]);
 
-  if (status !== "authenticated" || !user || user.role === "admin") {
+  useEffect(() => {
+    if (status !== "authenticated" || !applicant) return;
+    let cancelled = false;
+    getKycStatus()
+      .then((s) => {
+        if (cancelled) return;
+        if (kycOutstanding(s.mine)) router.replace(ONBOARDING_PATH);
+        else setOnboarded(true);
+      })
+      // Don't lock them out of the dashboard over a failed status check.
+      .catch(() => !cancelled && setOnboarded(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [status, applicant, router]);
+
+  if (status !== "authenticated" || !user || user.role === "admin" || (applicant && !onboarded)) {
     return (
       <div className="grid min-h-screen place-items-center bg-canvas">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />

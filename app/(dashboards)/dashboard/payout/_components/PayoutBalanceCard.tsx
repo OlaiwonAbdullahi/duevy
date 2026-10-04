@@ -25,7 +25,7 @@ export function PayoutBalanceCard({
   inFlight: number;
   /** Withdrawal is lead-only. */
   canWithdraw?: boolean;
-  /** Why the lead can't withdraw right now (verification, account, cooldown, …). */
+  /** Why the lead can't withdraw right now (verification, no beneficiary, one in flight, …). */
   blockedReason?: string | null;
   onWithdraw: () => void;
 }) {

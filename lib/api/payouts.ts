@@ -1,6 +1,6 @@
 import { apiClient, type Page } from "./client";
 import type {
-  BankAccount,
+  Beneficiary,
   DueCategory,
   DueType,
   KycState,
@@ -26,16 +26,12 @@ export function listBanks() {
   return apiClient.get<Bank[]>(`/banks`);
 }
 
-/** Ledger balance, the lead rep's KYC state, account readiness and the withdrawal fee schedule. */
+/** Ledger balance, the lead rep's KYC state, beneficiary count and the withdrawal fee schedule. */
 export function getPayoutSummary(spaceId: string) {
   return apiClient.get<PayoutSummary>(`/spaces/${spaceId}/payout/summary`);
 }
 
-export function getPayoutAccount(spaceId: string) {
-  return apiClient.get<BankAccount>(`/spaces/${spaceId}/payout/account`);
-}
-
-export type BankAccountInput = {
+export type BeneficiaryInput = {
   bankCode: string;
   accountNumber: string;
 };
@@ -47,35 +43,42 @@ export type ResolvedAccount = {
   accountNumber: string;
   /** Holder name resolved via Bachs name-enquiry. */
   accountName: string;
-  /** Withdrawals only go to an account in the rep's own name. */
-  matchesYourName: boolean;
 };
 
 /**
  * Resolve (but don't save) the account holder's name via name-enquiry so the rep
- * can confirm before committing. Throws `422 ACCOUNT_UNVERIFIABLE` if it fails.
+ * can confirm before adding it. Throws `422 ACCOUNT_UNVERIFIABLE` if it fails.
  */
-export function lookupPayoutAccount(
-  spaceId: string,
-  payload: BankAccountInput,
-) {
+export function lookupBeneficiary(spaceId: string, payload: BeneficiaryInput) {
   return apiClient.post<ResolvedAccount>(
-    `/spaces/${spaceId}/payout/account/lookup`,
+    `/spaces/${spaceId}/payout/beneficiaries/lookup`,
     payload,
   );
 }
 
+/** The accounts this space can withdraw to, newest first. */
+export function listBeneficiaries(spaceId: string) {
+  return apiClient.get<Beneficiary[]>(`/spaces/${spaceId}/payout/beneficiaries`);
+}
+
 /**
- * Lead rep only. Needs a passed identity check (`409 KYC_NOT_VERIFIED`) and an
- * account in the rep's own name (`422 ACCOUNT_NAME_MISMATCH`). Changing the
- * account holds withdrawals for 24 hours and emails every rep.
+ * Lead rep only; needs a passed identity check (`409 KYC_NOT_VERIFIED`). Any
+ * account can be added — it doesn't have to be in the rep's name. Adding an
+ * account that's already there returns the existing beneficiary.
  */
-export function setPayoutAccount(spaceId: string, payload: BankAccountInput) {
-  return apiClient.put<BankAccount>(
-    `/spaces/${spaceId}/payout/account`,
-    payload,
+export function addBeneficiary(spaceId: string, payload: BeneficiaryInput & { label?: string }) {
+  return apiClient.post<Beneficiary>(`/spaces/${spaceId}/payout/beneficiaries`, payload);
+}
+
+/** Lead rep only. Withdrawals already sent to it are unaffected. */
+export function removeBeneficiary(spaceId: string, beneficiaryId: string) {
+  return apiClient.delete<{ removed: true }>(
+    `/spaces/${spaceId}/payout/beneficiaries/${beneficiaryId}`,
   );
 }
+
+/** Where a withdrawal goes: a saved beneficiary, or a one-off account that isn't saved. */
+export type PayoutTarget = { beneficiaryId: string } | BeneficiaryInput;
 
 /**
  * Lead rep only. `amount` is the gross in kobo; the fee is deducted from it.
@@ -83,7 +86,7 @@ export function setPayoutAccount(spaceId: string, payload: BankAccountInput) {
  */
 export function requestPayout(
   spaceId: string,
-  payload: { amount: number; note?: string },
+  payload: { amount: number; note?: string } & PayoutTarget,
   idempotencyKey: string = crypto.randomUUID(),
 ) {
   return apiClient.post<Payout>(`/spaces/${spaceId}/payout/request`, payload, {

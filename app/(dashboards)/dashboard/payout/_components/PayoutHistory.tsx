@@ -44,6 +44,7 @@ export function PayoutHistory({ payouts }: { payouts: Payout[] }) {
                     {naira(payout.amount)}
                   </p>
                   <p className="truncate text-xs text-ink-soft">
+                    {payout.accountName ? `${payout.accountName} · ` : ""}
                     {payout.account} · {payout.reference}
                   </p>
                   {payout.fee > 0 && (

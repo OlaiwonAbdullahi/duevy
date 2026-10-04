@@ -2,29 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { accountLabel } from "./_components/data";
-import type { BankAccount, Payout } from "./_components/types";
-
-/** Placeholder until the rep's real account loads from the API. */
-const EMPTY_ACCOUNT: BankAccount = { bankName: "", accountName: "", accountNumber: "" };
+import type { Beneficiary, Payout } from "./_components/types";
 import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
-import { PayoutAccountCard } from "./_components/PayoutAccountCard";
+import { BeneficiariesCard } from "./_components/BeneficiariesCard";
 import Link from "next/link";
 import { PayoutHistory } from "./_components/PayoutHistory";
-import { WithdrawModal } from "./_components/WithdrawModal";
-import { EditAccountModal } from "./_components/EditAccountModal";
+import { WithdrawModal, type WithdrawTarget } from "./_components/WithdrawModal";
+import { AddBeneficiaryModal } from "./_components/AddBeneficiaryModal";
 import { useRepSpace } from "../_components/use-rep-space";
 import { fromKobo } from "../_components/format";
 import { timeAgo } from "../_components/notifications-data";
 import { Skeleton } from "../_components/Skeleton";
 import {
   getPayoutSummary,
-  getPayoutAccount,
-  setPayoutAccount,
+  listBeneficiaries,
+  addBeneficiary,
+  removeBeneficiary,
   requestPayout,
   listPayouts,
 } from "@/lib/api/payouts";
-import type { AccountEdit } from "./_components/EditAccountModal";
+import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
 import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
 
@@ -40,6 +37,7 @@ function adaptPayout(p: ApiPayout): Payout {
     status: p.status,
     requestedById: p.requestedById,
     account: p.account,
+    accountName: p.accountName ?? null,
     failureReason: p.failureReason,
   };
 }
@@ -47,8 +45,8 @@ function adaptPayout(p: ApiPayout): Payout {
 /** API error code → what the rep should do about it. */
 const PAYOUT_ERRORS: Record<string, string> = {
   KYC_NOT_VERIFIED: "Finish verification on the Verification page before withdrawing.",
-  NO_PAYOUT_ACCOUNT: "Add a payout account first.",
-  ACCOUNT_COOLDOWN: "Withdrawals are on hold for 24 hours after an account change.",
+  BENEFICIARY_NOT_FOUND: "That beneficiary was removed. Pick another one.",
+  ACCOUNT_UNVERIFIABLE: "We couldn't verify that account. Check the bank and number.",
   WITHDRAWAL_IN_PROGRESS: "Another withdrawal is still in progress. Try again once it settles.",
   INSUFFICIENT_BALANCE: "That's more than your available balance.",
   BELOW_MIN_PAYOUT: "That's below the minimum withdrawal.",
@@ -56,65 +54,46 @@ const PAYOUT_ERRORS: Record<string, string> = {
   FORBIDDEN: "Only the department's lead rep can withdraw.",
 };
 
-const ACCOUNT_ERRORS: Record<string, { title: string; description: string }> = {
+const BENEFICIARY_ERRORS: Record<string, { title: string; description: string }> = {
   ACCOUNT_UNVERIFIABLE: {
     title: "We couldn't verify that account",
     description: "Double-check the bank and account number and try again.",
   },
-  ACCOUNT_NAME_MISMATCH: {
-    title: "That account isn't in your name",
-    description: "Withdrawals can only go to a bank account in your own name.",
+  TOO_MANY_BENEFICIARIES: {
+    title: "Too many beneficiaries",
+    description: "Remove one you no longer use, then try again.",
   },
   KYC_NOT_VERIFIED: {
     title: "Verify your identity first",
-    description: "You can add a payout account once your NIN is verified.",
+    description: "You can add beneficiaries once your NIN is verified.",
   },
   FORBIDDEN: {
-    title: "Only the lead rep can change this",
-    description: "Ask your department's lead rep to update the payout account.",
+    title: "Only the lead rep can do this",
+    description: "Ask your department's lead rep to manage beneficiaries.",
   },
 };
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("en-NG", {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default function PayoutPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
-  // Withdrawals and the payout account are lead-only.
+  // Withdrawals and beneficiaries are lead-only.
   const isLead = repSpace?.membership !== "co";
 
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [account, setAccount] = useState<BankAccount>(EMPTY_ACCOUNT);
-  const [hasAccount, setHasAccount] = useState(false);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [summary, setSummary] = useState<PayoutSummary | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function refresh(id: string) {
-    const [nextSummary, acct, history] = await Promise.all([
+    const [nextSummary, list, history] = await Promise.all([
       getPayoutSummary(id),
-      getPayoutAccount(id).catch(() => null), // no account set yet is fine
+      listBeneficiaries(id),
       listPayouts(id),
     ]);
     setSummary(nextSummary);
-    if (acct && acct.accountNumber) {
-      setAccount({
-        bankName: acct.bankName ?? "",
-        accountName: acct.accountName ?? "",
-        accountNumber: acct.accountNumber,
-      });
-      setHasAccount(true);
-    } else {
-      setHasAccount(false);
-    }
+    setBeneficiaries(list);
     setPayouts(history.map(adaptPayout));
   }
 
@@ -125,10 +104,30 @@ export default function PayoutPage() {
       .finally(() => setLoading(false));
   }, [spaceId]);
 
-  const handleWithdraw = async (amount: number) => {
+  const handleWithdraw = async (amount: number, target: WithdrawTarget) => {
     if (!spaceId) return;
+    let destination: { beneficiaryId: string } | { bankCode: string; accountNumber: string };
+    if ("beneficiaryId" in target) {
+      destination = target;
+    } else if (target.saveAsBeneficiary) {
+      try {
+        const saved = await addBeneficiary(spaceId, {
+          bankCode: target.account.bankCode,
+          accountNumber: target.account.accountNumber,
+        });
+        destination = { beneficiaryId: saved.id };
+      } catch (err) {
+        const known = err instanceof ApiError ? BENEFICIARY_ERRORS[err.code] : undefined;
+        toast.error(known?.title ?? "Couldn't save the beneficiary", {
+          description: known?.description ?? "Untick “Save as a beneficiary” to send without saving.",
+        });
+        return;
+      }
+    } else {
+      destination = { bankCode: target.account.bankCode, accountNumber: target.account.accountNumber };
+    }
     try {
-      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100) });
+      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100), ...destination });
       setWithdrawOpen(false);
       // A 201 can already carry a provider refusal; the balance is restored then.
       if (payout.status === "failed" || payout.status === "reversed") {
@@ -149,46 +148,47 @@ export default function PayoutPage() {
     }
   };
 
-  const handleSaveAccount = async (next: AccountEdit) => {
+  const handleAddBeneficiary = async (next: BeneficiaryDraft) => {
     if (!spaceId) return;
     try {
-      // The API strictly takes { bankCode, accountNumber } — the account name is
-      // resolved + verified server-side via Bachs name-enquiry.
-      await setPayoutAccount(spaceId, {
+      // The account name is resolved server-side via Bachs name-enquiry.
+      const added = await addBeneficiary(spaceId, {
         bankCode: next.bankCode,
         accountNumber: next.accountNumber,
+        label: next.label,
       });
-      setEditOpen(false);
-      toast.success("Payout account updated", {
-        description: `${next.bankName} · ${accountLabel({
-          bankName: next.bankName,
-          accountName: "",
-          accountNumber: next.accountNumber,
-        })}`,
+      setAddOpen(false);
+      toast.success("Beneficiary added", {
+        description: `${added.accountName} · ${added.bankName} ${added.accountNumber}`,
       });
       await refresh(spaceId);
     } catch (err) {
-      const known = err instanceof ApiError ? ACCOUNT_ERRORS[err.code] : undefined;
-      toast.error(known?.title ?? "Couldn't update the account", {
+      const known = err instanceof ApiError ? BENEFICIARY_ERRORS[err.code] : undefined;
+      toast.error(known?.title ?? "Couldn't add the beneficiary", {
         description: known?.description ?? "Something went wrong. Please try again.",
       });
     }
   };
 
+  const handleRemoveBeneficiary = async (b: Beneficiary) => {
+    if (!spaceId) return;
+    try {
+      await removeBeneficiary(spaceId, b.id);
+      setBeneficiaries((list) => list.filter((x) => x.id !== b.id));
+      toast.success("Beneficiary removed");
+    } catch {
+      toast.error("Couldn't remove the beneficiary. Please try again.");
+    }
+  };
+
   const available = fromKobo(summary?.available ?? 0);
-  const cooldownUntil =
-    summary?.cooldownUntil && new Date(summary.cooldownUntil) > new Date() ? summary.cooldownUntil : null;
   const withdrawBlockedReason = !summary
     ? null
     : !summary.kyc.canWithdraw
       ? "Withdrawals open once verification is complete."
-      : !summary.payoutAccountReady
-        ? "Add a payout account to withdraw."
-        : cooldownUntil
-          ? `Withdrawals are on hold until ${formatTime(cooldownUntil)} after the account change.`
-          : summary.inFlight > 0
-            ? "A withdrawal is still in progress."
-            : null;
+      : summary.inFlight > 0
+        ? "A withdrawal is still in progress."
+        : null;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -200,7 +200,7 @@ export default function PayoutPage() {
           Payout
         </h1>
         <p className="mt-1 text-[13px] text-ink-soft">
-          Withdraw the funds your department has collected to its bank account.
+          Send the funds your department has collected to any bank account: yours, a lecturer&apos;s or a vendor&apos;s.
         </p>
       </header>
 
@@ -236,10 +236,11 @@ export default function PayoutPage() {
               blockedReason={withdrawBlockedReason}
               onWithdraw={() => setWithdrawOpen(true)}
             />
-            <PayoutAccountCard
-              account={account}
-              hasAccount={hasAccount}
-              onEdit={() => setEditOpen(true)}
+            <BeneficiariesCard
+              beneficiaries={beneficiaries}
+              canManage={isLead}
+              onAdd={() => setAddOpen(true)}
+              onRemove={handleRemoveBeneficiary}
             />
           </div>
         </>
@@ -258,17 +259,16 @@ export default function PayoutPage() {
           spaceId={spaceId ?? ""}
           available={available}
           minPayout={fromKobo(summary?.minPayout ?? 0)}
-          account={account}
+          beneficiaries={beneficiaries}
           onClose={() => setWithdrawOpen(false)}
           onConfirm={handleWithdraw}
         />
       )}
-      {editOpen && (
-        <EditAccountModal
+      {addOpen && (
+        <AddBeneficiaryModal
           spaceId={spaceId ?? ""}
-          account={account}
-          onClose={() => setEditOpen(false)}
-          onSave={handleSaveAccount}
+          onClose={() => setAddOpen(false)}
+          onSave={handleAddBeneficiary}
         />
       )}
     </div>
