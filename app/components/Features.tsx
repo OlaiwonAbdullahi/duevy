@@ -4,10 +4,8 @@ import {
   SecurityCheckIcon,
   Analytics01Icon,
   Invoice01Icon,
-  Building03Icon,
   AiChat01Icon,
   BarChartIcon,
-  GiftIcon,
 } from "@hugeicons/core-free-icons";
 
 const features = [
@@ -40,12 +38,6 @@ const features = [
     icon: BarChartIcon,
     title: "Paid polls & voting",
     body: "Run dinner nights, awards, or elections where students pay to vote, and reps watch tallies and funds raised live.",
-  },
-
-  {
-    icon: Building03Icon,
-    title: "Multi-school ready",
-    body: "Built to run across departments, faculties, and campuses.",
   },
 ];
 

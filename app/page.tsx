@@ -48,9 +48,7 @@ export default function Page() {
         <Reveal>
           <Hero />
         </Reveal>
-        <Reveal>
-          <TrustBar />
-        </Reveal>
+        {/* <TrustBar /> */}
         <Reveal>
           <Problem />
         </Reveal>

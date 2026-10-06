@@ -14,11 +14,11 @@ const faqs = [
   },
   {
     q: "Can a rep run away with the money?",
-    a: "No. Every department has its own verified payout account, and every withdrawal is logged and traceable back to who requested it.",
+    a: "No. Every department has its own verified payout account, and every withdrawal needs quorum approval before release — logged and traceable back to who requested it.",
   },
   {
-    q: "How do you know a payer is a real student?",
-    a: "Every account is verified by matric number through an admin approval queue.",
+    q: "How do you know who's paying?",
+    a: "Students sign up and enter the space code their rep shares. Their matric number is captured so the rep can match payments to names — it isn't used to verify identity.",
   },
   {
     q: "What does it cost?",

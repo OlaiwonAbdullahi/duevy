@@ -38,8 +38,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       <Sidebar
         groups={ADMIN_GROUPS}
         subtitle="Admin console"
-        open={open}
-        onClose={() => setOpen(false)}
+        drawer={{ open, onClose: () => setOpen(false) }}
       />
 
       <div className="flex min-h-screen flex-col lg:pl-72">

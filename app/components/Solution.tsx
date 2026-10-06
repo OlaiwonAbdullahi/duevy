@@ -14,7 +14,7 @@ const blocks = [
   {
     icon: ShieldIcon,
     title: "Reps stay accountable",
-    body: "Every department gets its own verified payout account, and every withdrawal is logged and traceable back to who requested it.",
+    body: "Every department gets its own verified payout account, and every withdrawal needs quorum approval before it's released — logged and traceable back to who requested it.",
   },
 ];
 

@@ -25,16 +25,12 @@ function isActive(pathname: string, href: string) {
 type SidebarProps = {
   groups: NavGroup[];
   subtitle?: string;
-  open: boolean;
-  onClose: () => void;
+  /** Mobile slide-out drawer. Omit for surfaces that use the bottom tab bar instead. */
+  drawer?: { open: boolean; onClose: () => void };
 };
 
-export default function Sidebar({
-  groups,
-  subtitle,
-  open,
-  onClose,
-}: SidebarProps) {
+export default function Sidebar({ groups, subtitle, drawer }: SidebarProps) {
+  const onClose = drawer?.onClose;
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
@@ -61,20 +57,26 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile backdrop */}
-      <div
-        onClick={onClose}
-        aria-hidden
-        className={cn(
-          "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
-          open ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
-      />
+      {drawer && (
+        <div
+          onClick={onClose}
+          aria-hidden
+          className={cn(
+            "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
+            drawer.open ? "opacity-100" : "pointer-events-none opacity-0",
+          )}
+        />
+      )}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-cloud bg-canvas transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-cloud bg-canvas",
+          drawer
+            ? cn(
+                "flex transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:translate-x-0",
+                drawer.open ? "translate-x-0" : "-translate-x-full",
+              )
+            : "hidden lg:flex",
         )}
       >
         {/* Brand */}
@@ -106,13 +108,15 @@ export default function Sidebar({
               )}
             </span>
           </Link>
-          <button
-            onClick={onClose}
-            aria-label="Close menu"
-            className="lg:hidden grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} size={18} />
-          </button>
+          {drawer && (
+            <button
+              onClick={onClose}
+              aria-label="Close menu"
+              className="lg:hidden grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-paper hover:text-ink transition-colors duration-300 cursor-pointer"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={18} />
+            </button>
+          )}
         </div>
 
         {/* Nav groups */}

@@ -11,6 +11,8 @@ import { TourProvider } from "./DashboardTour";
 import { getDashboardGroups, isRepOnlyPath, isFeatureGatedPath } from "./nav-config";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import { MobileTabBar } from "./MobileTabBar";
+import { MobileMoreSheet } from "./MobileMoreSheet";
 import { RepOnlyNotice } from "./RepOnlyNotice";
 import { FeatureUnavailableNotice } from "./FeatureUnavailableNotice";
 import { CommandPalette } from "./CommandPalette";
@@ -56,7 +58,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { role, isRep, isPendingRep } = useRole();
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Students who reach a rep-only route by URL get a graceful notice, not the tool.
@@ -69,13 +71,11 @@ function ShellInner({ children }: { children: ReactNode }) {
       <Sidebar
         groups={getDashboardGroups(isRep)}
         subtitle={role === "rep" ? "Rep dashboard" : "Student dashboard"}
-        open={open}
-        onClose={() => setOpen(false)}
       />
 
       <div className="flex min-h-screen flex-col lg:pl-72">
-        <Topbar onMenu={() => setOpen(true)} onSearch={() => setSearchOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <Topbar onSearch={() => setSearchOpen(true)} />
+        <main className="flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pb-8">
           {isPendingRep && <PendingRepBanner />}
           {!isPendingRep && user && !user.emailVerified && <VerifyEmailBanner />}
           {featureBlocked ? (
@@ -87,6 +87,13 @@ function ShellInner({ children }: { children: ReactNode }) {
           )}
         </main>
       </div>
+
+      <MobileTabBar isRep={isRep} onMore={() => setMoreOpen(true)} />
+      <MobileMoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        groups={getDashboardGroups(isRep)}
+      />
 
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} isRep={isRep} />
     </div>

@@ -43,7 +43,7 @@ const personas = [
       "Runs money across multiple levels and hundreds of students. No unified record for handover to the next set of execs.",
     gives: [
       "One dashboard for all levels",
-      "Verified identities via matric number",
+      "Matric numbers captured for clean reconciliation",
       "A clean audit trail for handover",
     ],
   },

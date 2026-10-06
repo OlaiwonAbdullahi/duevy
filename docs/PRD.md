@@ -1,26 +1,34 @@
 # DUEVY — Product Requirements Document
 
-## MVP — Rep onboarding, spaces, and dues collection on Anchor
+## MVP — Rep onboarding, spaces, and dues collection on Bachs
 
 | Field | Value |
 |---|---|
 | Product | Duevy — "Pay your dues. Simply." |
 | Entity | Duevy Labs Ltd |
-| Document | MVP PRD v1.0 (draft) |
-| Author | Abdullahi Olaiwon |
-| Date | 3 September 2026 |
-| Status | Draft for build |
-| Payment rail | Anchor (getanchor.co) — BaaS Standard pricing |
+| Document | MVP PRD v1.1 (revised) |
+| Author | Abdullahi Olaiwon (v1.0); revisions below reflect confirmed product decisions since |
+| Date | 3 September 2026 (v1.0) · revised 11 September 2026 |
+| Status | Revised — see note below |
+| Payment rail | **Bachs** (bachs.io) — Bachs Connect, replaces the Anchor plan in v1.0 |
 | Pilot | LAUTECH, single department cohort |
+
+> **Revision note (11 September 2026)**
+> This PRD's v1.0 draft specified Anchor as the payment rail, a 2% + ₦100 flat fee model, no payout quorum, and listed polls, saved cards, and an AI assistant as explicitly out of MVP scope. Since then, the team has confirmed all of the following as current product direction, not deferred:
+> - **Payment rail is Bachs, not Anchor.** Bachs Connect's connected-accounts model replaces the per-space Anchor deposit account described in v1.0 §6.
+> - **Fee is 3% flat**, not 2% + a separate ₦100 withdrawal fee. Duevy's cut is whatever it doesn't transfer out to the department — there is no separate withdrawal charge in the confirmed model.
+> - **Payouts require quorum approval** (`ceil(team_size × 0.8)` of the department's team, enforced in Duevy's own tables before any Bachs call) — this reverses v1.0's explicit "no approval quorum, one rep" rule, and makes co-rep/team membership a real requirement, not deferred.
+> - **Paid polls & voting, saved-card payments, and the "Ask Duey" assistant are in scope** — all three were listed as non-goals in v1.0 §1.2; all three are now built and live.
+> Sections below have been updated to match. Where a v1.0 Anchor-specific detail (KYC tier limits, stamp-duty fee splits, dynamic virtual account behavior) had no confirmed Bachs equivalent at revision time, it has been removed rather than guessed, and flagged as an open question in §13.
 
 ## Contents
 
 1. [Summary — goals, and what is deliberately out of scope](#1-summary)
 2. [Roles and permissions](#2-roles-and-permissions)
-3. [Rep onboarding — registration, admin approval, KYC banner, Anchor Tier 1](#3-rep-onboarding)
+3. [Rep onboarding — registration, admin approval, identity verification](#3-rep-onboarding)
 4. [The space — space code, dues, members](#4-the-space)
 5. [Student flow — signup, joining, multi-due checkout](#5-student-flow)
-6. [Anchor integration — objects, provisioning, collections, webhooks, payouts](#6-anchor-integration)
+6. [Bachs integration — connected accounts, collections, webhooks, payouts](#6-bachs-integration)
 7. [Money flow and unit economics](#7-money-flow-and-unit-economics)
 8. [Data model](#8-data-model)
 9. [Edge cases and failure handling](#9-edge-cases-and-failure-handling)
@@ -33,19 +41,19 @@
 
 ## 1. Summary
 
-Duevy lets a course rep collect departmental dues from students online, and lets students pay several dues at once without a bank-transfer-and-screenshot loop. This document covers the MVP only: the smallest build that can take real money from a real student at LAUTECH and land it in a rep's bank account.
+Duevy lets a course rep collect departmental dues from students online, and lets students pay several dues at once without a bank-transfer-and-screenshot loop. This document covers the MVP: the build that takes real money from a real student at LAUTECH and lands it — with team sign-off — in a department's bank account.
 
-The MVP has exactly three actors and one money path. A rep registers and is approved by the platform admin. The rep completes KYC with Anchor, which provisions the space's bank account. Students join the space with a code, select the dues they owe, and pay in one transaction. The rep withdraws the balance to their own bank account.
+The MVP has three actors and one money path, plus a quorum step before money leaves the platform. A rep registers and is approved by the platform admin. The rep's department completes onboarding with Bachs, which creates a connected account for the space. Students join the space with a code, select the dues they owe, and pay in one transaction (card or bank transfer). The rep requests a withdrawal; once enough of the department's team approves it, funds release to the department's bank account.
 
 > **The one-line test for MVP scope**
-> If a feature is not required for a student to pay a due and a rep to receive that money, it is not in the MVP.
+> If a feature is not required for a student to pay a due and a department to receive that money, it is not in the MVP.
 
 ### 1.1 Goals
 
 - Ship a live, real-money collection flow for one department at LAUTECH.
-- Prove the Anchor integration end to end: customer creation, KYC, deposit account, virtual account collection, payout, webhooks.
+- Prove the Bachs Connect integration end to end: connected account creation, onboarding, capability activation, collection, split transfer, quorum-gated withdrawal, webhooks.
 - Prove the fee model works at real ticket sizes (see §7).
-- Keep the rep's manual work to: create dues, share a code, withdraw.
+- Keep the rep's manual work to: create dues, share a code, request withdrawal.
 
 ### 1.2 Non-goals
 
@@ -53,16 +61,14 @@ These are deliberately deferred. They are not "phase 2 maybe" — they are out o
 
 | Deferred | Why it is out |
 |---|---|
-| Polls and paid voting | Revenue-adjacent, not required for the core loop. |
-| Saved cards / card storage | Adds PCI surface and a second payment method. Bank transfer to a virtual account is enough. |
-| Student wallet / balance | Holding student float multiplies compliance load. Money moves student → space account directly. |
-| Co-rep team and approval quorum | One rep per space in MVP. No payout approvals. |
+| Student wallet / balance | Holding student float multiplies compliance load. Money moves student → Duevy → department, never sitting in a student-facing balance. |
 | Referral programme | Growth feature, no place in a single-department pilot. |
-| "Ask Duey" AI assistant, chatbot, receipt parsing | Nice-to-have layered on a working core. |
 | WhatsApp channel | Email notifications only in MVP. |
 | Installments / split payments / lending | Changes the ledger model. Later phase. |
 | Multi-school onboarding, public API | Schema stays multi-school-ready; no UI or flow for it. |
-| Refunds (self-service) | Handled manually by the platform admin in MVP (see §9.4). |
+| Refunds (self-service) | Handled manually by the platform admin in MVP (see §9.4); recovered from Bachs via clawback transfer where the department hasn't already withdrawn. |
+
+**No longer deferred, as of the 11 September revision** (previously listed here in v1.0, now confirmed in scope): polls and paid voting, saved-card payments, co-rep team and quorum-approved payouts, and the "Ask Duey" assistant. See the revision note above.
 
 ---
 
@@ -72,8 +78,8 @@ Three roles. No sub-roles, no per-permission toggles.
 
 | Role | Who | Can do |
 |---|---|---|
-| Platform admin | You (Duevy Labs) | Approve or reject rep registrations; view all spaces, dues, payments and payouts; suspend a space; trigger a manual refund; view the Anchor reconciliation view. |
-| Rep | Course rep / class governor | Create one space; create and close dues; view members; view collections; withdraw the space balance to their own bank account; remove a member. |
+| Platform admin | You (Duevy Labs) | Approve or reject rep registrations; view all spaces, dues, payments and payouts; suspend a space; trigger a manual refund; view the Bachs reconciliation view. |
+| Rep | Course rep / class governor | Create one space; create and close dues; view members; view collections; request a withdrawal (subject to quorum approval); remove a member. |
 | Student | Any student with a space code | Join a space; see the dues that apply to them; select several and pay; view and download receipts; leave a space. |
 
 > **Access model**
@@ -85,7 +91,7 @@ Three roles. No sub-roles, no per-permission toggles.
 
 ## 3. Rep onboarding
 
-This is the flow with the most states in the MVP, and the one that gates everything else. A space cannot receive a naira until the rep behind it is a KYC-verified Anchor customer.
+This is the flow with the most states in the MVP, and the one that gates everything else. A space cannot receive or release a naira until its department has an active Bachs connected account with both the `transfers` and `payouts` capabilities enabled.
 
 ### 3.1 Registration
 
@@ -110,65 +116,62 @@ The admin sees the submitted details plus a free-text note field, and picks one 
 
 Every decision writes to an audit log: admin id, rep id, action, reason, timestamp.
 
-### 3.3 First dashboard — the KYC banner
+### 3.3 First dashboard — the payout-setup banner
 
-An approved rep lands on the dashboard immediately. The dashboard is not blank and not locked: the rep can look around, create the space profile, and draft dues. What they cannot do is take money.
+An approved rep lands on the dashboard immediately. The dashboard is not blank and not locked: the rep can look around, create the space profile, invite the team, and draft dues. What they cannot do is take money.
 
 > **Banner copy (persistent, top of every rep page)**
-> "Verify your identity to start collecting. Your space can't receive payments until this is done. It takes about 2 minutes — you'll need your BVN." **[Verify now]**
+> "Set up your payout account to start collecting. Your space can't receive payments until this is done." **[Set up now]**
 
-**What is unlocked before KYC**
+**What is unlocked before onboarding is complete**
 
-- **Available:** create the space, set its name, description and cover; create dues as drafts; copy the space code; invite students; browse the dashboard.
-- **Blocked:** publishing a due, generating an account number, any student payment, any withdrawal. Every blocked action shows the same modal pointing at KYC.
+- **Available:** create the space, set its name, description and cover; create dues as drafts; copy the space code; invite students and co-reps; browse the dashboard.
+- **Blocked:** publishing a due, any student payment, any withdrawal request. Every blocked action shows the same modal pointing at payout setup.
 
-Students who join a pre-KYC space see the space and its draft dues marked "Not open yet". This is intentional: the rep can seed the space and get students in while verification is pending.
+Students who join a pre-onboarding space see the space and its draft dues marked "Not open yet". This is intentional: the rep can seed the space and get students in while onboarding is pending.
 
-### 3.4 KYC — Anchor Tier 1
+### 3.4 Bachs Connect onboarding
 
-MVP verifies reps at Anchor's BVN-validated tier (Tier 1 in the API documentation). It is automatic, resolves by webhook in seconds, and costs ₦50 per verification against Anchor's published rate card.
+The space's department is a **Bachs connected account**, created with the `transfers` and `payouts` capabilities requested. Both capabilities start `restricted` and must become `active` before the space can collect or withdraw.
 
-| Collected at KYC | Notes |
+Duevy uses the **hosted onboarding link** (Bachs's recommended path for MVP): rather than building the Task-collection UI ourselves, the rep is sent to a Bachs-hosted flow and redirected back on completion. This avoids the maintenance burden of rendering every compliance field Bachs might add later.
+
+| Step | What happens |
 |---|---|
-| BVN (11 digits) | The name and phone number on the BVN must match the name and phone number the customer was created with at Anchor. Mismatch is the single most common rejection cause. |
-| Date of birth | YYYY-MM-DD. |
-| Gender | As recorded against the BVN. |
-| Bank account for payouts | Account number + bank. Resolved and name-matched before it is saved (see §6.5). |
+| Connected account created | On admin approval, or when the rep starts payout setup. |
+| Hosted link issued | `POST .../account-links` with a `refresh_url` and `return_url` on Duevy. Minted on explicit "Set up payouts" click, never on page load — a link minted on render would silently invalidate one already emailed. |
+| Rep completes the hosted flow | Business/individual details, bank destination, identity verification (Bachs offers both a hosted verification session and NIN-based verification for Nigerian accounts — **which one Duevy defaults to is an open question**, see §13). |
+| Capability activation | Reviewed by Bachs on no fixed schedule. Duevy never polls — it listens for `capability.updated`. |
 
-Verification is asynchronous. The rep submits, sees a "Verifying…" state, and Duevy waits for the Anchor webhook.
+Verification is asynchronous. The rep completes the hosted flow, sees a "Setting up…" state, and Duevy waits for the webhook.
 
 | Webhook event | Duevy does |
 |---|---|
-| `customer.identification.approved` | Rep status → `verified`. Create the deposit account and the space's virtual account. Banner is replaced with "You're verified — your space can now collect." Drafted dues become publishable. |
-| `customer.identification.rejected` | Rep status → `kyc_failed`. Banner turns amber with the rejection reason and a "Fix and retry" action. Rep can resubmit; each attempt is a fresh Anchor call and a fresh ₦50. |
-| `customer.identification.error` | Transient. Retry with backoff (3 attempts, 1/5/30 minutes). Rep sees "Still verifying" and is not asked to do anything. |
+| `capability.updated` (`transfers` → `active`) | Space can now accept student payments. |
+| `capability.updated` (`payouts` → `active`) | Space can now have withdrawals requested against it (still subject to quorum). |
+| `capability.updated` (either → `restricted`, after having been active) | Treated as a fresh state change — collection or withdrawal is blocked again until it returns to `active`. This can happen more than once; Duevy re-checks capability status immediately before any money movement rather than trusting a cached flag. |
+| `account.updated` | Drives the payout-setup status screen (`setup_status`, outstanding requirements). |
 
-> **Tier 1 limits — this constrains the product, not just compliance**
-> Tier 1: maximum single deposit ₦50,000; maximum cumulative balance ₦300,000.
->
-> **Consequence 1:** a single due priced above ₦50,000 cannot be paid in one inflow. MVP caps a single due at ₦50,000 and caps a single checkout at ₦50,000 — a student with more than that in selected dues pays in two goes.
->
-> **Consequence 2:** a 300-student space collecting ₦5,000 each will hit the ₦300,000 balance ceiling long before it finishes. Duevy therefore nudges withdrawal at 70% of the ceiling and hard-warns at 90%: "Withdraw now — your space is close to its limit."
->
-> Reps who repeatedly hit the ceiling are the trigger to add a Tier 2 upgrade path (deferred, see §12).
+A department only needs `transfers` and `payouts` — nothing that accepts payments directly, since Duevy collects centrally (see §6).
 
-### 3.5 Rep state machine
+### 3.5 Rep / space state machine
 
-| State | Entered when | Can collect? |
-|---|---|---|
-| `pending_approval` | Registration submitted, email verified | No |
-| `rejected` | Admin rejects | No — cannot sign in |
-| `approved` | Admin approves | No — KYC banner shown |
-| `kyc_pending` | KYC submitted, awaiting webhook | No |
-| `kyc_failed` | Anchor rejected the identification | No — retry offered |
-| `verified` | Anchor approved; account provisioned | Yes |
-| `suspended` | Admin suspends the space or the rep | No — payments refused, balance frozen |
+| State | Entered when | Can collect? | Can withdraw? |
+|---|---|---|---|
+| `pending_approval` | Registration submitted, email verified | No | No |
+| `rejected` | Admin rejects | No — cannot sign in | No |
+| `approved` | Admin approves | No — payout-setup banner shown | No |
+| `onboarding_pending` | Hosted link issued, not yet completed or under review | No | No |
+| `onboarding_incomplete` | Bachs reports outstanding requirements | No | No |
+| `transfers_active` | `transfers` capability active, `payouts` not yet | Yes | No |
+| `fully_active` | Both `transfers` and `payouts` active | Yes | Yes (subject to quorum) |
+| `suspended` | Admin suspends the space or the rep | No — payments refused, balance frozen | No |
 
 ---
 
 ## 4. The space
 
-A space is one department cohort — "Computer Science, 2024/2025, 400 Level". One rep owns one space in the MVP. The space is the unit that has an account number, a balance, dues, and members.
+A space is one department cohort — "Computer Science, 2024/2025, 400 Level". The space maps 1:1 to a Bachs connected account. A space has a team (the rep plus any invited co-reps), a balance, dues, and members — the team's size is what the payout quorum is computed against (§6.5).
 
 ### 4.1 Space code
 
@@ -186,7 +189,7 @@ A due is one line item a student can owe. The rep creates them; there is no temp
 |---|---|
 | Title | Required. E.g. "Departmental Due 2025/26". |
 | Type | One of: `departmental_due`, `handout`, `exam_levy`, `lab_manual`, `association_due`, `departmental_wear`, `trip_fee`, `clearance`, `other`. |
-| Amount | Required, fixed. ₦100 minimum, ₦50,000 maximum (Tier 1 ceiling). No variable or "pay what you can" amounts in MVP. |
+| Amount | Required, fixed. ₦100 minimum. No variable or "pay what you can" amounts in MVP. (v1.0's ₦50,000 maximum was an Anchor Tier 1 ceiling — no confirmed Bachs-equivalent cap exists yet; see §13.) |
 | Description | Optional, shown to students. |
 | Deadline | Optional date. Past the deadline the due shows as overdue but is still payable — MVP does not auto-close. |
 | Status | `draft` → `open` → `closed`. Only open dues are payable. Closing a due does not affect payments already made. |
@@ -200,6 +203,7 @@ Dues apply to the whole space. Per-student or per-group assignment is not in the
 - The rep sees the member list with name, matric number, email, total paid and outstanding.
 - The rep can remove a member. Removal does not delete their payment history or receipts.
 - A student can belong to more than one space (department + association), and the dashboard groups dues by space.
+- Separately from students, a rep can invite **co-reps** to the space's team. Team size is what the payout quorum is computed against — see §6.5.
 
 ---
 
@@ -219,19 +223,17 @@ The matric number is collected for the rep's reconciliation, not for verificatio
 
 1. The student sees every open due in the space as a checkbox row: title, amount, deadline, and a paid badge where relevant.
 2. Mandatory dues are pre-ticked. The student ticks any others.
-3. A sticky summary bar shows: selected dues subtotal, the 2% service charge, and the total to pay.
-4. "Pay ₦X" opens the payment screen. Duevy requests a virtual account from Anchor for exactly this amount and shows: account number, bank name, account name, amount, and a countdown.
-5. The student transfers from any bank app. The screen polls payment status live; no screenshot, no "I have paid" button.
-6. On the inflow webhook, the payment is marked successful, every selected due is marked paid for that student, a PDF receipt is generated, and a confirmation email goes out.
+3. A sticky summary bar shows: selected dues subtotal, the 3% service charge, and the total to pay.
+4. "Pay ₦X" opens checkout — a Bachs checkout session on **Duevy's own account** (not a per-space account; the split to the department happens after settlement, see §6.3). The student pays by saved/new card or bank transfer.
+5. On payment, the screen reflects status live — no screenshot, no "I have paid" button.
+6. Once the charge settles, Duevy transfers the face amount of each due to the space's connected account, every selected due is marked paid for that student, a PDF receipt is generated, and a confirmation email goes out.
 
 > **Design rules for the checkout**
-> One transfer covers many dues. The student never pays four times for four dues.
+> One transaction covers many dues. The student never pays four times for four dues.
 >
-> The amount shown is the exact amount to transfer, service charge included. Anything else breaks reconciliation.
+> The amount shown is the exact amount to pay, service charge included. Anything else breaks reconciliation.
 >
-> The virtual account is single-use and expires in 30 minutes. Expired accounts are not reused.
->
-> Nothing is marked paid on the client. Only the Anchor webhook (or a status poll confirming it) can mark a payment successful.
+> Nothing is marked paid on the client. Only the Bachs webhook (`collection.succeeded` / settlement) can mark a payment successful, and the split transfer to the department only fires on settlement, never on the client-side success callback.
 
 ### 5.3 After payment
 
@@ -241,73 +243,78 @@ The matric number is collected for the rep's reconciliation, not for verificatio
 
 ---
 
-## 6. Anchor integration
+## 6. Bachs integration
 
-Anchor is the only money rail in the MVP. Everything below maps to Anchor's documented API groups: customers, verification, deposit accounts, virtual accounts, money movement, and events.
+Bachs Connect is the only money rail in the MVP. Duevy collects every student payment into its own Bachs balance, then **splits** the face amount of each due out to the paying department's connected account via a transfer. See the `bachs-connect` skill for the full API reference this section summarizes.
 
 ### 6.1 Object mapping
 
-| Duevy concept | Anchor object |
+| Duevy concept | Bachs object |
 |---|---|
-| Rep | Individual Customer (created at approval, before KYC) |
-| Rep KYC | Individual verification, level TIER_1 (BVN + DOB + gender) |
-| Space account | Deposit account (savings), owned by the rep's customer record |
-| Checkout | Virtual NUBAN (dynamic, single-use, amount-fixed) attached to the space's deposit account |
-| Withdrawal | NIP transfer out to the rep's saved counterparty bank account |
-| Duevy revenue | Service charge swept to the Duevy revenue account |
+| Duevy Labs Ltd | Platform organization (`org_duevy...`), with `connect` capability active |
+| A department space | Connected account (`org_...`), `entity_type: individual`, capabilities `transfers` + `payouts` |
+| Course rep | Account representative on the connected account |
+| Student payment | Charge, collected on Duevy's own account (checkout session) |
+| Split to department | Transfer, `destination` = the space's connected account, `amount` = due face value |
+| Duevy revenue | Whatever isn't transferred out — the 3% add-on |
+| Withdrawal | Withdrawal, requested against the space's connected account, gated by both Bachs's `payouts` capability and Duevy's own quorum check |
+| Refund recovery | Clawback — a transfer from the space's connected account back to `self`, only possible if the department hasn't already withdrawn the amount |
 
 ### 6.2 Provisioning sequence
 
-1. Admin approves rep → `POST` create Individual Customer (name, email, phone, address).
-2. Rep submits KYC → `POST /api/v1/customers/{customerId}/verification/individual` with level `TIER_1`.
-3. Await `customer.identification.approved`.
-4. Create the deposit account against the verified customer.
-5. Store account id, NUBAN and bank name against the space. The space is now live.
+1. Admin approves rep, or rep starts payout setup → `POST /v1/organizations/connected-accounts` with `capabilities: { transfers: { requested: true }, payouts: { requested: true } }`. Persist the returned `org_...` id on the space immediately.
+2. `POST .../account-links` (`type: onboarding`) → redirect the rep to the hosted flow.
+3. Rep completes the hosted flow (business/individual details, bank destination, identity verification).
+4. Await `capability.updated` for both `transfers` and `payouts`.
+5. Space status becomes `fully_active` (§3.5). The space is now live.
 
-Steps 4 and 5 are never triggered by the client. They run in a webhook handler, so a rep who closes the tab still ends up provisioned.
+Steps 4–5 are never triggered by the client. They run in a webhook handler, so a rep who closes the tab still ends up provisioned once Bachs finishes review.
 
-### 6.3 Collections
+### 6.3 Collections and the split
 
-- One virtual account per checkout attempt, fixed to the exact total, expiring in 30 minutes.
-- Anchor charges 0.5% capped at ₦500 on inflow through a virtual NUBAN.
-- CBN stamp duty of ₦50 applies to transfers above ₦10,000 — it applies on both inflow and payout and is the single biggest threat to the margin (see §7).
-- The inflow webhook is the single source of truth for a successful payment.
+- Checkout happens once, on Duevy's own account — a normal Bachs checkout session, not a per-space or per-connected-account charge. This is deliberate: departments are individuals, not registered businesses, so putting them through the payment-accepting onboarding path would mean much longer Tasks and higher abandonment. Duevy collecting centrally keeps a department's onboarding to just `transfers` + `payouts`.
+- The student pays `face amount × 1.03`.
+- Once the charge **settles** (not merely succeeds — a transfer sent before settlement fails with `INSUFFICIENT_BALANCE`), Duevy transfers the face amount to the department's connected account: `destination: <space's org id>`, `amount: <face amount>`, `transfer_group: <charge id>`.
+- The `transfer_group` is reused on any later clawback for that charge, so a refund recovery sits with the original split.
+- The settlement webhook (and the resulting `transfer.created`) is the single source of truth for a successful, split payment — never the checkout's client-side callback.
 
 ### 6.4 Webhooks
 
-Duevy subscribes to, at minimum:
+Duevy subscribes to, at minimum, with `event_source: connect` for the connected-account events and `event_source: all` (or a second endpoint) for Duevy's own:
 
-- `customer.identification.approved` / `.rejected` / `.error`
-- Deposit account created
-- Virtual account inflow / payment received
-- Transfer successful / failed / reversed
+- `account.updated`, `capability.updated` — onboarding and capability status
+- `transfer.created` — a split (or clawback) landed
+- `payout.paid` / `payout.failed` — a withdrawal resolved
+- Duevy's own checkout/collection settlement event
 
 **Handler rules — non-negotiable**
 
 | Rule | Implementation |
 |---|---|
-| Verify signature | Reject any payload failing Anchor's signature check. Never trust an unsigned webhook. |
-| Idempotency | Persist every event by Anchor event id in a `webhook_events` table before processing. A repeated id is acknowledged and dropped. |
-| Acknowledge fast | Return 200 immediately, process in a queued job. Anchor retries on non-200 and duplicate processing is worse than a slow job. |
-| Never mark from the client | The frontend poll reads Duevy's own payment record. It never writes one. |
-| Reconcile daily | A nightly job compares Duevy payment records against Anchor account statements and flags mismatches to `/admin`. |
+| Verify signature | Reject any payload failing Bachs's signature check. Never trust an unsigned webhook. |
+| Idempotency | Persist every event by its Bachs event id in a `webhook_events` table before processing. A repeated id is acknowledged and dropped. |
+| Acknowledge fast | Return 200 immediately, process in a queued job. |
+| Never mark from the client | The frontend never writes a payment or payout's status. Only a webhook handler does. |
+| Connect events carry the account, not the platform | On a `event_source: connect` event, `organization_id` in the payload is the connected account (the department), not Duevy. Read it from the payload — don't assume it's you. |
+| Reconcile daily | A nightly job compares Duevy's records against `GET /v1/transfers` and flags mismatches to `/admin`. |
 
-### 6.5 Payouts
+### 6.5 Payouts and the quorum
 
-1. Rep opens Withdraw, sees the available balance, enters an amount.
-2. Destination is the bank account saved at KYC. Changing it requires re-entering the password and a name match against the rep's verified name — this is the highest-risk action in the product.
-3. Duevy charges a flat ₦100 withdrawal fee, deducted from the amount sent, plus ₦50 CBN stamp duty on withdrawals above ₦10,000. The fee breakdown is shown before the rep confirms (see §7.3).
-4. Payout row is created as `processing` and resolved by the transfer webhook to `successful` or `failed`. A failed transfer returns the amount to the available balance and emails the rep.
+1. Rep opens Withdraw, sees the available balance, enters an amount. Requires `payouts` **active** on the space's connected account (re-checked immediately before the call, never from a cached flag).
+2. **Quorum**: Duevy requires `ceil(team_size × 0.8)` approvals from the space's team (rep + co-reps) before the withdrawal is sent to Bachs. This is enforced entirely in Duevy's own `payout_requests` / `payout_approvals` tables — Bachs has no concept of it and never sees an unapproved request.
+3. Once quorum is met, Duevy calls `POST /v1/payouts/withdrawals` against the space's connected account, with a deterministic `Idempotency-Key` derived from the Duevy payout-request id.
+4. Payout row is created as `processing` and resolved by `payout.paid` / `payout.failed`. A failed payout returns the amount to the available balance and notifies the team.
+5. Once a withdrawal completes, that money is gone from Duevy's reach — a later refund on an order already withdrawn cannot be clawed back and must be handled as a manual shortfall (see §9.4).
 
-- No approval quorum, no co-rep sign-off — one rep, one account, MVP.
-- Minimum withdrawal ₦1,000. No maximum beyond the account balance.
-- Withdrawals are blocked while a space is suspended.
+- Minimum withdrawal and any maximum: not yet confirmed for the Bachs model (v1.0's figures were Anchor Tier 1 specific) — see §13.
+- Withdrawals are blocked while a space is suspended, regardless of quorum or capability status.
 
 ### 6.6 Environments
 
-- Build against the Anchor sandbox with test BVNs; every flow in this document must pass in sandbox before go-live.
-- API keys are scoped and stored as server-side secrets. No Anchor key is ever exposed to the browser.
-- Go-live requires Anchor's production approval for Duevy Labs Ltd as a business customer (KYB, ₦1,000).
+- Build against the Bachs sandbox (`sandbox-api.bachs.io`, `sk_sandbox_` keys); every flow in this document must pass in sandbox before go-live.
+- Going live is a base-URL + `sk_live_` key swap and nothing else — no other code path should differ between sandbox and production.
+- API keys are scoped and stored as server-side secrets. No Bachs key is ever exposed to the browser.
+- Duevy's own organization needs `connect` active (requested from the Bachs dashboard, not the API) before any connected account can be created. This conversion is irreversible and should happen on Duevy Labs Ltd's registered business entity.
 
 ---
 
@@ -315,101 +322,61 @@ Duevy subscribes to, at minimum:
 
 ### 7.1 The rule
 
-Duevy charges on both ends, and both charges are visible to the person paying them. The student pays a percentage on collection; the rep pays a flat fee on withdrawal. Neither is hidden inside the due amount.
+The student pays a flat percentage on top of what they owe; the department receives the due's full face value. Duevy's revenue is simply the gap between what's collected and what's transferred out — there is no separate fee schedule to configure on the Bachs side.
 
-> **Fee model**
-> **Collection** — the student pays: due total + 2% service charge. The 2% is inclusive of Anchor's 0.5% collection fee; Duevy does not stack Anchor's cut on top of it.
->
-> The space receives the full face amount of every due. "Your ₦5,000 due stays ₦5,000" is the pitch to the rep, and it stays true.
->
-> **Withdrawal** — the rep pays: ₦100 flat per payout (₦50 to Anchor for the NIP transfer, ₦50 to Duevy), deducted from the amount sent.
->
-> CBN stamp duty of ₦50 on any transfer above ₦10,000 is statutory and sits outside both charges — see §7.3.
+> **Fee model (confirmed 11 September 2026)**
+> Student pays: due total × 1.03 (3% on top).
+> Department receives: the full face amount of every due. "Your ₦5,000 due stays ₦5,000" holds exactly.
+> Duevy's cut: the 3% that isn't transferred out.
+> No separate withdrawal fee is part of the confirmed model — v1.0's ₦100 flat withdrawal charge and CBN-stamp-duty pass-through were tied to the Anchor plan and have not been reconfirmed under Bachs (see §13).
 
 ### 7.2 Collection economics
 
-Anchor charges 0.5% of the amount transferred, capped at ₦500, on inflow through a virtual NUBAN. That 0.5% is levied on what the student actually sends — the due plus the 2% — so the true cost is 0.51% of the due.
+| Due total | 3% charge | Student pays | Duevy net (before any Bachs processing cost) |
+|---|---|---|---|
+| ₦2,000 | ₦60 | ₦2,060 | ₦60 |
+| ₦5,000 | ₦150 | ₦5,150 | ₦150 |
+| ₦20,000 | ₦600 | ₦20,600 | ₦600 |
+| ₦50,000 | ₦1,500 | ₦51,500 | ₦1,500 |
 
-| Due total | 2% charge | Student pays | Anchor inflow | Stamp duty | Duevy net |
-|---|---|---|---|---|---|
-| ₦2,000 | ₦40 | ₦2,040 | ₦10.20 | — | ₦29.80 |
-| ₦5,000 | ₦100 | ₦5,100 | ₦25.50 | — | ₦74.50 |
-| ₦20,000 | ₦400 | ₦20,400 | ₦102.00 | ₦50 | ₦248.00 |
-| ₦50,000 | ₦1,000 | ₦51,000 | ₦255.00 | ₦50 | ₦695.00 |
+Whether Bachs deducts its own processing cost from the transferred amount or invoices it separately is not yet confirmed — see §13. Until that's answered, the "Duevy net" column above is the 3% gross, not a guaranteed net margin.
 
-Net margin on collection is 1.49% of the due (2% less 0.51%), minus ₦50 stamp duty once a single checkout exceeds ₦10,000. The ₦500 inflow cap never binds at MVP ticket sizes — 0.5% only reaches ₦500 at ₦100,000, which is double the Tier 1 single-deposit limit.
+### 7.3 What one space is worth
 
-> **Stamp duty is the sharp edge in the collection model**
-> On a ₦20,000 checkout, ₦50 of stamp duty eats 12.5% of the ₦400 charge. On a ₦10,500 checkout it eats 24% of ₦210.
->
-> Because the duty is a flat ₦50 that switches on at ₦10,000, margin per naira actually dips just above that threshold and recovers as the ticket grows.
->
-> This is an argument for encouraging students to pay several dues in one checkout: one ₦20,000 payment pays the ₦50 duty once, where four ₦5,000 payments pay it zero times. Both are fine; two ₦10,500 payments are the bad case.
-
-### 7.3 Withdrawal economics
-
-The rep is charged ₦100 per withdrawal. Anchor takes ₦50 for the NIP transfer, leaving Duevy ₦50 — but on any withdrawal above ₦10,000 the CBN levies a further ₦50 in stamp duty, which is exactly the size of that margin.
-
-| Withdrawal | Rep charged | Anchor NIP | Stamp duty | Duevy net |
-|---|---|---|---|---|
-| ₦8,000 | ₦100 | ₦50 | — | ₦50 |
-| ₦25,000 — pass through (recommended) | ₦150 | ₦50 | ₦50 | ₦50 |
-| ₦25,000 — Duevy absorbs | ₦100 | ₦50 | ₦50 | ₦0 |
-
-**Recommendation:** pass the duty through as a separate statutory line, so the rep sees "Duevy fee ₦100 + stamp duty ₦50". It is a government charge, reps already meet it on every bank transfer they make, and absorbing it means every meaningful withdrawal earns Duevy nothing. Whichever way this goes, the withdrawal screen must show the full breakdown and the exact amount that will land in the rep's account before they confirm.
-
-A rep withdrawing weekly costs Duevy nothing and earns ₦50 a time. A rep withdrawing daily to dodge the Tier 1 balance ceiling (§3.4) earns ₦350 a week — the ceiling and the payout fee push in the same direction, which is convenient but should not become a reason to leave the ceiling unsolved.
-
-### 7.4 What one space is worth
-
-A realistic pilot space: 300 students, one ₦5,000 departmental due, the rep withdrawing four times over the semester.
+A realistic pilot space: 300 students, one ₦5,000 departmental due.
 
 | Line | Working | Amount |
 |---|---|---|
-| Collection margin | 300 × ₦74.50 | ₦22,350 |
-| Withdrawal margin | 4 × ₦50 | ₦200 |
-| Rep KYC (one-off) | 1 × ₦50 | −₦50 |
-| **Net from one space, one semester** | | **₦22,500** |
+| Collection margin (gross, pre-Bachs-cost) | 300 × ₦150 | ₦45,000 |
 
-A rep costs ₦50 to verify and repays that on their first ₦5,000 payment, or their second ₦2,000 one. That is the whole acquisition maths of the MVP.
-
-**Anchor prices that are not per-transaction**
-
-| Item | Anchor price | Who absorbs it |
-|---|---|---|
-| Deposit account creation | ₦0.00 | — |
-| Virtual account creation | ₦0.00 | — |
-| Monthly account maintenance | ₦0.00 | — |
-| Account statement | ₦0.00 | — |
-| Individual KYC (BVN tier) | ₦50.00 | Duevy — acquisition cost, once per rep |
-| Business KYB (Duevy Labs) | ₦1,000.00 | Duevy — one-off, at onboarding |
-| Payout (NIP transfer) | ₦50.00 | Covered by the rep's ₦100 withdrawal fee |
+This supersedes v1.0's worked example, which included Anchor-specific per-KYC and per-withdrawal costs that don't have a confirmed Bachs equivalent yet.
 
 ---
 
 ## 8. Data model
 
-PostgreSQL. Multi-school-ready columns stay in the schema even though only LAUTECH is onboarded, but no multi-school UI is built.
+PostgreSQL. Multi-school-ready columns stay in the schema even though only LAUTECH is onboarded, but no multi-school UI is built. Money is stored as `NUMERIC(18,2)` decimal, matched to Bachs's decimal-string amounts — never a float, never minor units, to match how Bachs itself represents money.
 
 | Table | Key columns |
 |---|---|
 | `users` | `id`, `role` (admin\|rep\|student), `full_name`, `email`, `email_verified_at`, `phone`, `password_hash`, `status`, `created_at` |
 | `students` | `user_id`, `matric_number`, `school_id`, `level` |
-| `reps` | `user_id`, `school_id`, `faculty`, `department`, `kyc_status`, `anchor_customer_id`, `kyc_submitted_at`, `kyc_resolved_at`, `rejection_reason` |
+| `reps` | `user_id`, `school_id`, `faculty`, `department`, `rejection_reason` |
 | `schools` | `id`, `name`, `slug`, `state` |
-| `spaces` | `id`, `rep_user_id`, `school_id`, `name`, `description`, `code` (unique), `status`, `anchor_account_id`, `nuban`, `bank_name`, `created_at` |
+| `spaces` (departments) | `id`, `rep_user_id`, `school_id`, `name`, `description`, `code` (unique), `status`, `bachs_account_id`, `bachs_setup_status`, `bachs_transfers_active`, `bachs_payouts_active`, `bachs_payout_destination_id`, `created_at` |
 | `space_members` | `space_id`, `student_user_id`, `joined_at`, `removed_at` |
-| `dues` | `id`, `space_id`, `title`, `type`, `amount_kobo`, `description`, `deadline`, `is_mandatory`, `status` (draft\|open\|closed), `created_at` |
-| `payments` | `id`, `reference`, `space_id`, `student_user_id`, `subtotal_kobo`, `service_charge_kobo`, `total_kobo`, `status` (pending\|successful\|failed\|expired), `virtual_account_number`, `virtual_account_expires_at`, `anchor_payment_id`, `paid_at` |
-| `payment_lines` | `payment_id`, `due_id`, `amount_kobo` — the many-dues-one-payment join |
-| `payouts` | `id`, `space_id`, `amount_kobo`, `duevy_fee_kobo`, `anchor_fee_kobo`, `stamp_duty_kobo`, `net_sent_kobo`, `destination_bank`, `destination_account`, `status`, `anchor_transfer_id`, `requested_at`, `resolved_at` |
-| `webhook_events` | `anchor_event_id` (unique), `type`, `payload`, `received_at`, `processed_at`, `status` — the idempotency table |
+| `space_team` | `space_id`, `user_id`, `role` (rep\|co_rep), `invited_at` — the quorum pool |
+| `dues` | `id`, `space_id`, `title`, `type`, `amount`, `description`, `deadline`, `is_mandatory`, `status` (draft\|open\|closed), `created_at` |
+| `payments` | `id`, `reference`, `space_id`, `student_user_id`, `subtotal`, `service_charge`, `total`, `status` (pending\|successful\|failed), `bachs_charge_id`, `settled_at`, `paid_at` |
+| `payment_lines` | `payment_id`, `due_id`, `amount`, `split_transfer_id` (`tr_...`) — the many-dues-one-payment join, and each line's split transfer |
+| `payout_requests` | `id`, `space_id`, `amount`, `status` (pending_quorum\|approved\|processing\|paid\|failed), `bachs_withdrawal_id`, `requested_by`, `requested_at`, `resolved_at` |
+| `payout_approvals` | `payout_request_id`, `user_id`, `approved_at` — one row per team member who approved |
+| `webhook_events` | `bachs_event_id` (unique), `type`, `payload`, `received_at`, `processed_at`, `status` — the idempotency table |
 | `audit_log` | `actor_user_id`, `action`, `target_type`, `target_id`, `metadata`, `created_at` |
 
 > **Money storage**
-> Every amount is stored in kobo as an integer. No floats anywhere in the payment path.
->
-> BVN is submitted to Anchor and never persisted in Duevy's database — not raw, not encrypted. Store only Anchor's customer id and the KYC status it returns.
+> Every amount is a decimal string / `NUMERIC(18,2)`, paired with an ISO 4217 currency. No floats, no minor units, anywhere in the payment path.
+> Identity documents submitted during Bachs onboarding are never persisted in Duevy's database — store only the Bachs account id and the capability status it reports.
 
 ---
 
@@ -419,28 +386,27 @@ PostgreSQL. Multi-school-ready columns stay in the schema even though only LAUTE
 
 | Case | Behaviour |
 |---|---|
-| Student transfers less than the amount | Payment stays `pending`. Underpayment is flagged to `/admin` for manual resolution; the student sees "We received ₦X of ₦Y — contact support". No dues are marked paid. |
-| Student transfers more | Dues are marked paid; the excess is flagged to `/admin` for manual refund. Not automated in MVP. |
-| Student pays after the virtual account expires | Anchor still credits the space. The inflow is flagged as unmatched in `/admin` and reconciled manually against the reference. |
-| Duplicate transfer to the same virtual account | Second inflow is unmatched and flagged for refund. Single-use accounts make this rare. |
+| Charge succeeds but hasn't settled yet | Split transfer is not attempted (`INSUFFICIENT_BALANCE` would result). Duevy waits for settlement before splitting. |
+| Student disputes or a charge is refunded, department hasn't withdrawn | Duevy claws back the department's share (transfer to `self` from the space's connected account) and refunds the student from Duevy's own balance. |
+| Student disputes or a charge is refunded, department **has already withdrawn** | Clawback fails (`INSUFFICIENT_BALANCE`, nothing recorded). Escalates to `/admin` as a manual shortfall — Duevy does not front the money automatically. |
 | Due closed while a checkout is open | The payment completes and is honoured. Closing never invalidates an in-flight payment. |
 | Two students, same matric number | Allowed to pay; both flagged in the rep's member list as a possible duplicate. |
 
-### 9.2 KYC
+### 9.2 Onboarding / capability
 
-- BVN name/phone mismatch is the dominant rejection. The failure screen says exactly that, in plain words, and tells the rep to use the phone number registered on their BVN.
-- Three consecutive failed attempts locks retries for 24 hours and notifies the admin.
-- A rep stuck at `kyc_failed` keeps their space, code and drafted dues. Nothing is destroyed.
+- A capability can move from `active` back to `restricted` (e.g. a compliance re-review). Duevy treats this as a live state change every time and re-checks before any money movement — never trusts a cached flag.
+- A rep stuck in `onboarding_incomplete` keeps their space, code and drafted dues. Nothing is destroyed.
+- After any webhook outage, Duevy reconciles by reading `GET /v1/connected-accounts/{id}/capabilities` directly rather than replaying assumed state.
 
 ### 9.3 Suspension
 
-- The admin can suspend a space. Payments are refused at checkout, withdrawals are blocked, the balance stays where it is.
+- The admin can suspend a space. Payments are refused at checkout, withdrawal requests are blocked (regardless of quorum or capability status), the balance stays where it is.
 - Students in a suspended space see a neutral notice, not an accusation.
 
 ### 9.4 Refunds
 
-- No self-service refunds in MVP. The admin issues one as a manual NIP transfer from the space account, recorded against the payment with a reason.
-- If the space balance is short, the refund is blocked and escalated — Duevy does not front the money.
+- No self-service refunds in MVP. The admin issues one; Duevy recovers the department's share via clawback where possible (§9.1), and refunds the student from its own balance.
+- If the department has already withdrawn and the clawback fails, the admin escalates rather than fronting the money.
 
 ---
 
@@ -449,13 +415,13 @@ PostgreSQL. Multi-school-ready columns stay in the schema even though only LAUTE
 | Area | Requirement |
 |---|---|
 | Stack | Next.js (App Router) frontend, Node/Express or Next route handlers for the API, PostgreSQL, hosted on Vercel with a managed Postgres. |
-| Security | Anchor keys server-side only; signed webhooks; rate limiting on join, login and checkout; passwords hashed with argon2/bcrypt. |
-| Data protection | NDPR: a privacy policy at signup, stated retention, and an export/delete path on request. BVN never persisted. |
-| Auditability | Every admin action, KYC transition, payment status change and payout writes to `audit_log`. |
+| Security | Bachs keys server-side only; signed webhooks; rate limiting on join, login and checkout; passwords hashed with argon2/bcrypt. |
+| Data protection | NDPR: a privacy policy at signup, stated retention, and an export/delete path on request. Identity documents never persisted by Duevy. |
+| Auditability | Every admin action, capability transition, payment status change, and payout writes to `audit_log`. |
 | Availability | Checkout and webhook handling are the critical paths. A failed webhook is retried; a dropped one is caught by nightly reconciliation. |
-| Mobile | Students pay on phones. The checkout is designed mobile-first, with a tap-to-copy account number. |
-| Emails | Transactional only: email verification, approval decision, KYC result, payment receipt, payout result, rep daily digest. |
-| Observability | Error tracking plus an `/admin` health view: pending webhooks, unmatched inflows, stuck payments. |
+| Mobile | Students pay on phones. The checkout is designed mobile-first. |
+| Emails | Transactional only: email verification, approval decision, payout-setup result, payment receipt, payout result, rep daily digest. |
+| Observability | Error tracking plus an `/admin` health view: pending webhooks, unmatched transfers, stuck payouts. |
 
 ---
 
@@ -463,41 +429,34 @@ PostgreSQL. Multi-school-ready columns stay in the schema even though only LAUTE
 
 | Metric | Target | Why it matters |
 |---|---|---|
-| Reps approved → verified | ≥ 80% | Measures whether the KYC step is survivable. |
+| Reps approved → fully active (both capabilities) | ≥ 80% | Measures whether Bachs onboarding is survivable. |
 | Time from approval to first published due | < 24 hours | Measures onboarding friction. |
 | Students joined per active space | ≥ 60% of cohort | Measures whether the code distribution works. |
-| Checkout started → paid | ≥ 70% | Measures the transfer flow and the countdown pressure. |
+| Checkout started → paid | ≥ 70% | Measures the payment flow. |
 | Payments needing manual reconciliation | < 2% | Measures whether the money plumbing is sound. |
-| Unprompted rep withdrawals | ≥ 1 per active space | Proves the loop closes. |
+| Withdrawal requests that reach quorum | ≥ 1 per active space | Proves the payout loop, including the team's approval behaviour, actually closes. |
 
 ---
 
 ## 12. Build order
 
-Four milestones. Nothing in a later milestone is started before the earlier one works end to end in sandbox.
-
-| # | Milestone | Contains |
-|---|---|---|
-| M1 | Accounts and approval | Auth, email verification, rep registration, admin console with approve/reject, role-based dashboard shell, KYC banner (non-functional). |
-| M2 | Anchor identity | Anchor customer creation, Tier 1 verification, webhook infrastructure with signature checks and idempotency, deposit account provisioning, verified state. |
-| M3 | Collections | Space code and joining, dues CRUD, multi-select checkout, virtual account generation, inflow webhook, payment records, receipts, emails. |
-| M4 | Payouts and hardening | Withdrawal flow, transfer webhooks, balance warnings against the Tier 1 ceiling, nightly reconciliation, admin unmatched-inflow view, audit log. |
+v1.0's four-milestone plan (M1–M4) targeted the Anchor integration and predates the Bachs pivot, the quorum requirement, and the confirmed in-scope status of polls, card payments, and the Duey assistant. The actual `dev` branch has already shipped substantially beyond that original plan — payouts, polls, referrals, disputes, and the assistant all exist in some form today. This section is not re-derived here; treat the current `dev` branch state as the working source of truth for what's built; a fresh build-order pass, if wanted, should be planned as its own piece of work rather than guessed at inside this revision.
 
 ---
 
 ## 13. Open questions
 
-These need an answer from Anchor or a decision from you before M2 starts.
+Superseded Anchor-specific questions from v1.0 (tier naming, Anchor account ownership, Anchor virtual-account behaviour, Anchor's fee-deduction mechanics) are removed — they don't apply to Bachs. Open items as of this revision:
 
 | # | Question |
 |---|---|
-| 1 | Tier naming mismatch: Anchor's API docs describe Tier 0/1/2 (Tier 1 = BVN + DOB + gender), while the pricing sheet lists "Individual KYC Tier 2 — ₦50" and "Tier 3 — ₦200", and the tiered-requirements sheet numbers them 1/2/3. Confirm with busdev@getanchor.co which priced tier corresponds to the BVN-only level, so the ₦50 assumption in §7.2 holds. |
-| 2 | Account ownership: MVP assumes the space's deposit account belongs to the rep's verified customer record. The alternative is sub-ledger accounts under Duevy's FBO account, which sidesteps per-rep tier ceilings but makes Duevy the holder of student funds and raises the compliance load. Confirm before M2. |
-| 3 | Is the ₦300,000 Tier 1 cumulative balance a hard block on inflow, or a soft limit? If inflows are refused at the ceiling, the withdrawal nudge in §3.4 must become a hard stop with a queued-payment message. |
-| 4 | Does Anchor support fixed-amount, expiring dynamic virtual accounts, or only static reserved accounts per customer? The checkout design in §5.2 depends on the former; if only static accounts exist, matching relies on the transfer narration and reconciliation gets harder. |
-| 5 | Service-charge settlement: does the 2% split out automatically to the Duevy revenue account, or does the full amount land in the space account and get swept? The second option means the space balance briefly overstates what the rep can withdraw, and the sweep itself may attract a book-transfer or NIP charge — confirm which. |
-| 6 | SCUML registration — flagged as applicable given third-party fund handling. Confirm whether Anchor requires it before production approval for Duevy Labs Ltd. |
-| 7 | Stamp duty on payouts: §7.3 recommends passing the ₦50 to the rep on withdrawals above ₦10,000, because absorbing it wipes out the entire ₦50 margin. Needs a decision before M4, and confirmation from Anchor of whether the duty is deducted by them or must be added by Duevy. |
-| 8 | Does Anchor deduct the 0.5% inflow fee from the credited amount, or invoice it separately? If deducted, the space account is credited less than the due face amount and Duevy must top it up from revenue so the rep still sees the full ₦5,000. This changes the ledger design. |
+| 1 | Identity verification method: Bachs offers both a hosted verification session and NIN-based verification for NG accounts. Which does Duevy default reps to, and is the choice offered to the rep? |
+| 2 | Per-due / per-checkout amount ceiling: v1.0 capped a single due and checkout at ₦50,000, tied to Anchor's Tier 1 balance limits. Does an equivalent cap apply under Bachs, or is there no ceiling to design around? |
+| 3 | Minimum/maximum withdrawal amount under the Bachs model — not yet specified. |
+| 4 | Does Bachs deduct its own processing cost from a transfer, or invoice it separately? This determines whether the 3% collected is Duevy's clean net margin or has a further cost to net out (§7.2). |
+| 5 | Exact quorum policy: is `ceil(team_size × 0.8)` fixed, or configurable per space? What happens to a pending payout request if a team member who already approved is later removed from the space? |
+| 6 | Hold-window policy: how long does Duevy hold a department's share before it's eligible for withdrawal, relative to the dispute window? (Longer hold = safer clawback recovery, slower payouts.) |
+| 7 | SCUML registration — flagged as applicable given third-party fund handling. Confirm whether this is still required now that Bachs, not Anchor, is the rail. |
+| 8 | A refreshed build-order / milestone plan reflecting what's actually shipped on `dev` today (per §12) — worth doing as separate, focused work. |
 
-*Sources: Anchor BaaS Standard pricing sheet and 3-Tiered KYC Requirements (both supplied), and docs.getanchor.co — Developer Onboarding, Individual Customer KYC, and Deposit Accounts.*
+*Sources: this session's confirmation of the Bachs pivot, fee model, and quorum requirement; the `bachs-connect` skill (Bachs Connect API reference) for §6's technical detail. v1.0 was sourced from the Anchor BaaS Standard pricing sheet and 3-Tiered KYC Requirements, and docs.getanchor.co.*

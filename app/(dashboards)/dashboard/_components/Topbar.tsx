@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Search01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   Popover,
@@ -15,13 +15,7 @@ import { NotificationsMenu } from "./NotificationsMenu";
 import { UserAvatar } from "./UserAvatar";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-export default function Topbar({
-  onMenu,
-  onSearch,
-}: {
-  onMenu: () => void;
-  onSearch: () => void;
-}) {
+export default function Topbar({ onSearch }: { onSearch: () => void }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,16 +29,6 @@ export default function Topbar({
 
   return (
     <header className="sticky top-0 z-30 flex h-18 items-center gap-2.5 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:gap-4 sm:px-6 lg:px-8">
-      {/* Mobile menu */}
-      <button
-        onClick={onMenu}
-        data-tour="menu"
-        aria-label="Open menu"
-        className="lg:hidden grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-paper transition-colors duration-300 cursor-pointer"
-      >
-        <HugeiconsIcon icon={Menu01Icon} size={22} />
-      </button>
-
       {/* Search trigger — opens the ⌘K command palette. */}
       <button
         type="button"
