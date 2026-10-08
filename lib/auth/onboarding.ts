@@ -9,14 +9,17 @@ export function isRepApplicant(user: User | null | undefined) {
 
 /**
  * True while the applicant still owes us something: NIN not with Bachs yet (or
- * refused), or the student ID card missing (or refused). Anything merely
- * pending review counts as done — that's on us, not them.
+ * refused), the student ID card missing (or refused), or no payout account
+ * (or Bachs refused it and asked again). Anything merely pending review counts
+ * as done — that's on us, not them.
  */
 export function kycOutstanding(kyc: KycState) {
   return (
     kyc.kycStatus === "rejected" ||
     (kyc.kycStatus !== "verified" && !kyc.providerReference) ||
     kyc.studentId.status === null ||
-    kyc.studentId.status === "rejected"
+    kyc.studentId.status === "rejected" ||
+    !kyc.payoutDestination ||
+    kyc.requirementsDue.some((key) => key.startsWith("payout_destination"))
   );
 }

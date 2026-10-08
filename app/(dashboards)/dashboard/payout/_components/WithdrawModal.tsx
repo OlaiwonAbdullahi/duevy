@@ -11,7 +11,7 @@ import { Modal } from "../../_components/Modal";
 import { BARE_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { getPayoutQuote } from "@/lib/api/payouts";
+import { getPayoutQuote, lookupBeneficiary } from "@/lib/api/payouts";
 import type { PayoutQuote } from "@/lib/api/types";
 import { fromKobo } from "../../_components/format";
 import { naira } from "./data";
@@ -188,7 +188,7 @@ export function WithdrawModal({
                     onClick={() => setPicked(b.id)}
                     className={optionClass(selected)}
                   >
-                    <BankLogo name={b.bankName} className="h-9 w-9 shrink-0 text-[11px]" />
+                    <BankLogo name={b.bankName} code={b.bankCode} className="h-9 w-9 shrink-0 text-[11px]" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">{b.accountName}</span>
                       <span className="block truncate text-xs text-ink-soft">
@@ -222,7 +222,10 @@ export function WithdrawModal({
 
         {choice === NEW_ACCOUNT && (
           <div className="mt-3 rounded-2xl border border-cloud p-4">
-            <AccountFields spaceId={spaceId} onChange={setNewAccount} />
+            <AccountFields
+              lookup={(payload) => lookupBeneficiary(spaceId, payload)}
+              onChange={setNewAccount}
+            />
             <label className="mt-4 flex cursor-pointer items-center gap-2 text-xs text-ink">
               <input
                 type="checkbox"

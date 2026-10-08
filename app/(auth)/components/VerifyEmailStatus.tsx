@@ -2,38 +2,27 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 import { verifyEmail } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
-import { useAuth } from "@/lib/auth/auth-context";
-import { readPostAuthNext, clearPostAuthNext } from "@/lib/auth/post-auth-next";
-import { ONBOARDING_PATH, isRepApplicant } from "@/lib/auth/onboarding";
+import { readPostAuthNext } from "@/lib/auth/post-auth-next";
 import { ArrowRightIcon, CheckIcon } from "../../components/icons";
 
 type State = "verifying" | "success" | "error";
 
 export default function VerifyEmailStatus({ token }: { token: string | null }) {
-  const { user, status, refreshUser } = useAuth();
-  const router = useRouter();
   const [state, setState] = useState<State>(token ? "verifying" : "error");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const ran = useRef(false);
   // Carries `next` across the verify-email hop, which can happen in a
   // different tab/device than the one that started signup.
   const [persistedNext] = useState(() => readPostAuthNext());
-  const authenticated = status === "authenticated";
-  // Rep applicants onboard (KYC) before the dashboard. Signed-out applicants get
-  // there via the login form, which routes them the same way.
-  const onboarding = authenticated && isRepApplicant(user);
-  const continueHref = onboarding
-    ? ONBOARDING_PATH
-    : authenticated
-    ? (persistedNext ?? "/dashboard")
-    : persistedNext
-      ? `/login?next=${encodeURIComponent(persistedNext)}`
-      : "/login";
+  // Everyone signs in after verifying — the login form then routes rep
+  // applicants to onboarding and everyone else to `next` or the dashboard.
+  const continueHref = persistedNext
+    ? `/login?next=${encodeURIComponent(persistedNext)}`
+    : "/login";
 
   useEffect(() => {
     if (!token || ran.current) return;
@@ -42,7 +31,6 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
     (async () => {
       try {
         await verifyEmail(token);
-        if (status === "authenticated") await refreshUser();
         setState("success");
       } catch (err) {
         setErrorMessage(
@@ -53,15 +41,7 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
         setState("error");
       }
     })();
-  }, [token, status, refreshUser]);
-
-  // Straight into onboarding once the email is confirmed.
-  useEffect(() => {
-    if (state !== "success" || !onboarding) return;
-    clearPostAuthNext();
-    const t = setTimeout(() => router.replace(ONBOARDING_PATH), 1200);
-    return () => clearTimeout(t);
-  }, [state, onboarding, router]);
+  }, [token]);
 
   if (state === "verifying") {
     return (
@@ -88,17 +68,14 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
           Email verified
         </h1>
         <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">
-          {onboarding
-            ? "Your email address has been confirmed. Taking you to onboarding…"
-            : "Your email address has been confirmed."}
+          Your email address has been confirmed. Sign in to continue.
         </p>
 
         <Link
           href={continueHref}
-          onClick={() => authenticated && clearPostAuthNext()}
           className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
         >
-          {onboarding ? "Continue to onboarding" : authenticated ? "Go to dashboard" : "Sign in"}
+          Sign in
           <ArrowRightIcon
             size={16}
             className="transition-transform duration-500 group-hover:translate-x-1"
@@ -124,10 +101,9 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
 
       <Link
         href={continueHref}
-        onClick={() => authenticated && clearPostAuthNext()}
         className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
       >
-        {authenticated ? "Back to dashboard" : "Back to sign in"}
+        Back to sign in
         <ArrowRightIcon
           size={16}
           className="transition-transform duration-500 group-hover:translate-x-1"

@@ -213,3 +213,16 @@ export function submitGovernmentId(spaceId: string | undefined, file: File) {
   form.append("governmentId", file);
   return apiClient.post<KycState>(`${kycBase(spaceId)}/government-id`, form);
 }
+
+/** Name-enquiry for the rep's own payout account, without sending it to Bachs. */
+export function lookupPayoutDestination(spaceId: string | undefined, payload: BeneficiaryInput) {
+  return apiClient.post<ResolvedAccount>(`${kycBase(spaceId)}/payout-destination/lookup`, payload);
+}
+
+/**
+ * The rep's own bank account, sent to Bachs as their payout destination.
+ * Needs the NIN + student ID submission first (`409 KYC_NOT_STARTED`).
+ */
+export function submitPayoutDestination(spaceId: string | undefined, payload: BeneficiaryInput) {
+  return apiClient.post<KycState>(`${kycBase(spaceId)}/payout-destination`, payload);
+}

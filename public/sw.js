@@ -5,7 +5,12 @@ const OFFLINE_URL = "/offline";
 
 // Precache the offline page and core icons; tolerate individual failures so a
 // single 404 never blocks activation.
-const CORE = [OFFLINE_URL, "/icons/icon-192.png", "/manifest.webmanifest"];
+const CORE = [
+  OFFLINE_URL,
+  "/icons/logo.svg",
+  "/icons/icon-192.png",
+  "/manifest.webmanifest",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

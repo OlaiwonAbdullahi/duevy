@@ -6,6 +6,7 @@ import { Modal } from "../../_components/Modal";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { lookupBeneficiary } from "@/lib/api/payouts";
 import { AccountFields, type VerifiedAccount } from "./AccountFields";
 
 export type BeneficiaryDraft = {
@@ -46,7 +47,10 @@ export function AddBeneficiaryModal({
   return (
     <Modal title="Add beneficiary" icon={UserAdd01Icon} onClose={onClose}>
       <div className="flex flex-col gap-4">
-        <AccountFields spaceId={spaceId} onChange={setAccount} />
+        <AccountFields
+          lookup={(payload) => lookupBeneficiary(spaceId, payload)}
+          onChange={setAccount}
+        />
 
         <div>
           <label className="block text-xs font-medium text-ink-soft">

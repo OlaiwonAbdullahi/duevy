@@ -54,7 +54,9 @@ function PendingRepBanner() {
       ? "Your NIN couldn't be verified. Check your details and try again."
       : kyc?.studentId.status === "rejected"
         ? "Your student ID wasn't accepted. Upload a clearer photo."
-        : "Verify your NIN and upload your student ID so an admin can approve your department."
+        : kyc?.providerReference && kyc.studentId.status !== null
+          ? "Add a payout bank account in your name so an admin can approve your department."
+          : "Verify your NIN, upload your student ID and add a payout account so an admin can approve your department."
     : kycPassed
       ? "Your identity is verified. We'll email you once your department is approved — then your rep tools unlock."
       : "We're checking your NIN and student ID. You can use Duevy as a student in the meantime; we'll email you once you're approved.";

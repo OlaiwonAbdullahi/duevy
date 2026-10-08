@@ -38,7 +38,9 @@ NEXT_PUBLIC_LOGO_DEV_TOKEN=your_logo_dev_token
 | Variable | Required | Notes |
 |---|---|---|
 | `NEXT_PUBLIC_API_BASE_URL` | Yes | Base URL of the backend API, **including** the `/v1` prefix. Point this at your local backend (`http://localhost:3000/v1`) or a deployed one. |
-| `NEXT_PUBLIC_LOGO_DEV_TOKEN` | Yes | Public token from [logo.dev](https://logo.dev) — used to fetch bank logos on the payout screen (`app/(dashboards)/dashboard/payout/_components/BankLogo.tsx`). |
+| `NEXT_PUBLIC_LOGO_DEV_TOKEN` | No | Public token from [logo.dev](https://logo.dev) — a fallback for bank logos we don't host in `public/banks/` (mostly smaller MFBs). Without it, or when it has no logo either, a generated DiceBear pattern seeded with the bank name is shown. See `app/(dashboards)/dashboard/payout/_components/BankLogo.tsx`. |
+
+Bank logos in `public/banks/` are generated from [nigerianbanks.xyz](https://nigerianbanks.xyz) and Blockroll open-assets (`docs/banks.json`), both MIT. Refresh them with `npm run banks:logos` (add `-- --verbose` to see what was skipped).
 
 Both are `NEXT_PUBLIC_*` and get inlined at build time, per Next.js convention.
 

@@ -357,6 +357,15 @@ export type KycState = {
   /** Field keys Bachs still asks for, e.g. "persons.per_x.bvn" or an ID document. */
   requirementsDue: string[];
   governmentIdSubmittedAt: string | null;
+  /** The rep's own bank account on their Bachs account; `null` until sent. */
+  payoutDestination: {
+    bankCode: string;
+    bankName: string;
+    /** Masked, e.g. "•••• 6789". */
+    accountNumber: string;
+    accountName: string;
+    submittedAt: string;
+  } | null;
   studentId: {
     /** `null` until a card has been uploaded. */
     status: StudentIdStatus | null;

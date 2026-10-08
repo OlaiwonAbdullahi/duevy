@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { localBankLogo } from "@/lib/banks/local-logo";
 
 /**
- * The `/banks` endpoint carries no logo, so we resolve one from logo.dev (a
- * licensed logo API) keyed by a curated bank→domain map. Requires
- * `NEXT_PUBLIC_LOGO_DEV_TOKEN` — without it (or for an unknown bank, or if the
- * image fails to load) we render an initials monogram instead.
+ * The `/banks` endpoint carries no logo, so we resolve one ourselves, in order:
+ *   1. our own copy in public/banks/ (nigerianbanks.xyz + Blockroll, see
+ *      `npm run banks:logos`) — the major banks and fintechs, no token needed;
+ *   2. logo.dev (a licensed logo API), when `NEXT_PUBLIC_LOGO_DEV_TOKEN` is
+ *      set — by domain for banks in the curated map below, otherwise by the
+ *      bank's full name;
+ *   3. a DiceBear "constellation" pattern seeded with the bank's name (CC0),
+ *      so each logo-less bank still gets its own consistent mark;
+ *   4. an initials monogram, if even that fails to load (e.g. offline).
  *
  * NOTE: `NEXT_PUBLIC_*` env vars are inlined at build time — after adding the
  * token you must restart the dev server for logos to appear.
@@ -17,8 +23,8 @@ const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
 /**
  * Fragment of a (lowercased) bank name → its web domain. First match wins, so
  * more specific keys come first. Every domain here is verified to return a logo
- * from logo.dev; unmapped banks (mostly tiny MFBs with no web presence) render
- * the initials monogram.
+ * from logo.dev; unmapped banks (mostly tiny MFBs) are looked up by name
+ * instead, and render the initials monogram if that misses too.
  */
 const BANK_DOMAINS: Record<string, string> = {
   // Commercial & merchant banks
@@ -113,7 +119,7 @@ const BANK_DOMAINS: Record<string, string> = {
   advancly: "advancly.com",
 };
 
-function domainFor(name: string): string | null {
+export function domainFor(name: string): string | null {
   const n = name.toLowerCase();
   for (const key in BANK_DOMAINS) {
     if (n.includes(key)) return BANK_DOMAINS[key];
@@ -121,9 +127,22 @@ function domainFor(name: string): string | null {
   return null;
 }
 
+// `fallback=404` so a miss falls through to our own monogram instead of logo.dev's.
 function logoUrl(domain: string): string | null {
   if (!LOGO_DEV_TOKEN) return null;
-  return `https://img.logo.dev/${domain}?token=${LOGO_DEV_TOKEN}&size=64&format=png`;
+  return `https://img.logo.dev/${domain}?token=${LOGO_DEV_TOKEN}&size=64&retina=true&format=png&fallback=404`;
+}
+
+/** logo.dev's lookup by company name — for banks with no mapped domain (mostly MFBs). */
+function logoByNameUrl(name: string): string | null {
+  if (!LOGO_DEV_TOKEN) return null;
+  return `https://img.logo.dev/name/${encodeURIComponent(name.trim())}?token=${LOGO_DEV_TOKEN}&size=64&retina=true&format=png&fallback=404`;
+}
+
+/** Generated stand-in for a bank with no logo — the same bank name always gives the same pattern. */
+function avatarUrl(name: string): string | null {
+  const seed = name.trim();
+  return seed ? `https://api.dicebear.com/10.x/constellation/svg?seed=${encodeURIComponent(seed)}` : null;
 }
 
 /** Monogram initials for a bank — the fallback mark when no logo is available. */
@@ -148,20 +167,39 @@ function BankMark({ name, className }: { name: string; className: string }) {
   );
 }
 
-export function BankLogo({ name, className = "" }: { name: string; className?: string }) {
-  const [failed, setFailed] = useState(false);
+export function BankLogo({
+  name,
+  code,
+  className = "",
+}: {
+  name: string;
+  /** The bank code, when known — the most reliable match for our hosted logos. */
+  code?: string;
+  className?: string;
+}) {
+  // How many sources have failed to load; each failure falls through to the next.
+  const [failures, setFailures] = useState(0);
   const domain = domainFor(name);
-  const url = domain ? logoUrl(domain) : null;
+  // The full name, not a fragment, so a short word like "Enterprise" doesn't pull in an unrelated company.
+  const sources = [
+    localBankLogo(name, code),
+    domain ? logoUrl(domain) : logoByNameUrl(name),
+    avatarUrl(name),
+  ].filter(
+    (src): src is string => !!src,
+  );
+  const url = sources[failures];
 
-  if (!url || failed) return <BankMark name={name} className={className} />;
+  if (!url) return <BankMark name={name} className={className} />;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      key={url}
       src={url}
       alt=""
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setFailures((n) => n + 1)}
       className={`shrink-0 rounded-full bg-white object-contain ${className}`}
     />
   );

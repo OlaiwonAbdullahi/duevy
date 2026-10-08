@@ -12,7 +12,8 @@ const points = [
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#fbfaf7] lg:grid lg:grid-cols-2">
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#0b6e4f] p-12 xl:p-16">
+      {/* Pinned to the viewport so only the form panel scrolls on long steps. */}
+      <aside className="relative hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:self-start flex-col justify-between overflow-hidden bg-[#0b6e4f] p-12 xl:p-16">
         <div
           className="pointer-events-none absolute inset-0 opacity-60"
           style={{
@@ -71,7 +72,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="relative flex items-center gap-3 text-white/70">
           <ShieldIcon size={18} />
           <p className="text-[13px] leading-snug">
-            Just 2% + ₦20 per payment. No setup or monthly fees.
+            Secure, transparent dues — built for Nigerian campuses.
           </p>
         </div>
       </aside>

@@ -96,6 +96,7 @@ export default function SignupFlow() {
 
   async function handleAccountSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
     const data = new FormData(event.currentTarget);
     const nextAccount: Account = {
       name: String(data.get("name") ?? "").trim(),
@@ -136,6 +137,7 @@ export default function SignupFlow() {
 
   // The space theme isn't chosen at signup; the rep can change it later from Manage.
   async function handleSpaceSubmit(data: SpaceDetails) {
+    if (submitting) return;
     setSpace(data);
     setSubmitting(true);
     try {
@@ -170,7 +172,13 @@ export default function SignupFlow() {
   const { title, subtitle } = headerFor(currentId, role, joinFlow);
 
   if (submittedEmail) {
-    return <CheckEmailNotice email={submittedEmail} loginHref={loginHref} isRep={role === "rep"} />;
+    return (
+      <CheckEmailNotice
+        email={submittedEmail}
+        loginHref={loginHref}
+        isRep={role === "rep"}
+      />
+    );
   }
 
   return (
@@ -214,7 +222,8 @@ export default function SignupFlow() {
             <button
               type="button"
               onClick={() => setStepIndex(0)}
-              className="mb-6 flex items-center justify-between rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] px-4 py-3 text-left transition-colors duration-300 hover:border-[#0b6e4f]/40 cursor-pointer"
+              disabled={submitting}
+              className="mb-6 flex items-center justify-between rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] px-4 py-3 text-left transition-colors duration-300 hover:border-[#0b6e4f]/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[#e6f2ec]"
             >
               <span className="flex items-center gap-3">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e6f2ec] text-[#0b6e4f]">
@@ -229,93 +238,108 @@ export default function SignupFlow() {
                   </span>
                 </span>
               </span>
-              <span className="text-[#0b6e4f] text-[13px] font-medium">Change</span>
+              <span className="text-[#0b6e4f] text-[13px] font-medium">
+                Change
+              </span>
             </button>
           )}
 
           {/* Form */}
-          <form className="flex flex-col gap-5" onSubmit={handleAccountSubmit}>
-            <AuthField
-              id="name"
-              label="Full name"
-              icon="user"
-              type="text"
-              name="name"
-              autoComplete="name"
-              placeholder="e.g. Ada Okeke"
-              defaultValue={account.name}
-              required
-            />
-
-            <AuthField
-              id="matricNo"
-              label="Matric number"
-              icon="matric"
-              type="text"
-              name="matricNo"
-              autoComplete="off"
-              placeholder="e.g. CSC/2021/045"
-              defaultValue={account.matricNo}
-              required
-            />
-
-            <AuthField
-              id="email"
-              label="Email address"
-              icon="mail"
-              type="email"
-              name="email"
-              autoComplete="email"
-              placeholder="you@school.edu.ng"
-              defaultValue={account.email}
-              required
-            />
-
-            <AuthField
-              id="password"
-              label="Password"
-              icon="lock"
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              placeholder="Create a password"
-              defaultValue={account.password}
-              minLength={8}
-              required
-              hint="Use at least 8 characters."
-            />
-
-            <label className="flex items-start gap-3 text-[#7a847f] text-[13px] leading-relaxed cursor-pointer">
-              <input
-                type="checkbox"
-                name="terms"
+          <form
+            className="flex flex-col gap-5"
+            onSubmit={handleAccountSubmit}
+            aria-busy={submitting}
+          >
+            {/* A disabled fieldset locks every input while the request is in flight. */}
+            <fieldset
+              disabled={submitting}
+              className="flex min-w-0 flex-col gap-5 transition-opacity duration-300 disabled:opacity-60"
+            >
+              <AuthField
+                id="name"
+                label="Full name"
+                icon="user"
+                type="text"
+                name="name"
+                autoComplete="name"
+                placeholder="e.g. Ada Okeke"
+                defaultValue={account.name}
                 required
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#e6f2ec] accent-[#0b6e4f] cursor-pointer"
               />
-              <span>
-                I agree to Duevy&apos;s{" "}
-                <Link
-                  href="/terms"
-                  className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
-                >
-                  Terms
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="/privacy"
-                  className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
-                >
-                  Privacy Policy
-                </Link>
-                .
-              </span>
-            </label>
+
+              <AuthField
+                id="matricNo"
+                label="Matric number"
+                icon="matric"
+                type="text"
+                name="matricNo"
+                autoComplete="off"
+                placeholder="e.g. CSC/2021/045"
+                defaultValue={account.matricNo}
+                required
+              />
+
+              <AuthField
+                id="email"
+                label="Email address"
+                icon="mail"
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="you@school.edu.ng"
+                defaultValue={account.email}
+                required
+              />
+
+              <AuthField
+                id="password"
+                label="Password"
+                icon="lock"
+                type="password"
+                name="password"
+                autoComplete="new-password"
+                placeholder="Create a password"
+                defaultValue={account.password}
+                minLength={8}
+                required
+                hint="Use at least 8 characters."
+              />
+
+              <label className="flex items-start gap-3 text-[#7a847f] text-[13px] leading-relaxed cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="terms"
+                  required
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#e6f2ec] accent-[#0b6e4f] cursor-pointer"
+                />
+                <span>
+                  I agree to Duevy&apos;s{" "}
+                  <Link
+                    href="/terms"
+                    className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+                  >
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+            </fieldset>
 
             <button
               type="submit"
               disabled={submitting}
-              className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer disabled:cursor-not-allowed disabled:bg-[#0b6e4f]/60 disabled:hover:bg-[#0b6e4f]/60"
             >
+              {submitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
               {submitting
                 ? "Creating account…"
                 : role === "rep"
@@ -337,6 +361,7 @@ export default function SignupFlow() {
         <SpaceDetailsStep
           defaultValues={space}
           submitLabel={submitting ? "Finishing setup…" : "Finish setup"}
+          submitting={submitting}
           onBack={goBack}
           onSubmit={handleSpaceSubmit}
         />

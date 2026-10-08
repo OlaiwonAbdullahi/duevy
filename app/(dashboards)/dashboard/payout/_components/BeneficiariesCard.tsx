@@ -91,7 +91,7 @@ export function BeneficiariesCard({
         <ul className="mt-5 max-h-80 divide-y divide-cloud overflow-y-auto rounded-2xl border border-cloud">
           {beneficiaries.map((b) => (
             <li key={b.id} className="flex items-center gap-3 px-4 py-3">
-              <BankLogo name={b.bankName} className="h-9 w-9 shrink-0 text-[11px]" />
+              <BankLogo name={b.bankName} code={b.bankCode} className="h-9 w-9 shrink-0 text-[11px]" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">
                   {b.label ?? b.accountName}

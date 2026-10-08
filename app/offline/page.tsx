@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -9,9 +10,15 @@ export const metadata: Metadata = {
 export default function OfflinePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-canvas px-6 text-center">
-      <span className="grid h-16 w-16 place-items-center rounded-3xl bg-brand text-2xl font-semibold text-white">
-        D
-      </span>
+      {/* Precached by public/sw.js so it renders with no network. */}
+      <Image
+        src="/icons/logo.svg"
+        alt="Duevy"
+        width={64}
+        height={64}
+        priority
+        className="h-16 w-16 rounded-full"
+      />
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-ink">
           You&apos;re offline

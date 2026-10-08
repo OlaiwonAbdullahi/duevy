@@ -11,8 +11,8 @@ import { KycCard } from "@/app/(dashboards)/dashboard/kyc/_components/KycCard";
 
 /**
  * Where a rep applicant lands once their email is verified: verify NIN +
- * student ID before anything else. Not skippable — the dashboard sends them
- * back here until both are submitted.
+ * student ID and add a payout account before anything else. Not skippable — the dashboard sends them
+ * back here until all three are submitted.
  */
 export default function OnboardingPage() {
   const { user, status, logout } = useAuth();
@@ -91,8 +91,8 @@ export default function OnboardingPage() {
           Hi {user.name.split(" ")[0]}, let&apos;s verify you
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-[#7a847f]">
-          We need your NIN and student ID before you can use your dashboard and an admin can
-          approve your department. It takes about two minutes.
+          We need your NIN, student ID and a payout bank account in your name before you can use
+          your dashboard and an admin can approve your department. It takes about three minutes.
         </p>
 
         <div className="mt-8">

@@ -24,12 +24,14 @@ export function BankCombobox({
   value,
   onChange,
   loading = false,
+  disabled = false,
 }: {
   banks: Bank[];
   /** Selected bank code. */
   value: string;
   onChange: (code: string) => void;
   loading?: boolean;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -74,10 +76,10 @@ export function BankCombobox({
           role="combobox"
           aria-expanded={open}
           aria-label="Bank"
-          disabled={loading && banks.length === 0}
+          disabled={disabled || (loading && banks.length === 0)}
           className="mt-1.5 flex h-11 w-full items-center gap-2 rounded-2xl border border-cloud bg-canvas px-4 text-left text-sm text-ink transition-colors outline-none cursor-pointer focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {selectedName && <BankLogo name={selectedName} className="h-6 w-6" />}
+          {selectedName && <BankLogo name={selectedName} code={value} className="h-6 w-6" />}
           <span className={`min-w-0 flex-1 truncate ${selectedName ? "text-ink" : "text-ink-soft"}`}>
             {selectedName ?? (loading && banks.length === 0 ? "Loading banks…" : "Select your bank")}
           </span>
@@ -134,7 +136,7 @@ export function BankCombobox({
                       isActive ? "bg-paper" : ""
                     }`}
                   >
-                    <BankLogo name={bank.name} className="h-7 w-7 text-[11px]" />
+                    <BankLogo name={bank.name} code={bank.code} className="h-7 w-7 text-[11px]" />
                     <span className="min-w-0 flex-1 truncate">{bank.name}</span>
                     {selected && (
                       <HugeiconsIcon
