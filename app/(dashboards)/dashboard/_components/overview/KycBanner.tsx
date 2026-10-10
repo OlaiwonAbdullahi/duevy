@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -8,7 +7,7 @@ import {
   Clock01Icon,
   ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
-import { getKycStatus } from "@/lib/api/payouts";
+import { useKycStatus } from "@/lib/api/queries";
 import type { SpaceKycStatus } from "@/lib/api/types";
 
 type Notice = { tone: "action" | "waiting"; title: string; body: string; cta?: string };
@@ -94,19 +93,7 @@ function noticeFor(s: SpaceKycStatus, isLead: boolean): Notice | null {
 }
 
 export function KycBanner({ spaceId, isLead }: { spaceId: string; isLead: boolean }) {
-  const [status, setStatus] = useState<SpaceKycStatus | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getKycStatus(spaceId)
-      .then((s) => {
-        if (!cancelled) setStatus(s);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [spaceId]);
+  const status = useKycStatus(spaceId).data ?? null;
 
   const notice = status ? noticeFor(status, isLead) : null;
   if (!notice) return null;

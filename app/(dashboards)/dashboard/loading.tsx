@@ -1,5 +1,5 @@
-import { ListPageSkeleton } from "./_components/Skeleton";
+import { OverviewSkeleton } from "./_components/Skeleton";
 
 export default function Loading() {
-  return <ListPageSkeleton stats={4} />;
+  return <OverviewSkeleton />;
 }

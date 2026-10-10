@@ -12,6 +12,7 @@ import {
   CheckmarkCircle02Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api/errors";
 import { lookupSpace, joinSpace } from "@/lib/api/spaces";
@@ -43,6 +44,7 @@ export default function JoinSpacePage() {
   const rawCode = params.code;
   const router = useRouter();
   const { user, status, refreshUser } = useAuth();
+  const queryClient = useQueryClient();
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [dept, setDept] = useState<JoinableDepartment | null>(null);
@@ -105,8 +107,10 @@ export default function JoinSpacePage() {
     setPhase("joining");
     try {
       await joinSpace(dept.id, { code: dept.code });
-      await refreshUser();
       setPhase("joined");
+      // The join is done; let the session and cached student views catch up in the background.
+      void refreshUser().catch(() => {});
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
     } catch (err) {
       if (err instanceof ApiError && err.code === "ALREADY_MEMBER") {
         setPhase("already-member");

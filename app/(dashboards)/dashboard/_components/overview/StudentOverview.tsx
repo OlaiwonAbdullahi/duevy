@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,7 +14,7 @@ import {
   AiChat01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { getStudentOverview } from "@/lib/api/me";
+import { useStudentOverview } from "@/lib/api/queries";
 import type { StudentOverview as StudentOverviewData } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { EmptyState } from "../EmptyState";
@@ -27,6 +27,7 @@ import {
 import { TXN_META, formatTime } from "../../transactions/_components/data";
 import type { HugeIcon } from "../nav-config";
 import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
+import { OverviewBodySkeleton } from "../Skeleton";
 import { FEATURES } from "@/lib/features";
 
 const TXN_FALLBACK = { icon: ReceiptDollarIcon as HugeIcon, label: "Activity" };
@@ -43,31 +44,16 @@ export function StudentOverview() {
   const { user } = useAuth();
   const name = user?.name?.split(" ")[0] ?? "there";
 
-  const [data, setData] = useState<StudentOverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // Cached: coming back to the dashboard shows the last overview instantly
+  // while it refreshes in the background.
+  const overview = useStudentOverview();
+  const data: StudentOverviewData | null = overview.data ?? null;
+  const loading = overview.isPending;
+  const error = overview.isError;
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const overview = await getStudentOverview();
-        if (!cancelled) setData(overview);
-      } catch {
-        if (!cancelled) {
-          setError(true);
-          toast.error("Couldn't load your dashboard. Pull to refresh.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (overview.isError) toast.error("Couldn't load your dashboard. Pull to refresh.");
+  }, [overview.isError]);
 
   // Overdue first, then soonest deadline — matches the old mock ordering.
   const openDues = useMemo(() => {
@@ -114,7 +100,7 @@ export function StudentOverview() {
           description="Something went wrong reaching the server. Refresh the page to try again."
         />
       ) : loading ? (
-        <OverviewSkeleton />
+        <OverviewBodySkeleton />
       ) : (
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -258,28 +244,6 @@ export function StudentOverview() {
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-/** Matches the loaded layout so the page doesn't jump when data arrives. */
-function OverviewSkeleton() {
-  return (
-    <div className="mt-6 animate-pulse">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-28 rounded-3xl border border-cloud bg-canvas" />
-        ))}
-      </div>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-20 rounded-3xl border border-cloud bg-canvas" />
-        ))}
-      </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="h-72 rounded-3xl border border-cloud bg-canvas" />
-        <div className="h-72 rounded-3xl border border-cloud bg-canvas" />
-      </div>
     </div>
   );
 }

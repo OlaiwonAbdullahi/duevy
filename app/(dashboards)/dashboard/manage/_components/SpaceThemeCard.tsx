@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys, spaceQuery } from "@/lib/api/queries";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PaintBoardIcon, Tick02Icon } from "@hugeicons/core-free-icons";
@@ -12,7 +14,6 @@ import {
 } from "../../_components/space-theme";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { getSpace } from "@/lib/api/spaces";
 import { updateSpaceProfile } from "@/lib/api/rep";
 import { ApiError } from "@/lib/api/errors";
 
@@ -24,6 +25,7 @@ import { ApiError } from "@/lib/api/errors";
 export function SpaceThemeCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  const queryClient = useQueryClient();
   const { themeId, setThemeId } = useSpaceTheme();
 
   // Only mark the selected swatch after hydration to avoid a mismatch with the
@@ -35,7 +37,8 @@ export function SpaceThemeCard() {
   useEffect(() => {
     if (!spaceId) return;
     let cancelled = false;
-    getSpace(spaceId)
+    queryClient
+      .fetchQuery(spaceQuery(spaceId))
       .then((space) => {
         if (cancelled) return;
         if (isSpaceThemeId(space.theme)) setThemeId(space.theme);
@@ -56,6 +59,7 @@ export function SpaceThemeCard() {
     setSaving(true);
     try {
       await updateSpaceProfile(spaceId, { theme: id });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.space(spaceId) });
       toast.success("Space theme updated", { description: label });
     } catch (err) {
       setThemeId(previous);

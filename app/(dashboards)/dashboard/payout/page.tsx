@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Beneficiary, Payout } from "./_components/types";
@@ -7,8 +8,7 @@ import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { BeneficiariesCard } from "./_components/BeneficiariesCard";
 import Link from "next/link";
 import { PayoutHistory } from "./_components/PayoutHistory";
-import { WithdrawModal, type WithdrawTarget } from "./_components/WithdrawModal";
-import { AddBeneficiaryModal } from "./_components/AddBeneficiaryModal";
+import type { WithdrawTarget } from "./_components/WithdrawModal";
 import { useRepSpace } from "../_components/use-rep-space";
 import { fromKobo } from "../_components/format";
 import { timeAgo } from "../_components/notifications-data";
@@ -24,6 +24,9 @@ import {
 import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
 import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
+
+const WithdrawModal = dynamic(() => import("./_components/WithdrawModal").then((mod) => mod.WithdrawModal), { ssr: false });
+const AddBeneficiaryModal = dynamic(() => import("./_components/AddBeneficiaryModal").then((mod) => mod.AddBeneficiaryModal), { ssr: false });
 
 /** API payout (kobo, ISO date) → history row. */
 function adaptPayout(p: ApiPayout): Payout {
@@ -191,7 +194,7 @@ export default function PayoutPage() {
         : null;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <header>
         <span className="mb-2 inline-block rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
           Rep tools

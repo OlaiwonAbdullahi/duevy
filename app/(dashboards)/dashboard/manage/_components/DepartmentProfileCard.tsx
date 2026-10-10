@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys, spaceQuery } from "@/lib/api/queries";
 import { toast } from "sonner";
 import { Building03Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -10,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { getSpace } from "@/lib/api/spaces";
 import { updateSpaceProfile } from "@/lib/api/rep";
 import { ApiError } from "@/lib/api/errors";
 
@@ -45,6 +46,7 @@ function Field({
 export function DepartmentProfileCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  const queryClient = useQueryClient();
   // Only the lead can edit the profile — the backend 403s a co-rep, so hide
   // the edit affordance up front rather than let them hit that error.
   const readOnly = repSpace?.membership === "co";
@@ -60,7 +62,8 @@ export function DepartmentProfileCard() {
   useEffect(() => {
     if (!spaceId) return;
     let cancelled = false;
-    getSpace(spaceId)
+    queryClient
+      .fetchQuery(spaceQuery(spaceId))
       .then((space) => {
         if (cancelled) return;
         setName(space.name);
@@ -74,7 +77,7 @@ export function DepartmentProfileCard() {
     return () => {
       cancelled = true;
     };
-  }, [spaceId]);
+  }, [spaceId, queryClient]);
 
   const edit = (setter: (v: string) => void) => (v: string) => {
     setter(v);
@@ -91,6 +94,7 @@ export function DepartmentProfileCard() {
         about,
         faculty: faculty.trim() || null,
       });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.space(spaceId) });
       setDirty(false);
       toast.success("Department details saved", { description: name });
     } catch (err) {

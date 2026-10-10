@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -226,10 +226,10 @@ export default function CreateDuesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <AnimatePresence mode="wait" initial={false}>
         {mode === "form" ? (
-          <motion.div
+          <m.div
             key="form"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -242,9 +242,9 @@ export default function CreateDuesPage() {
               onCancel={() => setMode("list")}
               onSave={save}
             />
-          </motion.div>
+          </m.div>
         ) : mode === "collections" && viewingDue && spaceId ? (
-          <motion.div
+          <m.div
             key="collections"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -256,9 +256,9 @@ export default function CreateDuesPage() {
               due={viewingDue}
               onBack={() => setMode("list")}
             />
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="list"
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -350,7 +350,7 @@ export default function CreateDuesPage() {
                 </div>
               </>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 

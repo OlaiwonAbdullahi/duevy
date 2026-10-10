@@ -43,6 +43,21 @@ function writeRoleCookie(role: string | null) {
     : "duevy_role=; path=/; max-age=0; samesite=lax";
 }
 
+/** Marketing pages that never need the session. */
+const PUBLIC_PATHS = new Set(["/", "/privacy", "/terms", "/offline"]);
+
+/**
+ * A visitor with no role hint on a marketing page has almost certainly never
+ * signed in here, so skip the `/auth/refresh` round trip (which can mean a
+ * backend cold start). App routes always try, so a lost hint never locks
+ * anyone out.
+ */
+function shouldSkipBootstrap() {
+  if (typeof window === "undefined") return false;
+  if (!PUBLIC_PATHS.has(window.location.pathname)) return false;
+  return !document.cookie.split("; ").some((c) => c.startsWith("duevy_role=") && c.length > 11);
+}
+
 /**
  * Single source of truth for "who is signed in" across the whole app. The access
  * token itself lives only in the `lib/api/client` module (never in React state or
@@ -57,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     (async () => {
+      if (shouldSkipBootstrap()) {
+        setStatus("unauthenticated");
+        return;
+      }
       try {
         await refreshAccessToken();
         const me = await authApi.getMe();
@@ -138,6 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
+      // Never show the next account on this device the last one's cached data.
+      // Loaded lazily so pages without the query cache don't ship it.
+      void import("@/lib/api/query-client").then((m) => m.clearQueryCache());
     }
   }, []);
 

@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -243,7 +243,7 @@ function TourOverlay({
   const centered = !box;
 
   return createPortal(
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -278,7 +278,7 @@ function TourOverlay({
         )}
       >
         <AnimatePresence mode="wait">
-          <motion.div
+          <m.div
             key={step.id}
             ref={cardRef}
             initial={{ opacity: 0, y: 10, scale: 0.97 }}
@@ -363,10 +363,10 @@ function TourOverlay({
               </Button>
             )}
           </div>
-          </motion.div>
+          </m.div>
         </AnimatePresence>
       </div>
-    </motion.div>,
+    </m.div>,
     document.body,
   );
 }

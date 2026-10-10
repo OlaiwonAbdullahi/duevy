@@ -3,6 +3,8 @@ export type ApiMeta = {
   perPage?: number;
   total?: number;
   totalPages?: number;
+  /** `GET /admin/feedback` only: how many are still `new`, for a badge. */
+  unresolved?: number;
 };
 
 export type ApiSuccess<T> = {

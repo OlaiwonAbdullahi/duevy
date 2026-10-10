@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   WifiDisconnected02Icon,
@@ -53,7 +53,7 @@ export function NetworkIndicator() {
   return (
     <AnimatePresence>
       {visible && (
-        <motion.div
+        <m.div
           key={offline ? "offline" : "online"}
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -72,7 +72,7 @@ export function NetworkIndicator() {
             size={16}
           />
           {offline ? "You're offline" : "Back online"}
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

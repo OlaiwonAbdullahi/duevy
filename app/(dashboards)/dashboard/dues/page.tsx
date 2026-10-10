@@ -1,8 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, m } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Building03Icon } from "@hugeicons/core-free-icons";
@@ -14,16 +16,41 @@ import { adaptSpace, adaptDue } from "./_components/adapt";
 import { SpaceCard } from "./_components/SpaceCard";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
-import { PayDueModal } from "./_components/PayDueModal";
 import { payPageHref, toastCheckoutError } from "./_components/checkout";
 import { listSpaces, joinSpace } from "@/lib/api/spaces";
 import { listDues, payDue, payDues as payDuesApi } from "@/lib/api/dues";
+import { queryKeys } from "@/lib/api/queries";
+
+const PayDueModal = dynamic(() => import("./_components/PayDueModal").then((mod) => mod.PayDueModal), { ssr: false });
+
+type DuesPageData = { spaces: Space[]; dues: Due[] };
+const DUES_PAGE_KEY = ["me", "dues-page"] as const;
+const EMPTY_SPACES: Space[] = [];
+const EMPTY_DUES: Due[] = [];
 
 export default function DuesPage() {
   const router = useRouter();
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const [dues, setDues] = useState<Due[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  // Cached so coming back to Dues renders instantly; local edits (optimistic
+  // joins) write into the same cache entry.
+  const pageQuery = useQuery({
+    queryKey: DUES_PAGE_KEY,
+    queryFn: async () => {
+      const [apiSpaces, apiDues] = await Promise.all([listSpaces(), listDues({ perPage: 100 })]);
+      return { spaces: apiSpaces.map(adaptSpace), dues: apiDues.data.map(adaptDue) };
+    },
+  });
+  const spaces = pageQuery.data?.spaces ?? EMPTY_SPACES;
+  const dues = pageQuery.data?.dues ?? EMPTY_DUES;
+  const loading = pageQuery.isPending;
+  const updatePage = (patch: (page: DuesPageData) => DuesPageData) =>
+    queryClient.setQueryData<DuesPageData>(DUES_PAGE_KEY, (page) =>
+      patch(page ?? { spaces: [], dues: [] }),
+    );
+  const setSpaces = (fn: (list: Space[]) => Space[]) =>
+    updatePage((page) => ({ ...page, spaces: fn(page.spaces) }));
+  const setDues = (fn: (list: Due[]) => Due[]) =>
+    updatePage((page) => ({ ...page, dues: fn(page.dues) }));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
@@ -32,26 +59,8 @@ export default function DuesPage() {
   const [syncing, setSyncing] = useState<Record<string, "joining" | "loading">>({});
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [apiSpaces, apiDues] = await Promise.all([
-          listSpaces(),
-          listDues({ perPage: 100 }),
-        ]);
-        if (cancelled) return;
-        setSpaces(apiSpaces.map(adaptSpace));
-        setDues(apiDues.data.map(adaptDue));
-      } catch {
-        if (!cancelled) toast.error("Couldn't load your dues.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (pageQuery.isError) toast.error("Couldn't load your dues.");
+  }, [pageQuery.isError]);
 
   const selected = spaces.find((s) => s.id === selectedId) ?? null;
   const selectedDues = useMemo(
@@ -105,6 +114,7 @@ export default function DuesPage() {
       return false;
     }
 
+    void queryClient.invalidateQueries({ queryKey: queryKeys.studentOverview });
     toast.success(`Joined ${dept.short}`, {
       description: "It's now under Your spaces.",
     });
@@ -157,7 +167,7 @@ export default function DuesPage() {
     <div className="mx-auto max-w-6xl">
       <AnimatePresence mode="wait" initial={false}>
         {selected ? (
-          <motion.div
+          <m.div
             key={selected.id}
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -171,9 +181,9 @@ export default function DuesPage() {
               onBack={() => setSelectedId(null)}
               onPay={setPayDues}
             />
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="grid"
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -275,7 +285,7 @@ export default function DuesPage() {
                 )}
               </>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 

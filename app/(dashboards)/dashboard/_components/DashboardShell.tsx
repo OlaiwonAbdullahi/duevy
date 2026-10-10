@@ -1,13 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock01Icon, MailAtSign01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { getKycStatus } from "@/lib/api/payouts";
-import type { KycState } from "@/lib/api/types";
+import { OverviewSkeleton, ShellSkeleton } from "./Skeleton";
+import { useKycStatus } from "@/lib/api/queries";
 import { ONBOARDING_PATH, isRepApplicant, kycOutstanding } from "@/lib/auth/onboarding";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
@@ -17,7 +18,9 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { RepOnlyNotice } from "./RepOnlyNotice";
 import { FeatureUnavailableNotice } from "./FeatureUnavailableNotice";
-import { CommandPalette } from "./CommandPalette";
+
+// Split out of the shell bundle; it mounts after hydration to listen for ⌘K.
+const CommandPalette = dynamic(() => import("./CommandPalette").then((mod) => mod.CommandPalette), { ssr: false });
 
 /**
  * Shown across the dashboard while a rep application is open. KYC comes first
@@ -25,19 +28,8 @@ import { CommandPalette } from "./CommandPalette";
  */
 function PendingRepBanner() {
   const pathname = usePathname();
-  const [kyc, setKyc] = useState<KycState | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getKycStatus()
-      .then((s) => {
-        if (!cancelled) setKyc(s.mine);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
+  // Shared with the onboarding gate below and the KYC page, so it's one request.
+  const kyc = useKycStatus().data?.mine ?? null;
 
   const notStarted = !!kyc && kycOutstanding(kyc);
   const kycPassed = !!kyc && kyc.kycStatus === "verified" && kyc.studentId.status !== null;
@@ -149,7 +141,10 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const applicant = isRepApplicant(user);
   // Rep applicants finish onboarding (KYC) before they see the dashboard.
-  const [onboarded, setOnboarded] = useState(false);
+  const kycQuery = useKycStatus(undefined, { enabled: status === "authenticated" && applicant });
+  const outstanding = kycQuery.data ? kycOutstanding(kycQuery.data.mine) : null;
+  // Don't lock them out of the dashboard over a failed status check.
+  const onboarded = kycQuery.isError || outstanding === false;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -161,26 +156,12 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   }, [status, user, router, pathname]);
 
   useEffect(() => {
-    if (status !== "authenticated" || !applicant) return;
-    let cancelled = false;
-    getKycStatus()
-      .then((s) => {
-        if (cancelled) return;
-        if (kycOutstanding(s.mine)) router.replace(ONBOARDING_PATH);
-        else setOnboarded(true);
-      })
-      // Don't lock them out of the dashboard over a failed status check.
-      .catch(() => !cancelled && setOnboarded(true));
-    return () => {
-      cancelled = true;
-    };
-  }, [status, applicant, router]);
+    if (applicant && outstanding) router.replace(ONBOARDING_PATH);
+  }, [applicant, outstanding, router]);
 
   if (status !== "authenticated" || !user || user.role === "admin" || (applicant && !onboarded)) {
     return (
-      <div className="grid min-h-screen place-items-center bg-canvas">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />
-      </div>
+      <ShellSkeleton>{pathname === "/dashboard" ? <OverviewSkeleton /> : undefined}</ShellSkeleton>
     );
   }
 

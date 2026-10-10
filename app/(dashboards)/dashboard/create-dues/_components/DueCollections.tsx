@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { fromKobo } from "../../_components/format";
 import { timeAgo } from "../../_components/notifications-data";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { getAllCollections, remindUnpaid, listReps, reassignDue } from "@/lib/api/rep";
+import { getAllCollections, remindUnpaid, reassignDue } from "@/lib/api/rep";
+import { useSpaceReps } from "@/lib/api/queries";
 import { ApiError } from "@/lib/api/errors";
 import { FEATURES } from "@/lib/features";
 import { CollectionSummary } from "../../collections/_components/CollectionSummary";
@@ -84,7 +85,7 @@ export function DueCollections({
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [sendingReminders, setSendingReminders] = useState(false);
-  const [reps, setReps] = useState<SpaceRep[]>([]);
+  const reps: SpaceRep[] = useSpaceReps(FEATURES.coReps ? spaceId : undefined).data ?? [];
   const [reassigning, setReassigning] = useState(false);
 
   const assignedRep = reps.find((r) => r.id === due.assignedRepId);
@@ -96,12 +97,6 @@ export function DueCollections({
   const selectableReps =
     assignedRep && assignedRep.role === "lead" ? [assignedRep, ...coReps] : coReps;
 
-  useEffect(() => {
-    if (!FEATURES.coReps) return;
-    listReps(spaceId)
-      .then(setReps)
-      .catch(() => {});
-  }, [spaceId]);
 
   const reassign = async (userId: string) => {
     if (!userId || userId === due.assignedRepId) return;

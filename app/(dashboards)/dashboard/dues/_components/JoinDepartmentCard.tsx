@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   UserMultipleIcon,
@@ -137,7 +137,7 @@ export function JoinDepartmentCard({
       {/* Result region — the match preview (with a Join button) or a "not found" note. */}
       <AnimatePresence mode="wait" initial={false}>
         {match ? (
-          <motion.div
+          <m.div
             key={match.id}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -184,10 +184,10 @@ export function JoinDepartmentCard({
                 {joining ? "Joining…" : "Join department"}
               </Button>
             )}
-          </motion.div>
+          </m.div>
         ) : (
           notFound && (
-            <motion.p
+            <m.p
               key="not-found"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -203,7 +203,7 @@ export function JoinDepartmentCard({
               No department found for{" "}
               <span className="font-semibold text-ink">{normalized}</span>. Check the
               code with your rep.
-            </motion.p>
+            </m.p>
           )
         )}
       </AnimatePresence>

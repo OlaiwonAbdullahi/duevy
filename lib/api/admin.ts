@@ -1,4 +1,5 @@
 import { apiClient, type Page } from "./client";
+import type { Feedback, FeedbackCategory, FeedbackStatus } from "./feedback";
 import type {
   ApiMeta,
   Dispute,
@@ -401,6 +402,24 @@ export function resolveDispute(
   payload: { resolution: "upheld" | "rejected"; note: string; refundTxnId?: string },
 ) {
   return apiClient.post<Dispute>(`/admin/disputes/${disputeId}/resolve`, payload);
+}
+
+// ---------------------------------------------------------------------------
+// Product feedback inbox (sent from POST /feedback)
+// ---------------------------------------------------------------------------
+
+export function listAdminFeedback(
+  query: { status?: FeedbackStatus; category?: FeedbackCategory; q?: string; page?: number; perPage?: number } = {},
+): Promise<Page<Feedback[]>> {
+  return apiClient.getPage<Feedback[]>(`/admin/feedback${toQuery(query)}`);
+}
+
+export function resolveFeedback(id: string, note?: string) {
+  return apiClient.post<Feedback>(`/admin/feedback/${id}/resolve`, note ? { note } : {});
+}
+
+export function reopenFeedback(id: string) {
+  return apiClient.post<Feedback>(`/admin/feedback/${id}/reopen`);
 }
 
 // ---------------------------------------------------------------------------

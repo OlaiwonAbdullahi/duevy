@@ -1,33 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IdIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { SettingsCard } from "./SettingsCard";
 import { useRole } from "../../_components/role-context";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { getKycStatus } from "@/lib/api/payouts";
-import type { SpaceKycStatus } from "@/lib/api/types";
+import { useKycStatus } from "@/lib/api/queries";
 
 /** Rep-only: where the department's verification (KYC) stands, linking to /dashboard/kyc. */
 export function VerificationCard() {
   const { isRep } = useRole();
   const repSpace = useRepSpace();
-  const [status, setStatus] = useState<SpaceKycStatus | null>(null);
-
-  useEffect(() => {
-    if (!repSpace) return;
-    let cancelled = false;
-    getKycStatus(repSpace.id)
-      .then((s) => {
-        if (!cancelled) setStatus(s);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [repSpace]);
+  const status = useKycStatus(repSpace?.id, { enabled: !!repSpace }).data ?? null;
 
   if (!isRep || !repSpace) return null;
 

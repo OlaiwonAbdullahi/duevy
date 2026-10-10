@@ -2,18 +2,17 @@ import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import SmoothScroll from "./components/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { PwaRegister } from "./components/pwa/PwaRegister";
-import { InstallBanner } from "./components/pwa/InstallBanner";
-import { NetworkIndicator } from "./components/pwa/NetworkIndicator";
+import { PwaChrome } from "./components/pwa/PwaChrome";
+import { MotionProvider } from "./components/MotionProvider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const BASE_URL = "https://duevy.app";
@@ -116,12 +115,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SmoothScroll />
-          <AuthProvider>
-            {children}
-            <NetworkIndicator />
-            <InstallBanner />
-          </AuthProvider>
+          <MotionProvider>
+            <AuthProvider>
+              {children}
+              <PwaChrome />
+            </AuthProvider>
+          </MotionProvider>
           <Toaster position="top-center" richColors />
           <PwaRegister />
         </ThemeProvider>

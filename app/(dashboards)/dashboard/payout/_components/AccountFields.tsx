@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBanks } from "@/lib/api/queries";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckmarkCircle02Icon, Alert01Icon } from "@hugeicons/core-free-icons";
@@ -9,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { predictBanks } from "@/lib/banks/predict";
 import {
-  listBanks,
   type Bank,
   type BeneficiaryInput,
   type ResolvedAccount,
@@ -49,8 +49,10 @@ export function AccountFields({
   useEffect(() => {
     lookupRef.current = lookup;
   }, [lookup]);
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [banksLoading, setBanksLoading] = useState(true);
+  // Fetched once per session and shared by every form that picks a bank.
+  const banksQuery = useBanks();
+  const banks: Bank[] = useMemo(() => banksQuery.data ?? [], [banksQuery.data]);
+  const banksLoading = banksQuery.isPending;
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
 
@@ -59,22 +61,8 @@ export function AccountFields({
   const [resolveError, setResolveError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    setBanksLoading(true);
-    listBanks()
-      .then((list) => {
-        if (!cancelled) setBanks(list);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Couldn't load the bank list. Close this and try again.");
-      })
-      .finally(() => {
-        if (!cancelled) setBanksLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (banksQuery.isError) toast.error("Couldn't load the bank list. Close this and try again.");
+  }, [banksQuery.isError]);
 
   const bankName = useMemo(
     () => banks.find((b) => b.code === bankCode)?.name ?? "",

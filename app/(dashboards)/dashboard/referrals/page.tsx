@@ -111,7 +111,7 @@ export default function ReferralsPage() {
   const steps = buildSteps(rewardPerReferral);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <header>
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           Refer &amp; earn

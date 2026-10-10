@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Download04Icon,
@@ -97,7 +97,7 @@ export function InstallBanner() {
   return (
     <AnimatePresence>
       {show && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
@@ -155,7 +155,7 @@ export function InstallBanner() {
           >
             <HugeiconsIcon icon={Cancel01Icon} size={16} />
           </button>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

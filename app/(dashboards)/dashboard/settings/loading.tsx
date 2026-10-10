@@ -27,7 +27,7 @@ function SettingsCardSkeleton({ rows = 3 }: { rows?: number }) {
 
 export default function Loading() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <HeaderSkeleton action={false} />
       <div className="mt-6 flex flex-col gap-5">
         <SettingsCardSkeleton rows={2} />

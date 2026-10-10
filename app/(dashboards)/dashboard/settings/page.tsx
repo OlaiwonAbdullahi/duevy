@@ -10,7 +10,7 @@ import { DangerZone } from "./_components/DangerZone";
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <header>
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           Settings

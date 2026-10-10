@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { getKycStatus } from "@/lib/api/payouts";
+import { useKycStatus } from "@/lib/api/queries";
 import { ONBOARDING_PATH, isRepApplicant, kycOutstanding } from "@/lib/auth/onboarding";
 import { KycCard } from "@/app/(dashboards)/dashboard/kyc/_components/KycCard";
 
@@ -17,8 +17,11 @@ import { KycCard } from "@/app/(dashboards)/dashboard/kyc/_components/KycCard";
 export default function OnboardingPage() {
   const { user, status, logout } = useAuth();
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
   const applicant = isRepApplicant(user);
+  const kycQuery = useKycStatus(undefined, { enabled: status === "authenticated" && applicant });
+  const outstanding = kycQuery.data ? kycOutstanding(kycQuery.data.mine) : null;
+  // A failed check still shows the form rather than a dead end.
+  const checked = outstanding === true || kycQuery.isError;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -29,21 +32,11 @@ export default function OnboardingPage() {
     }
   }, [status, user, applicant, router]);
 
-  // Already submitted everything (e.g. came back via a bookmark) — straight through.
+  // Nothing left to submit — either they came back via a bookmark, or KycCard
+  // just wrote the final step's state into the shared cache. Straight through.
   useEffect(() => {
-    if (status !== "authenticated" || !applicant) return;
-    let cancelled = false;
-    getKycStatus()
-      .then((s) => {
-        if (cancelled) return;
-        if (kycOutstanding(s.mine)) setChecked(true);
-        else router.replace("/dashboard");
-      })
-      .catch(() => !cancelled && setChecked(true));
-    return () => {
-      cancelled = true;
-    };
-  }, [status, applicant, router]);
+    if (applicant && outstanding === false) router.replace("/dashboard");
+  }, [applicant, outstanding, router]);
 
   if (status !== "authenticated" || !user || !applicant || !checked) {
     return (
@@ -52,15 +45,6 @@ export default function OnboardingPage() {
       </div>
     );
   }
-
-  // Move on only once nothing is left for the applicant to do.
-  const handleChanged = async () => {
-    try {
-      if (!kycOutstanding((await getKycStatus()).mine)) router.push("/dashboard");
-    } catch {
-      // The card already shows what was submitted; they can refresh to retry.
-    }
-  };
 
   const signOut = async () => {
     await logout();
@@ -97,7 +81,7 @@ export default function OnboardingPage() {
 
         <div className="mt-8">
           {/* Applicants have no space yet, so this uses /me/kyc*. */}
-          <KycCard isLead onChanged={handleChanged} />
+          <KycCard isLead />
         </div>
       </main>
     </div>

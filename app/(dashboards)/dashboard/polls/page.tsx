@@ -1,7 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -20,7 +21,6 @@ import type { Poll } from "./_components/types";
 import { PollListRow } from "./_components/PollListRow";
 import { PollForm } from "./_components/PollForm";
 import { PollAnalytics } from "./_components/PollAnalytics";
-import { ShareLinkModal } from "./_components/ShareLinkModal";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
 import {
   listPolls,
@@ -33,6 +33,8 @@ import {
   type PollPatch,
 } from "@/lib/api/polls";
 import { ApiError } from "@/lib/api/errors";
+
+const ShareLinkModal = dynamic(() => import("./_components/ShareLinkModal").then((mod) => mod.ShareLinkModal), { ssr: false });
 
 export default function PollsPage() {
   const repSpace = useRepSpace();
@@ -181,10 +183,10 @@ export default function PollsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <AnimatePresence mode="wait" initial={false}>
         {mode === "form" && spaceId ? (
-          <motion.div
+          <m.div
             key="form"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -208,9 +210,9 @@ export default function PollsPage() {
                 );
               }}
             />
-          </motion.div>
+          </m.div>
         ) : mode === "analytics" && viewing ? (
-          <motion.div
+          <m.div
             key="analytics"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -222,9 +224,9 @@ export default function PollsPage() {
               onBack={() => setMode("list")}
               onShare={setSharePoll}
             />
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="list"
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -311,7 +313,7 @@ export default function PollsPage() {
                 </div>
               </>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 

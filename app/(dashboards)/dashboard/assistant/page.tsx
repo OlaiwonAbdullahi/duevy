@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -28,8 +29,9 @@ import { getSpace } from "@/lib/api/spaces";
 import { ApiError } from "@/lib/api/errors";
 import { adaptDue, adaptSpace } from "../dues/_components/adapt";
 import type { Due, Space } from "../dues/_components/types";
-import { PayDueModal } from "../dues/_components/PayDueModal";
 import { payPageHref, toastCheckoutError } from "../dues/_components/checkout";
+
+const PayDueModal = dynamic(() => import("../dues/_components/PayDueModal").then((mod) => mod.PayDueModal), { ssr: false });
 
 type ChatMessage = {
   id: number;
@@ -146,16 +148,11 @@ export default function AssistantPage() {
     pushMessage("user", trimmed);
     setInput("");
     setSending(true);
-    console.log("[assistant] REQUEST", {
-      message: trimmed,
-      conversationId: conversationId ?? undefined,
-    });
     try {
       const res = await sendAssistantMessage({
         message: trimmed,
         conversationId: conversationId ?? undefined,
       });
-      console.log("[assistant] RESPONSE", res);
       setConversationId(res.conversationId);
       pushMessage("bot", res.reply, res.quickReplies, res.action);
 
@@ -163,12 +160,6 @@ export default function AssistantPage() {
         void openPaymentModal(res.action.dueId);
       }
     } catch (err) {
-      console.error("[assistant] FAILED", {
-        status: err instanceof ApiError ? err.status : undefined,
-        code: err instanceof ApiError ? err.code : undefined,
-        message: err instanceof Error ? err.message : String(err),
-        err,
-      });
       pushMessage(
         "bot",
         err instanceof ApiError

@@ -13,6 +13,7 @@ import {
   GiftIcon,
   UserGroup03Icon,
   Megaphone01Icon,
+  BubbleChatEditIcon,
   AiChat01Icon,
 } from "@hugeicons/core-free-icons";
 import { FEATURES } from "@/lib/features";
@@ -139,6 +140,7 @@ export const ADMIN_LINKS: NavLink[] = [
     ? [{ label: "Polls", href: "/admin/polls", icon: CheckmarkSquare01Icon }]
     : []),
   { label: "Disputes", href: "/admin/disputes", icon: Megaphone01Icon },
+  { label: "Feedback", href: "/admin/feedback", icon: BubbleChatEditIcon },
   { label: "Reports", href: "/admin/reports", icon: Analytics01Icon },
   { label: "Settings", href: "/admin/settings", icon: Shield01Icon },
 ];

@@ -12,7 +12,9 @@ import { UserAvatar } from "../../_components/UserAvatar";
 import { EmptyState } from "../../_components/EmptyState";
 import { Skeleton } from "../../_components/Skeleton";
 import { BRAND_INPUT } from "../../_components/form-styles";
-import { listReps, transferLead } from "@/lib/api/rep";
+import { transferLead } from "@/lib/api/rep";
+import { queryKeys, useSpaceReps } from "@/lib/api/queries";
+import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/errors";
 import type { SpaceRep } from "@/lib/api/types";
 
@@ -25,20 +27,19 @@ export function TransferLeadModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [coReps, setCoReps] = useState<SpaceRep[] | null>(null);
+  const queryClient = useQueryClient();
+  const repsQuery = useSpaceReps(spaceId);
+  const coReps: SpaceRep[] | null = repsQuery.isError
+    ? []
+    : (repsQuery.data?.filter((r) => r.role === "co") ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listReps(spaceId)
-      .then((reps) => setCoReps(reps.filter((r) => r.role === "co")))
-      .catch(() => {
-        toast.error("Couldn't load your co-reps.");
-        setCoReps([]);
-      });
-  }, [spaceId]);
+    if (repsQuery.isError) toast.error("Couldn't load your co-reps.");
+  }, [repsQuery.isError]);
 
   const valid = !!selectedId && password.length > 0;
 
@@ -48,6 +49,7 @@ export function TransferLeadModal({
     setError(null);
     try {
       await transferLead(spaceId, { userId: selectedId, password });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.spaceReps(spaceId) });
       toast.success("Leadership transferred", {
         description: "You're now a co-rep of this department.",
       });

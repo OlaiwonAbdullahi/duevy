@@ -9,13 +9,22 @@ import { StudentsTable } from "./_components/StudentsTable";
 import { useRepSpace } from "../_components/use-rep-space";
 import { timeAgo } from "../_components/notifications-data";
 import { StatRowSkeleton, ListSkeleton } from "../_components/Skeleton";
-import { listAllMembers, getRepOverview, regenerateJoinCode } from "@/lib/api/rep";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth/auth-context";
+import { listAllMembers, regenerateJoinCode } from "@/lib/api/rep";
+import { queryKeys, repOverviewQuery } from "@/lib/api/queries";
+import type { RepOverview } from "@/lib/api/types";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function CirclePage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
+  // `/auth/me` usually carries the join code already; only fall back to the
+  // (heavier, but probably cached) overview when it doesn't.
+  const knownCode = repSpace?.joinCode ?? null;
+  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
 
   const [students, setStudents] = useState<Student[]>([]);
   const [recentCount, setRecentCount] = useState(0);
@@ -28,11 +37,10 @@ export default function CirclePage() {
     let cancelled = false;
     (async () => {
       try {
-        // Members roster + join code — the join code comes from the same
-        // `/spaces/{spaceId}/overview` the rep dashboard uses.
-        const [members, overview] = await Promise.all([
+        const [members, joinCode] = await Promise.all([
           listAllMembers(spaceId),
-          getRepOverview(spaceId),
+          knownCode ??
+            queryClient.fetchQuery(repOverviewQuery(spaceId)).then((overview) => overview.joinCode),
         ]);
         if (cancelled) return;
         const weekAgo = Date.now() - WEEK_MS;
@@ -40,7 +48,7 @@ export default function CirclePage() {
           members.filter((m) => new Date(m.joinedAt).getTime() >= weekAgo).length,
         );
         setStudents(members.map((m) => ({ ...m, joinedAt: timeAgo(m.joinedAt) })));
-        setCode(overview.joinCode);
+        setCode(joinCode);
       } catch {
         if (!cancelled) toast.error("Couldn't load your circle.");
       } finally {
@@ -50,7 +58,7 @@ export default function CirclePage() {
     return () => {
       cancelled = true;
     };
-  }, [spaceId]);
+  }, [spaceId, knownCode, queryClient]);
 
   const filteredStudents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -68,6 +76,11 @@ export default function CirclePage() {
     try {
       const { code: next } = await regenerateJoinCode(spaceId);
       setCode(next);
+      queryClient.setQueryData<RepOverview>(queryKeys.repOverview(spaceId), (o) =>
+        o ? { ...o, joinCode: next } : o,
+      );
+      // `/auth/me` carries the code too; refresh it so the next visit isn't stale.
+      void refreshUser().catch(() => {});
       toast.success("Join code regenerated", {
         description: "The old code no longer works — reshare the new one.",
       });

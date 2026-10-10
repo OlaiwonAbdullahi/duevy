@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UserGroup03Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -102,7 +103,39 @@ function formatDate(iso: string) {
   });
 }
 
+// Signed image links inside applications are short-lived, so don't hold them long.
+const APP_DETAIL_STALE_MS = 30_000;
+
 export default function AdminRepsPage() {
+  const queryClient = useQueryClient();
+  // Shared between the reps list, the Applications tab and the ID re-upload
+  // filter so each is fetched once rather than per search or per section.
+  const frozenSpaceIds = () =>
+    queryClient.fetchQuery({
+      queryKey: ["admin", "spaces", "frozen"],
+      queryFn: () =>
+        listAdminSpaces({ perPage: 100 })
+          .then((p) => new Set(p.data.filter((s) => s.payoutsFrozen).map((s) => s.id)))
+          .catch(() => new Set<string>()),
+      staleTime: 60_000,
+    });
+  const fetchApplications = (status: RepApplicationStatus | undefined) =>
+    queryClient.fetchQuery({
+      queryKey: ["admin", "rep-applications", status ?? "all"],
+      queryFn: () => listRepApplications({ status, perPage: 100 }),
+      staleTime: 5_000,
+    });
+  const applicationQuery = (id: string) => ({
+    queryKey: ["admin", "rep-application", id],
+    queryFn: () => getRepApplication(id),
+    staleTime: APP_DETAIL_STALE_MS,
+  });
+  const prefetchApplication = (id: string) => void queryClient.prefetchQuery(applicationQuery(id));
+  const forgetApplication = (id: string) => {
+    queryClient.removeQueries({ queryKey: ["admin", "rep-application", id] });
+    queryClient.removeQueries({ queryKey: ["admin", "rep-applications"] });
+  };
+
   const [tab, setTab] = useState<"directory" | "applications">("directory");
 
   // ---- Directory (active/suspended reps) -----------------------------------
@@ -124,11 +157,10 @@ export default function AdminRepsPage() {
     try {
       // `/admin/reps` doesn't say whether payouts are frozen; that flag lives on
       // the rep's spaces, so read it from `/admin/spaces`.
-      const [{ data }, spaces] = await Promise.all([
+      const [{ data }, frozen] = await Promise.all([
         listAdminReps({ q: debouncedSearch || undefined, perPage: 100 }),
-        listAdminSpaces({ perPage: 100 }).then((p) => p.data).catch(() => []),
+        frozenSpaceIds(),
       ]);
-      const frozen = new Set(spaces.filter((s) => s.payoutsFrozen).map((s) => s.id));
       setReps(
         data.map((r) => ({
           ...r,
@@ -197,6 +229,7 @@ export default function AdminRepsPage() {
         await unfreezeRepPayouts(r.id);
       }
       patch(r.id, { payoutsFrozen: next });
+      queryClient.removeQueries({ queryKey: ["admin", "spaces", "frozen"] });
       toast.success(`Payouts ${next ? "frozen" : "unfrozen"} for ${r.name}.`);
     } catch (err) {
       // e.g. 404 "Rep leads no spaces" for a co-rep — say why.
@@ -218,10 +251,9 @@ export default function AdminRepsPage() {
   async function loadApplications() {
     setAppsLoading(true);
     try {
-      const { data } = await listRepApplications({
-        status: appStatusFilter === "all" ? undefined : appStatusFilter,
-        perPage: 100,
-      });
+      const { data } = await fetchApplications(
+        appStatusFilter === "all" ? undefined : appStatusFilter,
+      );
       setApplications(data);
     } catch {
       toast.error("Couldn't load rep applications.");
@@ -246,7 +278,7 @@ export default function AdminRepsPage() {
     let cancelled = false;
     Promise.all([
       listStudentIdsForReview({ status: "pending", perPage: 100 }),
-      listRepApplications({ status: "pending", perPage: 100 }),
+      fetchApplications("pending"),
     ])
       .then(([ids, apps]) => {
         if (cancelled) return;
@@ -257,6 +289,8 @@ export default function AdminRepsPage() {
     return () => {
       cancelled = true;
     };
+    // Mount-only; the fetch helpers are recreated each render but read nothing from it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openIdReupload = async (row: StudentIdReviewRow) => {
@@ -286,7 +320,8 @@ export default function AdminRepsPage() {
     setSelectedAppId(id);
     setAppDetailLoading(true);
     setAppDetail(null);
-    getRepApplication(id)
+    queryClient
+      .fetchQuery(applicationQuery(id))
       .then(setAppDetail)
       .catch(() => {
         toast.error("Couldn't load that application.");
@@ -302,6 +337,7 @@ export default function AdminRepsPage() {
     try {
       await reviewStudentId(app.userId, { decision: "rejected", note });
       toast.success("Asked the applicant for a new student ID.");
+      forgetApplication(app.userId);
       const fresh = await getRepApplication(app.userId).catch(() => null);
       if (fresh) {
         setAppDetail(fresh);
@@ -320,6 +356,7 @@ export default function AdminRepsPage() {
     setAppBusy(true);
     try {
       const rep = await verifyRep(app.userId);
+      forgetApplication(app.userId);
       toast.success(
         `${app.applicant?.name ?? "Applicant"} approved — ${app.requestedSpace.name} is live.`,
       );
@@ -343,6 +380,7 @@ export default function AdminRepsPage() {
     setAppBusy(true);
     try {
       await rejectRep(app.userId, reason);
+      forgetApplication(app.userId);
       toast.success(`${app.applicant?.name ? `${app.applicant.name}'s` : "The"} application rejected.`);
       setApplications((prev) => prev.filter((a) => a.userId !== app.userId));
       setSelectedAppId(null);
@@ -611,6 +649,7 @@ export default function AdminRepsPage() {
                   <tr
                     key={app.userId}
                     onClick={() => openApplication(app.userId)}
+                    onMouseEnter={() => prefetchApplication(app.userId)}
                     className="cursor-pointer transition-colors hover:bg-paper/40"
                   >
                     <td className="p-4">

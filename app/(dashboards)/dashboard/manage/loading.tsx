@@ -27,14 +27,13 @@ function ManageCardSkeleton({ rows = 3 }: { rows?: number }) {
 
 export default function Loading() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <HeaderSkeleton action={false} />
       <div className="mt-6 flex flex-col gap-5">
-        <ManageCardSkeleton rows={1} />
-        <ManageCardSkeleton rows={1} />
-        <ManageCardSkeleton rows={2} />
+        {/* Department profile, audit trail, danger zone. */}
         <ManageCardSkeleton rows={2} />
         <ManageCardSkeleton rows={3} />
+        <ManageCardSkeleton rows={1} />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -20,7 +20,7 @@ import {
   AiChat01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { getRepOverview } from "@/lib/api/rep";
+import { useRepOverview } from "@/lib/api/queries";
 import type { RepOverview as RepOverviewData } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { EmptyState } from "../EmptyState";
@@ -30,6 +30,7 @@ import { timeAgo } from "../notifications-data";
 import { useRepSpace } from "../use-rep-space";
 import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
 import { KycBanner } from "./KycBanner";
+import { OverviewBodySkeleton } from "../Skeleton";
 import { FEATURES } from "@/lib/features";
 
 export function RepOverview() {
@@ -37,36 +38,18 @@ export function RepOverview() {
   const repSpace = useRepSpace();
   const name = user?.name?.split(" ")[0] ?? "there";
 
-  const [data, setData] = useState<RepOverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const spaceId = repSpace?.id;
+  // Cached: coming back to the dashboard shows the last overview instantly
+  // while it refreshes in the background.
+  const overview = useRepOverview(spaceId);
+  const data: RepOverviewData | null = overview.data ?? null;
+  // No department resolved (e.g. student previewing) — don't hang on the skeleton.
+  const loading = !!spaceId && overview.isPending;
+  const error = overview.isError;
 
   useEffect(() => {
-    if (!repSpace) {
-      // No department resolved (e.g. student previewing) — don't hang on the skeleton.
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const overview = await getRepOverview(repSpace.id);
-        if (!cancelled) setData(overview);
-      } catch {
-        if (!cancelled) {
-          setError(true);
-          toast.error("Couldn't load your department dashboard.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [repSpace]);
+    if (overview.isError) toast.error("Couldn't load your department dashboard.");
+  }, [overview.isError]);
 
   const spaceName = data?.space.name ?? repSpace?.name ?? "Your department";
   const spaceShort = data?.space.short ?? "";
@@ -100,14 +83,7 @@ export function RepOverview() {
           description="Something went wrong reaching the server. Refresh the page to try again."
         />
       ) : loading ? (
-        <div className="mt-6 grid animate-pulse gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-28 rounded-3xl border border-cloud bg-canvas"
-            />
-          ))}
-        </div>
+        <OverviewBodySkeleton stats={4} />
       ) : (
         <>
           {/* Department KPIs. */}

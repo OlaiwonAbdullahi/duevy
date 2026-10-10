@@ -11,7 +11,7 @@ export default function PayoutBreakdownPage() {
   const spaceId = repSpace?.id;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <header className="flex items-center gap-3">
         <Link
           href="/dashboard/payout"

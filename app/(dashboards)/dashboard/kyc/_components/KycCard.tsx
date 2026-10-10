@@ -23,7 +23,6 @@ import { DateOfBirthPicker } from "../../_components/DateOfBirthPicker";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
 import {
-  getKycStatus,
   submitKyc,
   resubmitStudentId,
   submitGovernmentId,
@@ -31,7 +30,8 @@ import {
   submitPayoutDestination,
   MAX_KYC_DOCUMENT_BYTES,
 } from "@/lib/api/payouts";
-import type { KycState, SpaceKycStatus } from "@/lib/api/types";
+import type { KycState } from "@/lib/api/types";
+import { useApplyKycState, useKycStatus } from "@/lib/api/queries";
 import { AccountFields, type VerifiedAccount } from "../../payout/_components/AccountFields";
 import { BankLogo } from "../../payout/_components/BankLogo";
 
@@ -113,28 +113,13 @@ export function KycCard({
   isLead: boolean;
   onChanged?: () => void;
 }) {
-  const [status, setStatus] = useState<SpaceKycStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Shared with the dashboard gate and banner, so they all update together.
+  const { data: status = null, isPending: loading } = useKycStatus(spaceId);
+  const applyKycState = useApplyKycState();
   const [formOpen, setFormOpen] = useState(false);
 
-  async function refresh() {
-    try {
-      setStatus(await getKycStatus(spaceId));
-    } catch {
-      setStatus(null);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId]);
-
   const apply = (next: KycState) => {
-    // Only the lead's state is the space's state; a co-rep's submission is theirs alone.
-    setStatus((s) => (s ? (isLead ? { ...s, ...next, mine: next } : { ...s, mine: next }) : s));
+    applyKycState(next, { spaceId, isLead });
     onChanged?.();
   };
 

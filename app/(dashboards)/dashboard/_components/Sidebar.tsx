@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Logout01Icon,
+  BubbleChatEditIcon,
   Cancel01Icon,
   ArrowDown01Icon,
   NewTwitterIcon,
@@ -15,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/auth-context";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { FeedbackModal } from "./FeedbackModal";
 import type { NavGroup } from "./nav-config";
 
 function isActive(pathname: string, href: string) {
@@ -40,6 +42,7 @@ export default function Sidebar({
   const { logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   // Which collapsible groups are folded away, keyed by title. A rep lands with
   // the Student group folded so the rep tools are front and centre.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
@@ -178,7 +181,7 @@ export default function Sidebar({
                 {group.collapsible ? (
                   <AnimatePresence initial={false}>
                     {!isCollapsed && (
-                      <motion.div
+                      <m.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -189,7 +192,7 @@ export default function Sidebar({
                         className="overflow-hidden"
                       >
                         {links}
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 ) : (
@@ -211,8 +214,19 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Footer: follow + sign out */}
+        {/* Footer: feedback + sign out + follow */}
         <div className="border-t border-cloud p-4">
+          <button
+            type="button"
+            onClick={() => {
+              onClose(); // the mobile drawer shouldn't sit behind the form
+              setFeedbackOpen(true);
+            }}
+            className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-ink cursor-pointer"
+          >
+            <HugeiconsIcon icon={BubbleChatEditIcon} size={18} className="shrink-0" />
+            Send feedback
+          </button>
           <button
             type="button"
             onClick={() => setConfirmingLogout(true)}
@@ -246,6 +260,7 @@ export default function Sidebar({
         onConfirm={handleLogout}
         onClose={() => setConfirmingLogout(false)}
       />
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </>
   );
 }

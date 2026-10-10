@@ -1,7 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Search01Icon,
@@ -19,8 +21,9 @@ import { BARE_INPUT } from "../_components/form-styles";
 import type { Transaction, TxnFilter, TxnType } from "./_components/types";
 import { TXN_META, naira, groupByDay } from "./_components/data";
 import { TransactionRow } from "./_components/TransactionRow";
-import { ReceiptModal } from "./_components/ReceiptModal";
 import { EmptyState } from "../_components/EmptyState";
+
+const ReceiptModal = dynamic(() => import("./_components/ReceiptModal").then((mod) => mod.ReceiptModal), { ssr: false });
 
 const TABS: { value: TxnFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -45,36 +48,25 @@ function adapt(t: ApiTransaction): Transaction {
   };
 }
 
+const EMPTY_TRANSACTIONS: Transaction[] = [];
+
 export default function TransactionsPage() {
   const [filter, setFilter] = useState<TxnFilter>("all");
   const [query, setQuery] = useState("");
   const [receiptTxn, setReceiptTxn] = useState<Transaction | null>(null);
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // Cached: revisiting the page renders instantly and refreshes in the background.
+  const txQuery = useQuery({
+    queryKey: ["me", "transactions"],
+    queryFn: () => listTransactions({ perPage: 100 }).then(({ data }) => data.map(adapt)),
+  });
+  const transactions = txQuery.data ?? EMPTY_TRANSACTIONS;
+  const loading = txQuery.isPending;
+  const error = txQuery.isError;
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const { data } = await listTransactions({ perPage: 100 });
-        if (!cancelled) setTransactions(data.map(adapt));
-      } catch {
-        if (!cancelled) {
-          setError(true);
-          toast.error("Couldn't load your transactions.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (txQuery.isError) toast.error("Couldn't load your transactions.");
+  }, [txQuery.isError]);
 
   // Newest first, then apply the direction tab and search box.
   const filtered = useMemo(() => {
@@ -106,7 +98,7 @@ export default function TransactionsPage() {
   }, [transactions]);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <header>
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           Transactions

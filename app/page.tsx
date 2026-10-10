@@ -1,8 +1,5 @@
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import DashboardPreview from "./components/DashboardPreview";
-import TrustBar from "./components/TrustBar";
-import Problem from "./components/Problem";
 import Personas from "./components/Personas";
 import Features from "./components/Features";
 import HowItWorks from "./components/HowItWorks";
@@ -11,6 +8,7 @@ import Pricing from "./components/Pricing";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 import Reveal from "./components/Reveal";
+import SmoothScroll from "./components/SmoothScroll";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -38,6 +36,7 @@ const jsonLd = {
 export default function Page() {
   return (
     <>
+      <SmoothScroll />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

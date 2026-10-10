@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Search01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { Menu01Icon, Search01Icon, Logout01Icon, BubbleChatEditIcon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   Popover,
@@ -14,6 +14,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { UserAvatar } from "./UserAvatar";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { FeedbackModal } from "./FeedbackModal";
 
 export default function Topbar({
   onMenu,
@@ -26,6 +27,7 @@ export default function Topbar({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   async function handleLogout() {
     setConfirmingLogout(false);
@@ -94,6 +96,17 @@ export default function Topbar({
               type="button"
               onClick={() => {
                 setMenuOpen(false);
+                setFeedbackOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
+            >
+              <HugeiconsIcon icon={BubbleChatEditIcon} size={16} />
+              Send feedback
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
                 setConfirmingLogout(true);
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
@@ -115,6 +128,7 @@ export default function Topbar({
         onConfirm={handleLogout}
         onClose={() => setConfirmingLogout(false)}
       />
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </header>
   );
 }

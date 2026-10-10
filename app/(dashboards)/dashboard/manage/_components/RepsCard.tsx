@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icons";
@@ -10,7 +11,8 @@ import { UserAvatar } from "../../_components/UserAvatar";
 import { Skeleton } from "../../_components/Skeleton";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { listReps, inviteRep, removeRep } from "@/lib/api/rep";
+import { inviteRep, removeRep } from "@/lib/api/rep";
+import { queryKeys, useSpaceReps } from "@/lib/api/queries";
 import type { SpaceRep as Rep } from "@/lib/api/types";
 import { InviteRepModal } from "./InviteRepModal";
 import { RepActivityPanel } from "./RepActivityPanel";
@@ -21,26 +23,17 @@ export function RepsCard() {
   const spaceId = repSpace?.id;
   // Inviting/removing reps is lead-only on the backend.
   const isLead = repSpace?.membership !== "co";
-  const [reps, setReps] = useState<Rep[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: reps = [], isPending: loading } = useSpaceReps(spaceId);
+  // Edits go straight into the shared cache so the rest of the dashboard sees them.
+  const setReps = (update: Rep[] | ((list: Rep[]) => Rep[])) => {
+    if (!spaceId) return;
+    queryClient.setQueryData<Rep[]>(queryKeys.spaceReps(spaceId), (list = []) =>
+      typeof update === "function" ? update(list) : update,
+    );
+  };
   const [inviteOpen, setInviteOpen] = useState(false);
   const [activityRep, setActivityRep] = useState<Rep | null>(null);
-
-  useEffect(() => {
-    if (!spaceId) return;
-    let cancelled = false;
-    listReps(spaceId)
-      .then((list) => {
-        if (!cancelled) setReps(list);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [spaceId]);
 
   const remove = async (rep: Rep) => {
     if (!spaceId) return;

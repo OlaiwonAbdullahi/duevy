@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { listReps } from "@/lib/api/rep";
+import { useSpaceReps } from "@/lib/api/queries";
 import type { SpaceMembershipSummary } from "@/lib/api/types";
 
 const REP_MEMBERSHIPS = new Set(["rep", "lead", "co"]);
@@ -49,28 +49,6 @@ function normalize(m: RawMembership): SpaceMembershipSummary | null {
 }
 
 /**
- * `/auth/me` only says `membership: "rep"` — it doesn't say whether the caller
- * is the space's lead or a co-rep. Resolve that from `GET /spaces/:id/reps`,
- * once per space+user (several components on a page use this hook).
- */
-const repRoleCache = new Map<string, Promise<"lead" | "co" | null>>();
-
-function fetchRepRole(spaceId: string, userId: string) {
-  const key = `${spaceId}:${userId}`;
-  let pending = repRoleCache.get(key);
-  if (!pending) {
-    pending = listReps(spaceId)
-      .then((reps) => reps.find((r) => r.id === userId)?.role ?? null)
-      .catch(() => {
-        repRoleCache.delete(key); // retry on next mount
-        return null;
-      });
-    repRoleCache.set(key, pending);
-  }
-  return pending;
-}
-
-/**
  * The department the signed-in rep manages, from the session user's
  * memberships. `membership` is refined to `lead` / `co` once the reps list
  * loads (it reads `rep` until then). Returns null for students (or before the
@@ -98,23 +76,15 @@ export function useRepSpace(): SpaceMembershipSummary | null {
     return memberships.find((s) => REP_MEMBERSHIPS.has(s.membership)) ?? null;
   }, [user]);
 
-  const [role, setRole] = useState<{ key: string; role: "lead" | "co" | null } | null>(null);
-  const key = base && user ? `${base.id}:${user.id}` : null;
-
-  useEffect(() => {
-    if (!base || !user || base.membership === "lead" || base.membership === "co") return;
-    let cancelled = false;
-    fetchRepRole(base.id, user.id).then((r) => {
-      if (!cancelled) setRole({ key: `${base.id}:${user.id}`, role: r });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [base, user]);
+  // `/auth/me` only says `membership: "rep"` — it doesn't say whether the caller
+  // is the lead or a co-rep. Resolve that from the space's reps list, which is
+  // cached and shared with every other component that shows the reps.
+  const needsRole = !!base && base.membership !== "lead" && base.membership !== "co";
+  const { data: reps } = useSpaceReps(needsRole ? base.id : undefined);
+  const resolved = (user && reps?.find((r) => r.id === user.id)?.role) ?? null;
 
   return useMemo(() => {
     if (!base) return null;
-    const resolved = role && role.key === key ? role.role : null;
     return resolved ? { ...base, membership: resolved } : base;
-  }, [base, role, key]);
+  }, [base, resolved]);
 }

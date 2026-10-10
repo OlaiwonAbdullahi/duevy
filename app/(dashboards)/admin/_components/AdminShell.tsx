@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Menu01Icon, Notification02Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
+import { ShellSkeleton } from "../../dashboard/_components/Skeleton";
 import Sidebar from "../../dashboard/_components/Sidebar";
 import { ADMIN_GROUPS } from "../../dashboard/_components/nav-config";
 import { ThemeToggle } from "../../dashboard/_components/ThemeToggle";
@@ -26,11 +27,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, [status, user, router, pathname]);
 
   if (status !== "authenticated" || user?.role !== "admin") {
-    return (
-      <div className="grid min-h-screen place-items-center bg-canvas">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cloud border-t-brand" />
-      </div>
-    );
+    return <ShellSkeleton />;
   }
 
   return (

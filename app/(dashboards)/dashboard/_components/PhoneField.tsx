@@ -13,9 +13,8 @@ import {
   isValidPhoneNumber,
   parsePhoneNumberFromString,
   type CountryCode,
-} from "libphonenumber-js";
+} from "libphonenumber-js/min";
 import metadata from "libphonenumber-js/min/metadata";
-import * as Flags from "country-flag-icons/react/3x2";
 import {
   Popover,
   PopoverContent,
@@ -51,11 +50,22 @@ function buildCountries(): Country[] {
   return all;
 }
 
+/** Flags are served from `public/flags` (copied from country-flag-icons) so only the visible ones download. */
 function Flag({ code }: { code: CountryCode }) {
-  const Svg = (Flags as Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>>)[code];
   return (
     <span className="grid h-3.5 w-5 shrink-0 place-items-center overflow-hidden rounded-[3px] bg-cloud ring-1 ring-black/10">
-      {Svg ? <Svg className="h-full w-full" aria-hidden /> : null}
+      {/* eslint-disable-next-line @next/next/no-img-element -- tiny static SVGs, no optimisation needed */}
+      <img
+        src={`/flags/${code}.svg`}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        decoding="async"
+        className="h-full w-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.visibility = "hidden";
+        }}
+      />
     </span>
   );
 }

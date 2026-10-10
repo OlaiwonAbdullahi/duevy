@@ -21,6 +21,7 @@ import {
   type PaymentStatus,
 } from "@/lib/api/dues";
 import { apiClient } from "@/lib/api/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/errors";
 import { nairaFromKobo } from "../../_components/format";
 
@@ -52,6 +53,7 @@ function formatCountdown(ms: number) {
 export default function PaymentPage() {
   const params = useParams<{ reference: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const reference = params.reference;
   const dueId = searchParams.get("dueId");
@@ -84,6 +86,8 @@ export default function PaymentPage() {
       setCheckout(res);
       if (res.status !== "pending") {
         settled.current = true;
+        // Balances, dues and history all changed; refetch them on next view.
+        void queryClient.invalidateQueries();
         return;
       }
       if (manual) {
@@ -113,10 +117,32 @@ export default function PaymentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reference]);
 
+  // Poll while the tab is visible; a hidden tab stops hitting the API and
+  // checks again the moment it's back in view.
   useEffect(() => {
     if (status !== "pending" || notFound) return;
-    const interval = setInterval(() => check(false), BACKGROUND_POLL_MS);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => check(false), BACKGROUND_POLL_MS);
+    };
+    const stop = () => {
+      clearInterval(interval);
+      interval = undefined;
+    };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else {
+        void check(false);
+        start();
+      }
+    };
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, notFound]);
 

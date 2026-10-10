@@ -85,15 +85,18 @@ export function getCollections(
   );
 }
 
+/** Pages 2..totalPages, so the rest can be fetched in parallel once page 1 says how many there are. */
+function remainingPages(totalPages = 1): number[] {
+  return Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => i + 2);
+}
+
 /** Every student on the roster, following pages until `meta.totalPages`. */
 export async function getAllCollections(spaceId: string, dueId: string): Promise<CollectionsResponse> {
   const first = await getCollections(spaceId, dueId, { page: 1 });
-  const students = [...first.data.students];
-  const totalPages = first.meta?.totalPages ?? 1;
-  for (let page = 2; page <= totalPages; page++) {
-    const next = await getCollections(spaceId, dueId, { page });
-    students.push(...next.data.students);
-  }
+  const rest = await Promise.all(
+    remainingPages(first.meta?.totalPages).map((page) => getCollections(spaceId, dueId, { page })),
+  );
+  const students = [first, ...rest].flatMap((p) => p.data.students);
   return { totals: first.data.totals, students };
 }
 
@@ -120,13 +123,10 @@ export function listMembers(
 /** The whole roster, following pages (100 at a time, the API's ceiling). */
 export async function listAllMembers(spaceId: string): Promise<SpaceMember[]> {
   const first = await listMembers(spaceId, { page: 1, perPage: 100 });
-  const members = [...first.data];
-  const totalPages = first.meta?.totalPages ?? 1;
-  for (let page = 2; page <= totalPages; page++) {
-    const next = await listMembers(spaceId, { page, perPage: 100 });
-    members.push(...next.data);
-  }
-  return members;
+  const rest = await Promise.all(
+    remainingPages(first.meta?.totalPages).map((page) => listMembers(spaceId, { page, perPage: 100 })),
+  );
+  return [first, ...rest].flatMap((p) => p.data);
 }
 
 export function removeMember(spaceId: string, userId: string) {
