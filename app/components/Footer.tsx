@@ -28,10 +28,10 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Image
-                src="/icons/logo2.svg"
+                src="/logos/duevy-mark.svg"
                 alt=""
-                width={25}
-                height={32}
+                width={28}
+                height={28}
                 className="h-6 w-auto"
               />
               <span className="text-[#1b2520] text-xl tracking-tight">

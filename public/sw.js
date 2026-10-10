@@ -1,13 +1,13 @@
 /* Duevy service worker — app-shell caching + offline fallback.
  * Bump CACHE when the caching strategy changes to retire old caches. */
-const CACHE = "duevy-v1";
+const CACHE = "duevy-v2";
 const OFFLINE_URL = "/offline";
 
 // Precache the offline page and core icons; tolerate individual failures so a
 // single 404 never blocks activation.
 const CORE = [
   OFFLINE_URL,
-  "/icons/logo.svg",
+  "/logos/duevy-mark.svg",
   "/icons/icon-192.png",
   "/manifest.webmanifest",
 ];

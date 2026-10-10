@@ -87,10 +87,10 @@ export default function Sidebar({
             className="flex items-center gap-2.5 cursor-pointer"
           >
             <Image
-              src="/icons/logo2.svg"
+              src="/logos/duevy-mark.svg"
               alt=""
-              width={25}
-              height={32}
+              width={28}
+              height={28}
               className="h-7 w-auto"
             />
             <span className="flex flex-col">

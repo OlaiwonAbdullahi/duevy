@@ -41,11 +41,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           className="relative inline-flex items-center gap-1 text-white text-xl tracking-tight cursor-pointer w-fit"
         >
           <Image
-            src="/icons/logo2.svg"
+            src="/logos/duevy-mark.svg"
             alt=""
             width={28}
             height={28}
-            className="h-7 w-7 rounded-lg"
+            className="h-8 w-8 rounded-lg bg-white p-1.5"
           />
           Duevy.
         </Link>
@@ -86,10 +86,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             className="flex items-center gap-2 text-[#1b2520] text-xl tracking-tight cursor-pointer"
           >
             <Image
-              src="/icons/logo2.svg"
+              src="/logos/duevy-mark.svg"
               alt=""
-              width={25}
-              height={32}
+              width={28}
+              height={28}
               className="h-6 w-auto"
             />
             Duevy.

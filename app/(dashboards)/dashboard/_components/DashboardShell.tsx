@@ -135,7 +135,9 @@ function ShellInner({ children }: { children: ReactNode }) {
       </div>
 
       <BottomNav isRep={isRep} onMore={() => setMoreOpen(true)} />
-      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} groups={getDashboardGroups(isRep)} />
+      {/* Students already have every page in the tab bar (Settings via the
+          sheet's Profile button), so their sheet is account actions only. */}
+      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} groups={isRep ? getDashboardGroups(true) : []} />
 
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} isRep={isRep} />
     </div>

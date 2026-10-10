@@ -12,7 +12,7 @@ export default function OfflinePage() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-canvas px-6 text-center">
       {/* Precached by public/sw.js so it renders with no network. */}
       <Image
-        src="/icons/logo.svg"
+        src="/icons/icon-192.png"
         alt="Duevy"
         width={64}
         height={64}

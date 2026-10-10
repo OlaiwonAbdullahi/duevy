@@ -11,10 +11,10 @@ export default function NotFound() {
         className="absolute left-6 top-6 flex items-center gap-2 text-xl tracking-tight text-ink cursor-pointer sm:left-10 sm:top-8"
       >
         <Image
-          src="/icons/logo2.svg"
+          src="/logos/duevy-mark.svg"
           alt=""
-          width={25}
-          height={32}
+          width={28}
+          height={28}
           className="h-6 w-auto"
         />
         Duevy.

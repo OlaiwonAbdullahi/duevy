@@ -39,6 +39,8 @@ import {
   BalanceCardButton,
   ActionRow,
   MiniStat,
+  JoinCodeTile,
+  CopyCodeButton,
 } from "./OverviewUI";
 import { KycBanner } from "./KycBanner";
 import { OverviewBodySkeleton, Skeleton } from "../Skeleton";
@@ -144,9 +146,7 @@ export function RepOverview() {
                 label="Outstanding"
                 value={nairaFromKobo(data?.stats.outstanding ?? 0)}
               />
-              <Link href="/dashboard/circle" className="block active:opacity-80">
-                <MiniStat label="Join code" value={data?.joinCode ?? "—"} />
-              </Link>
+              <JoinCodeTile code={data?.joinCode} />
             </div>
           </div>
 
@@ -171,17 +171,21 @@ export function RepOverview() {
               value={`${collectionRate}%`}
               hint={`${data?.space.memberCount ?? 0} members`}
             />
-            <Link
-              href="/dashboard/circle"
-              className="block rounded-3xl transition-opacity duration-300 hover:opacity-80 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-            >
-              <StatCard
-                icon={SquareLock01Icon}
-                label="Join code"
-                value={data?.joinCode ?? "—"}
-                hint="Share to add students"
-              />
-            </Link>
+            {/* The card still opens Circle; the copy button sits on top of it. */}
+            <div className="relative">
+              <Link
+                href="/dashboard/circle"
+                className="block rounded-3xl transition-opacity duration-300 hover:opacity-80 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              >
+                <StatCard
+                  icon={SquareLock01Icon}
+                  label="Join code"
+                  value={data?.joinCode ?? "—"}
+                  hint="Share to add students"
+                />
+              </Link>
+              <CopyCodeButton code={data?.joinCode} className="absolute right-4 top-4" />
+            </div>
           </div>
 
           {/* Rep quick actions. */}

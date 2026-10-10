@@ -13,7 +13,29 @@ export function CategoryPicker({
   onChange: (next: DueType) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+    <>
+    {/* Phones: one swipeable row of chips. */}
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:hidden">
+      {CATEGORIES.map((cat) => {
+        const on = cat === value;
+        return (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => onChange(cat)}
+            aria-pressed={on}
+            className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors cursor-pointer ${
+              on ? "border-brand bg-cloud text-brand" : "border-cloud bg-paper text-ink-soft"
+            }`}
+          >
+            <HugeiconsIcon icon={CATEGORY_ICON[cat]} size={16} />
+            {CATEGORY_LABEL[cat]}
+          </button>
+        );
+      })}
+    </div>
+
+    <div className="hidden grid-cols-5 gap-2 sm:grid">
       {CATEGORIES.map((cat) => {
         const on = cat === value;
         return (
@@ -36,5 +58,6 @@ export function CategoryPicker({
         );
       })}
     </div>
+    </>
   );
 }

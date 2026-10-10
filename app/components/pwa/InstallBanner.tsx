@@ -115,7 +115,7 @@ export function InstallBanner() {
         >
           <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-brand">
             <Image
-              src="/icons/logo.svg"
+              src="/icons/icon-192.png"
               alt="Duevy"
               fill
               sizes="48px"

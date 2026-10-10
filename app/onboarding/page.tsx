@@ -55,7 +55,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-[#fbfaf7]">
       <header className="flex items-center justify-between px-6 pt-6 sm:px-10">
         <Link href="/" className="flex items-center gap-2 text-xl tracking-tight text-[#1b2520]">
-          <Image src="/icons/logo2.svg" alt="" width={25} height={32} className="h-6 w-auto" />
+          <Image src="/logos/duevy-mark.svg" alt="" width={28} height={28} className="h-6 w-auto" />
           Duevy.
         </Link>
         <button

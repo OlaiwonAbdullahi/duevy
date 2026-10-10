@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BankIcon, ArrowRight01Icon, InvoiceIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, InvoiceIcon } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
 import type { Due, Space } from "./types";
 import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
@@ -72,7 +72,7 @@ export function PayDueModal({
           {singleFee !== null ? (
             <>
               <div className="flex items-center justify-between text-xs text-ink-soft">
-                <span>Service fee (2% + ₦20)</span>
+                <span>Service fee</span>
                 <span className="font-medium text-ink">{naira(singleFee)}</span>
               </div>
               <div className="flex items-center justify-between">
@@ -93,23 +93,12 @@ export function PayDueModal({
                 </span>
               </div>
               <p className="text-[11px] leading-relaxed text-ink-soft">
-                Plus a service fee of 2% + ₦20{multi ? ", charged once for all of these" : ""}.
+                Plus a service fee{multi ? ", charged once for all of these" : ""}.
                 You&apos;ll see the exact total on the next screen.
               </p>
             </>
           )}
         </div>
-      </div>
-
-      <div className="mt-5 flex items-start gap-3 rounded-2xl border border-cloud bg-paper p-4">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-canvas text-brand">
-          <HugeiconsIcon icon={BankIcon} size={18} />
-        </span>
-        <p className="text-xs leading-relaxed text-ink-soft">
-          You&apos;ll get <span className="font-semibold text-ink">bank transfer details</span>{" "}
-          — a one-time account number for {multi ? "these dues" : "this due"}. Send the exact
-          amount from any bank app and we&apos;ll confirm it automatically.
-        </p>
       </div>
 
       <button
@@ -118,7 +107,7 @@ export function PayDueModal({
         onClick={onConfirm}
         className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
-        {pending ? "Setting up…" : "Get transfer details"}
+        {pending ? "Setting up…" : "Pay"}
         {!pending && <HugeiconsIcon icon={ArrowRight01Icon} size={16} />}
       </button>
     </Modal>

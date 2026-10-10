@@ -75,7 +75,10 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/logos/duevy-mark.svg", type: "image/svg+xml" },
+    ],
     shortcut: "/favicon.ico",
     apple: "/icons/apple-touch-icon.png",
   },

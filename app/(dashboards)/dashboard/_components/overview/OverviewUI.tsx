@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 import type { ComponentProps, ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../nav-config";
 import { StatCard as BaseStatCard } from "../StatCard";
 import { IconChip } from "../IconChip";
@@ -225,5 +229,65 @@ export function InlineStat({
       {caption && rate !== undefined && <p className="mt-2 text-xs text-ink-soft">{caption}</p>}
       {children && <div className="mt-4">{children}</div>}
     </section>
+  );
+}
+
+/** Copies a join code, flipping to a tick for a moment. */
+export function useCopyCode(code: string | null | undefined) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      toast.success("Join code copied", { description: code });
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast.error("Couldn't copy — long-press to copy the code");
+    }
+  };
+  return { copied, copy };
+}
+
+/** Phone join-code tile: tap anywhere to copy. Sits beside a MiniStat. */
+export function JoinCodeTile({ code }: { code: string | null | undefined }) {
+  const { copied, copy } = useCopyCode(code);
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      disabled={!code}
+      aria-label={code ? `Copy join code ${code}` : "Join code"}
+      className="flex items-center justify-between gap-2 rounded-2xl border border-dashed border-brand/30 bg-cloud/40 px-4 py-3 text-left transition-colors active:bg-cloud cursor-pointer disabled:cursor-default"
+    >
+      <span className="min-w-0">
+        <span className="block text-[11px] font-medium text-ink-soft">Join code</span>
+        <span className="mt-0.5 block truncate font-mono text-base font-semibold tracking-[0.12em] text-ink">
+          {code ?? "—"}
+        </span>
+      </span>
+      {code && (
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-canvas text-brand">
+          <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={15} />
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Round copy button for the desktop join-code stat card's corner. */
+export function CopyCodeButton({ code, className }: { code: string | null | undefined; className?: string }) {
+  const { copied, copy } = useCopyCode(code);
+  if (!code) return null;
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      aria-label={`Copy join code ${code}`}
+      title="Copy join code"
+      className={`grid h-9 w-9 place-items-center rounded-full border border-cloud bg-canvas text-ink-soft transition-colors hover:bg-paper hover:text-brand cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${className ?? ""}`}
+    >
+      <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={15} />
+    </button>
   );
 }

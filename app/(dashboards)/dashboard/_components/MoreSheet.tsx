@@ -73,7 +73,7 @@ export default function MoreSheet({
     router.push("/login");
   }
 
-  // The two flat groups for a student; reps get "Student" + "Rep tools".
+  // Reps get "Student" + "Rep tools"; students pass no groups (no tiles).
   const sections = groups.map((g) => ({
     title: g.title ?? "Menu",
     links: g.links.filter((l) => l.href !== "/dashboard"),

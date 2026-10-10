@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import {
   AlertCircleIcon,
   Building03Icon,
+  ArrowDataTransferHorizontalIcon,
   CheckmarkCircle02Icon,
+  Coins01Icon,
   CreditCardIcon,
   MoneySend01Icon,
   ReceiptDollarIcon,
@@ -87,13 +89,39 @@ export default function AdminOverviewPage() {
         </TableCard>
       ) : loading ? (
         <div className="grid animate-pulse grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 7 }).map((_, i) => (
+          {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="h-28 rounded-3xl border border-cloud bg-canvas" />
           ))}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              icon={Coins01Icon}
+              label="Revenue"
+              value={nairaFromKobo(data?.revenue?.total ?? 0)}
+              hint={`${nairaFromKobo(data?.revenue?.last30Days ?? 0)} in the last 30 days · ${nairaFromKobo(
+                data?.revenue?.checkoutFees ?? 0,
+              )} service fees, ${nairaFromKobo(data?.revenue?.withdrawalFees ?? 0)} withdrawal fees`}
+              tone="brand"
+            />
+            <StatCard
+              icon={ArrowDataTransferHorizontalIcon}
+              label="Transactions"
+              value={(data?.transactions?.count ?? 0).toLocaleString()}
+              hint={`${(data?.transactions?.last30Days ?? 0).toLocaleString()} in the last 30 days · ${nairaFromKobo(
+                data?.transactions?.volume ?? 0,
+              )} paid · ${(data?.transactions?.payouts ?? 0).toLocaleString()} withdrawals`}
+            />
+            <StatCard
+              icon={ReceiptDollarIcon}
+              label="Dues collected"
+              value={nairaFromKobo(data?.duesCollected ?? 0)}
+              hint={`${formatPercent01(
+                data && data.duesTarget ? data.duesCollected / data.duesTarget : 0,
+              )} of the ${nairaFromKobo(data?.duesTarget ?? 0)} target`}
+              tone="brand"
+            />
             <StatCard
               icon={UserMultipleIcon}
               label="Total users"
@@ -111,15 +139,6 @@ export default function AdminOverviewPage() {
               label="Spaces"
               value={String(spaceCount ?? 0)}
               hint="Departments, faculties and clubs"
-            />
-            <StatCard
-              icon={ReceiptDollarIcon}
-              label="Dues collected"
-              value={nairaFromKobo(data?.duesCollected ?? 0)}
-              hint={`${formatPercent01(
-                data && data.duesTarget ? data.duesCollected / data.duesTarget : 0,
-              )} of the ${nairaFromKobo(data?.duesTarget ?? 0)} target`}
-              tone="brand"
             />
             <StatCard
               icon={MoneySend01Icon}

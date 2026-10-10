@@ -43,6 +43,10 @@ export type AdminOverview = {
   duesTarget: number;
   floatHeld: number;
   overdue: { amount: number; count: number };
+  /** Duevy's own revenue in kobo: checkout service fees + withdrawal fees kept. */
+  revenue: { total: number; checkoutFees: number; withdrawalFees: number; last30Days: number };
+  /** Paid student checkouts; `volume` is what students paid (kobo). */
+  transactions: { count: number; volume: number; last30Days: number; payouts: number };
   attention: AttentionCard[];
 };
 
@@ -531,6 +535,28 @@ export function getAdminRoles() {
 
 export function updateAdminRole(role: AdminSubRole, permissions: AdminPermissions) {
   return apiClient.put<AdminRoleInfo>(`/admin/roles/${role}`, permissions);
+}
+
+// ---------------------------------------------------------------------------
+// Payment settings
+// ---------------------------------------------------------------------------
+
+/** `hosted`: redirect students to Bachs's checkout page. `custom`: show a one-time bank account on Duevy. */
+export type CheckoutMode = "hosted" | "custom";
+
+export type PaymentSettings = {
+  checkoutMode: CheckoutMode;
+  updatedAt: string | null;
+  updatedById: string | null;
+};
+
+export function getPaymentSettings() {
+  return apiClient.get<PaymentSettings>("/admin/settings/payments");
+}
+
+/** Super admin only. Applies to checkouts opened afterwards. */
+export function updatePaymentSettings(checkoutMode: CheckoutMode) {
+  return apiClient.put<PaymentSettings>("/admin/settings/payments", { checkoutMode });
 }
 
 // ---------------------------------------------------------------------------
