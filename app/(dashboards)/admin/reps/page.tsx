@@ -296,16 +296,21 @@ export default function AdminRepsPage() {
   }
 
   // Ask the applicant to upload a better student ID (their NIN result stands).
-  const rejectStudentId = async (app: RepApplication, note: string) => {
+  // Resolves whether it worked, so the modal keeps the note on a failure.
+  const rejectStudentId = async (app: RepApplication, note: string): Promise<boolean> => {
     setAppBusy(true);
     try {
       await reviewStudentId(app.userId, { decision: "rejected", note });
       toast.success("Asked the applicant for a new student ID.");
-      const fresh = await getRepApplication(app.userId);
-      setAppDetail(fresh);
-      setApplications((prev) => prev.map((a) => (a.userId === app.userId ? fresh : a)));
+      const fresh = await getRepApplication(app.userId).catch(() => null);
+      if (fresh) {
+        setAppDetail(fresh);
+        setApplications((prev) => prev.map((a) => (a.userId === app.userId ? fresh : a)));
+      }
+      return true;
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't update the student ID.");
+      return false;
     } finally {
       setAppBusy(false);
     }

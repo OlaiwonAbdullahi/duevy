@@ -22,6 +22,16 @@ import {
 
 type CheckState = "done" | "waiting" | "failed" | "todo";
 
+/** Inline spinner for a button whose request is in flight. */
+function Spinner({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn("h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-current/30 border-t-current", className)}
+    />
+  );
+}
+
 const CHECK_STYLE: Record<CheckState, { icon: typeof Clock01Icon; className: string }> = {
   done: { icon: CheckmarkCircle02Icon, className: "bg-emerald-500/10 text-emerald-700" },
   waiting: { icon: Clock01Icon, className: "bg-amber-500/10 text-amber-700" },
@@ -85,14 +95,21 @@ function ReasonForm({
   label,
   placeholder,
   confirmLabel,
+  busyLabel,
   busy,
+  loading = false,
   onCancel,
   onConfirm,
 }: {
   label: string;
   placeholder: string;
   confirmLabel: string;
+  /** Shown on the confirm button while this form's request runs, e.g. "Rejecting…". */
+  busyLabel: string;
+  /** Any request on the modal is running — locks the form. */
   busy: boolean;
+  /** This form's own request is running — spinner on its confirm button. */
+  loading?: boolean;
   onCancel: () => void;
   onConfirm: (reason: string) => void;
 }) {
@@ -105,6 +122,7 @@ function ReasonForm({
         value={reason}
         onChange={(e) => setReason(e.target.value.slice(0, 500))}
         rows={3}
+        disabled={busy}
         placeholder={placeholder}
         className="mt-1.5 w-full rounded-xl border border-cloud bg-canvas px-3.5 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft/60 focus:border-brand focus:ring-2 focus:ring-brand/15"
       />
@@ -116,9 +134,11 @@ function ReasonForm({
           variant="danger-outline"
           size="pill"
           disabled={busy || !reason.trim()}
+          aria-busy={loading || undefined}
           onClick={() => onConfirm(reason.trim())}
         >
-          {confirmLabel}
+          {loading && <Spinner />}
+          {loading ? busyLabel : confirmLabel}
         </Button>
       </div>
     </div>
@@ -170,9 +190,13 @@ export function ApplicationReviewModal({
   onClose: () => void;
   onApprove: (app: RepApplication) => void;
   onReject: (app: RepApplication, reason: string) => void;
-  onRejectId: (app: RepApplication, note: string) => void;
+  /** Resolves `true` once the ID was sent back, so the note form can close. */
+  onRejectId: (app: RepApplication, note: string) => Promise<boolean>;
 }) {
   const [mode, setMode] = useState<"review" | "reject-app" | "reject-id">("review");
+  // Which button started the running request, so only that one shows a spinner.
+  const [action, setAction] = useState<"approve" | "reject" | "reject-id" | null>(null);
+  const running = busy ? action : null;
   const pending = app?.status === "pending";
   const kyc = app?.kyc ?? null;
   const ready = applicationKycReady(kyc);
@@ -192,15 +216,26 @@ export function ApplicationReviewModal({
       icon={UserAdd01Icon}
       title={app?.applicant?.name ?? "Application"}
       description={app?.applicant?.email}
-      onClose={onClose}
+      // Not while a decision is being saved — closing would hide its result.
+      onClose={() => !busy && onClose()}
       footer={
         app && pending && mode === "review" ? (
           <>
             <Button variant="danger-outline" size="pill" disabled={busy} onClick={() => setMode("reject-app")}>
               Reject application
             </Button>
-            <Button variant="brand" size="pill" disabled={busy || !ready} onClick={() => onApprove(app)}>
-              Approve rep
+            <Button
+              variant="brand"
+              size="pill"
+              disabled={busy || !ready}
+              aria-busy={running === "approve" || undefined}
+              onClick={() => {
+                setAction("approve");
+                onApprove(app);
+              }}
+            >
+              {running === "approve" && <Spinner />}
+              {running === "approve" ? "Approving…" : "Approve rep"}
             </Button>
           </>
         ) : undefined
@@ -257,11 +292,14 @@ export function ApplicationReviewModal({
                       label="What should they fix? They'll see this."
                       placeholder="e.g. The photo is blurry — upload a clear photo showing your name and matric number."
                       confirmLabel="Send back"
+                      busyLabel="Sending…"
                       busy={busy}
+                      loading={running === "reject-id"}
                       onCancel={() => setMode("review")}
-                      onConfirm={(note) => {
-                        onRejectId(app, note);
-                        setMode("review");
+                      // Stays open until it's saved, so a failure keeps the note.
+                      onConfirm={async (note) => {
+                        setAction("reject-id");
+                        if (await onRejectId(app, note)) setMode("review");
                       }}
                     />
                   )}
@@ -276,14 +314,33 @@ export function ApplicationReviewModal({
                 label="Why are you rejecting this application? The applicant will be emailed."
                 placeholder="e.g. We couldn't confirm you're a rep for this department."
                 confirmLabel="Reject application"
+                busyLabel="Rejecting…"
                 busy={busy}
+                loading={running === "reject"}
                 onCancel={() => setMode("review")}
-                onConfirm={(reason) => onReject(app, reason)}
+                onConfirm={(reason) => {
+                  setAction("reject");
+                  onReject(app, reason);
+                }}
               />
             ) : ready ? (
-              <p className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
-                Ready to approve. Approving also approves the student ID and creates{" "}
-                <span className="font-semibold">{app.requestedSpace.name}</span>.
+              <p
+                role="status"
+                className="flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800"
+              >
+                {running === "approve" ? (
+                  <>
+                    <Spinner />
+                    <span>
+                      Approving — creating <span className="font-semibold">{app.requestedSpace.name}</span>…
+                    </span>
+                  </>
+                ) : (
+                  <span>
+                    Ready to approve. Approving also approves the student ID and creates{" "}
+                    <span className="font-semibold">{app.requestedSpace.name}</span>.
+                  </span>
+                )}
               </p>
             ) : (
               <p className="rounded-2xl bg-amber-500/10 px-4 py-3 text-xs text-amber-800">
@@ -321,21 +378,33 @@ export function IdReuploadModal({
   onDecide: (decision: "approved" | "rejected", note?: string) => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
+  const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
+  const running = busy ? decision : null;
   return (
     <AdminModal
       wide
       icon={IdIcon}
       title={row.name}
       description={`${row.email}${row.matricNo ? ` · ${row.matricNo}` : ""}`}
-      onClose={onClose}
+      onClose={() => !busy && onClose()}
       footer={
         rejecting ? undefined : (
           <>
             <Button variant="danger-outline" size="pill" disabled={busy} onClick={() => setRejecting(true)}>
               Send back
             </Button>
-            <Button variant="brand" size="pill" disabled={busy} onClick={() => onDecide("approved")}>
-              Approve ID
+            <Button
+              variant="brand"
+              size="pill"
+              disabled={busy}
+              aria-busy={running === "approved" || undefined}
+              onClick={() => {
+                setDecision("approved");
+                onDecide("approved");
+              }}
+            >
+              {running === "approved" && <Spinner />}
+              {running === "approved" ? "Approving…" : "Approve ID"}
             </Button>
           </>
         )
@@ -355,9 +424,14 @@ export function IdReuploadModal({
             label="What should they fix? They'll see this."
             placeholder="e.g. The photo is blurry — upload a clear photo showing your name and matric number."
             confirmLabel="Send back"
+            busyLabel="Sending…"
             busy={busy}
+            loading={running === "rejected"}
             onCancel={() => setRejecting(false)}
-            onConfirm={(note) => onDecide("rejected", note)}
+            onConfirm={(note) => {
+              setDecision("rejected");
+              onDecide("rejected", note);
+            }}
           />
         )}
       </div>

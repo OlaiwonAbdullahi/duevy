@@ -27,6 +27,9 @@ export default function DuesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
+  // Spaces just joined from the code card: shown straight away, marked until the
+  // join is confirmed and their dues have loaded.
+  const [syncing, setSyncing] = useState<Record<string, "joining" | "loading">>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -70,35 +73,52 @@ export default function DuesPage() {
 
   const openSpace = (space: Space) => setSelectedId(space.id);
 
-  // Joining by code is instant — the department drops straight into "Your
-  // spaces" with its starter dues, no approval to wait on.
-  const joinDepartment = async (dept: JoinableDepartment) => {
-    if (spaces.some((s) => s.id === dept.id)) return;
+  // Joining by code needs no approval, so the department goes into "Your
+  // spaces" immediately (optimistically) and is taken back out if the join
+  // fails. Resolves whether it worked, so the code card knows to clear.
+  const joinDepartment = async (dept: JoinableDepartment): Promise<boolean> => {
+    if (spaces.some((s) => s.id === dept.id)) return true;
+    const space: Space = {
+      id: dept.id,
+      name: dept.name,
+      short: dept.short,
+      kind: dept.kind,
+      membership: dept.membership,
+      hue: dept.hue,
+      memberCount: dept.memberCount,
+    };
+    const settle = () =>
+      setSyncing((s) => {
+        const next = { ...s };
+        delete next[dept.id];
+        return next;
+      });
+
+    setSpaces((list) => [space, ...list]);
+    setSyncing((s) => ({ ...s, [dept.id]: "joining" }));
     try {
       await joinSpace(dept.id, { code: dept.code });
-      const space: Space = {
-        id: dept.id,
-        name: dept.name,
-        short: dept.short,
-        kind: dept.kind,
-        membership: dept.membership,
-        hue: dept.hue,
-        memberCount: dept.memberCount,
-      };
-      setSpaces((list) => [space, ...list]);
-      // Lookup previews dues without fees or the student's status, so load the
-      // real student view of the new space's dues.
-      const joined = await listDues({ spaceId: dept.id, perPage: 100 }).catch(() => null);
-      if (joined) {
+    } catch {
+      setSpaces((list) => list.filter((s) => s.id !== dept.id));
+      settle();
+      toast.error(`Couldn't join ${dept.short}. Please try again.`);
+      return false;
+    }
+
+    toast.success(`Joined ${dept.short}`, {
+      description: "It's now under Your spaces.",
+    });
+    // Lookup previews dues without fees or the student's status, so load the
+    // real student view of the new space's dues — in the background.
+    setSyncing((s) => ({ ...s, [dept.id]: "loading" }));
+    void listDues({ spaceId: dept.id, perPage: 100 })
+      .then((joined) => {
         const fresh = joined.data.map(adaptDue);
         setDues((list) => [...fresh, ...list.filter((d) => d.spaceId !== dept.id)]);
-      }
-      toast.success(`Joined ${dept.short}`, {
-        description: "It's now under Your spaces.",
-      });
-    } catch {
-      toast.error(`Couldn't join ${dept.short}. Please try again.`);
-    }
+      })
+      .catch(() => {})
+      .finally(settle);
+    return true;
   };
 
   // One bank-transfer checkout for the whole basket, then the dedicated pay
@@ -224,6 +244,7 @@ export default function DuesPage() {
                           space={space}
                           dues={dues}
                           onOpen={openSpace}
+                          status={syncing[space.id]}
                         />
                       ))}
                     </div>
@@ -246,6 +267,7 @@ export default function DuesPage() {
                           space={space}
                           dues={dues}
                           onOpen={openSpace}
+                          status={syncing[space.id]}
                         />
                       ))}
                     </div>

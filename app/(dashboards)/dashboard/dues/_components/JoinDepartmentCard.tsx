@@ -30,16 +30,20 @@ export function JoinDepartmentCard({
   onJoin,
 }: {
   joinedIds: string[];
-  onJoin: (dept: JoinableDepartment) => void;
+  /** Resolves whether the join worked; the preview stays up until then. */
+  onJoin: (dept: JoinableDepartment) => Promise<boolean>;
 }) {
   const [code, setCode] = useState("");
   const [match, setMatch] = useState<JoinableDepartment | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [looking, setLooking] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   const normalized = code.trim().toUpperCase();
   const ready = normalized.length >= MIN_CODE;
-  const alreadyJoined = match ? joinedIds.includes(match.id) : false;
+  // The page adds the space to joinedIds as soon as Join is pressed, so ignore
+  // that while our own join is still in flight.
+  const alreadyJoined = match && !joining ? joinedIds.includes(match.id) : false;
 
   const handleChange = (value: string) => {
     // Codes are upper-cased alphanumerics with optional dashes (e.g. CSC29-LMYB).
@@ -65,9 +69,13 @@ export function JoinDepartmentCard({
     }
   };
 
-  const join = () => {
-    if (!match || alreadyJoined) return;
-    onJoin(match);
+  const join = async () => {
+    if (!match || alreadyJoined || joining) return;
+    setJoining(true);
+    const ok = await onJoin(match);
+    setJoining(false);
+    // On a failure the preview stays, so they can just press Join again.
+    if (!ok) return;
     setCode("");
     setMatch(null);
     setNotFound(false);
@@ -96,7 +104,8 @@ export function JoinDepartmentCard({
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
             // If a match is already showing, Enter confirms; otherwise it looks up.
-            if (match && !alreadyJoined) join();
+            if (joining) return;
+            if (match && !alreadyJoined) void join();
             else lookup();
           }}
           inputMode="text"
@@ -105,6 +114,7 @@ export function JoinDepartmentCard({
           spellCheck={false}
           placeholder="Enter your department code"
           aria-label="Department join code"
+          disabled={joining}
           className={cn(
             BRAND_INPUT,
             "h-12 flex-1 bg-paper text-base font-semibold uppercase tracking-[0.35em] placeholder:text-sm placeholder:font-normal placeholder:tracking-normal md:text-base",
@@ -114,9 +124,12 @@ export function JoinDepartmentCard({
           variant="brand"
           size="pill-xl"
           onClick={lookup}
-          disabled={!ready || looking}
+          disabled={!ready || looking || joining}
           className="shrink-0"
         >
+          {looking && (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          )}
           {looking ? "Looking up…" : "Look up"}
         </Button>
       </div>
@@ -160,10 +173,15 @@ export function JoinDepartmentCard({
               <Button
                 variant="brand"
                 size="pill"
-                onClick={join}
+                onClick={() => void join()}
+                disabled={joining}
+                aria-busy={joining || undefined}
                 className="shrink-0 self-start sm:self-center"
               >
-                Join department
+                {joining && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                )}
+                {joining ? "Joining…" : "Join department"}
               </Button>
             )}
           </motion.div>
