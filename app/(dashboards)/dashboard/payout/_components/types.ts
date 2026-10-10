@@ -20,4 +20,14 @@ export type Payout = {
   /** Who it was sent to, as the bank holds the name. */
   accountName: string | null;
   failureReason: string | null;
+  /** Optional note the rep added. */
+  note: string | null;
+  /** Raw ISO timestamps for the details timeline. */
+  timeline: {
+    requestedAt: string;
+    processingAt: string | null;
+    settledAt: string | null;
+    failedAt: string | null;
+    reversedAt: string | null;
+  };
 };

@@ -8,8 +8,9 @@ import {
 import { naira } from "./data";
 
 /**
- * Hero card for the payout page. Shows what can be withdrawn now, with the
- * collected total and withdrawals still in flight as context chips.
+ * Hero card for the payout page, on the Duevy doodle artwork. Shows what can
+ * be withdrawn now, with the collected total and withdrawals still in flight
+ * as context chips.
  */
 export function PayoutBalanceCard({
   available,
@@ -30,61 +31,38 @@ export function PayoutBalanceCard({
   onWithdraw: () => void;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-brand p-6 sm:p-8">
-      {/* Dotted texture, fading in from the top-right corner */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-60"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1.5px)",
-          backgroundSize: "18px 18px",
-          maskImage:
-            "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
-          WebkitMaskImage:
-            "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
-        }}
-      />
-      <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
-        <div className="relative h-72 w-72">
-          <span className="absolute inset-0 rounded-[3.25rem] border border-white/15" />
-          <span className="absolute inset-8 rounded-[2.5rem] border border-white/10" />
-          <span className="absolute inset-16 rounded-[1.75rem] border border-white/[0.07]" />
-          <span className="absolute inset-16 rounded-l-[1.75rem] rounded-r-[6rem] border-r border-white/10" />
-        </div>
-      </div>
-      <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-[4rem] border border-white/10" />
-
+    <div className="doodle-card relative overflow-hidden rounded-[28px] p-5  sm:rounded-3xl sm:p-8">
       <div className="relative flex items-center gap-2 text-white/80">
         <HugeiconsIcon icon={Wallet01Icon} size={16} />
         <span className="text-xs font-medium">Available to withdraw</span>
       </div>
-      <p className="relative mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+      <p className="relative mt-2 text-[32px] font-semibold leading-none tracking-tight text-white tabular-nums sm:mt-3 sm:text-4xl">
         {naira(available)}
       </p>
 
-      <div className="relative mt-6 flex flex-wrap gap-3">
+      <div className="relative mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:flex sm:flex-wrap sm:gap-3">
         <Chip label="Total collected" value={naira(collected)} />
-        <Chip label="Withdrawal in progress" value={naira(inFlight)} />
+        <Chip label="In progress" value={naira(inFlight)} />
       </div>
 
-      <div className="relative mt-8 flex flex-wrap gap-3">
+      <div className="relative mt-5 flex gap-2.5 sm:mt-8 sm:flex-wrap sm:gap-3">
         {canWithdraw && (
           <button
             type="button"
             onClick={onWithdraw}
             disabled={available <= 0 || !!blockedReason}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-brand sm:h-12 sm:flex-none sm:px-7 transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             <HugeiconsIcon icon={MoneySend01Icon} size={16} />
-            Withdraw funds
+            Withdraw<span className="max-sm:hidden"> funds</span>
           </button>
         )}
         <Link
           href="/dashboard/payout/breakdown"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/30 px-7 text-sm font-semibold text-white transition-colors duration-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-white/15 px-4 text-sm font-semibold text-white backdrop-blur-sm sm:h-12 sm:flex-none sm:border sm:border-white/30 sm:bg-transparent sm:px-7 transition-colors duration-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           <HugeiconsIcon icon={ChartLineData01Icon} size={16} />
-          View breakdown
+          <span className="max-sm:hidden">View </span>Breakdown
         </Link>
       </div>
       {canWithdraw && blockedReason && (
@@ -96,9 +74,9 @@ export function PayoutBalanceCard({
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-white/12 px-4 py-2.5">
-      <p className="text-[11px] font-medium text-white/70">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-white">{value}</p>
+    <div className="min-w-0 rounded-2xl bg-white/12 px-3.5 py-2.5 backdrop-blur-sm sm:px-4">
+      <p className="truncate text-[11px] font-medium text-white/70">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-semibold text-white tabular-nums">{value}</p>
     </div>
   );
 }

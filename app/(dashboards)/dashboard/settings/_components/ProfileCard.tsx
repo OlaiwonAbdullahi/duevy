@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserIcon, Camera01Icon } from "@hugeicons/core-free-icons";
+import { AnimatePresence, m } from "motion/react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -117,7 +119,38 @@ export function ProfileCard() {
     }
   };
 
+  const meta =
+    [user?.level ? `${user.level} level` : null, user?.matricNo].filter(Boolean).join(" · ") ||
+    "Your account";
+
   return (
+    <>
+    {/* Phones: a profile cover — doodle banner, avatar overlapping with a camera button. */}
+    <section className="overflow-hidden rounded-3xl border border-cloud bg-canvas sm:hidden">
+      <div className="doodle-card h-24" />
+      <div className="px-4 pb-4">
+        <button
+          type="button"
+          onClick={pickAvatar}
+          disabled={uploadingAvatar}
+          aria-label="Change avatar"
+          className="relative -mt-10 block rounded-full ring-4 ring-canvas cursor-pointer disabled:cursor-wait"
+        >
+          <UserAvatar name={name || "?"} src={user?.avatarUrl} size={76} />
+          <span className="absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full bg-brand text-white ring-2 ring-canvas">
+            {uploadingAvatar ? (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <HugeiconsIcon icon={Camera01Icon} size={14} />
+            )}
+          </span>
+        </button>
+        <p className="mt-3 truncate text-lg font-semibold tracking-tight text-ink">{name}</p>
+        <p className="mt-0.5 truncate text-xs text-ink-soft">{meta}</p>
+        {user?.email && <p className="mt-0.5 truncate text-xs text-ink-soft">{user.email}</p>}
+      </div>
+    </section>
+
     <SettingsCard
       icon={UserIcon}
       title="Profile"
@@ -127,14 +160,14 @@ export function ProfileCard() {
           type="button"
           onClick={save}
           disabled={!dirty || saving}
-          className="shrink-0 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-50 cursor-pointer"
+          className="shrink-0 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-50 cursor-pointer max-sm:hidden"
         >
           {saving ? "Saving…" : "Save"}
         </button>
       }
     >
-      {/* Avatar + identity. */}
-      <div className="flex items-center gap-4 border-b border-cloud pb-5">
+      {/* Avatar + identity (phones get the cover above instead). */}
+      <div className="hidden items-center gap-4 border-b border-cloud pb-5 sm:flex">
         <button
           type="button"
           onClick={pickAvatar}
@@ -165,25 +198,25 @@ export function ProfileCard() {
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
-          <p className="truncate text-xs text-ink-soft">
-            {[user?.level ? `${user.level} level` : null, user?.matricNo]
-              .filter(Boolean)
-              .join(" · ") || "Your account"}
-          </p>
+          <p className="truncate text-xs text-ink-soft">{meta}</p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+      <div className="grid grid-cols-2 gap-4 sm:mt-5">
+        <div className="col-span-2">
           <Field label="Full name" value={name} onChange={edit(setName)} />
         </div>
-        <Field
-          label="Email"
-          type="email"
-          value={email}
-          onChange={edit(setEmail)}
-        />
-        <Field label="Phone" value={phone} onChange={edit(setPhone)} />
+        <div className="col-span-2 sm:col-span-1">
+          <Field
+            label="Email"
+            type="email"
+            value={email}
+            onChange={edit(setEmail)}
+          />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
+          <Field label="Phone" value={phone} onChange={edit(setPhone)} />
+        </div>
 
         {/* School-managed, read-only. */}
         <div>
@@ -209,5 +242,26 @@ export function ProfileCard() {
         correct them.
       </p>
     </SettingsCard>
+
+    {/* Phones: Save rides above the tab bar once something's changed. */}
+    <AnimatePresence>
+      {dirty && (
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="fixed inset-x-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-20 sm:hidden"
+        >
+          <div className="mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-cloud bg-canvas/95 p-1.5 pl-5 shadow-[0_18px_40px_-20px_rgba(11,110,79,0.5)] backdrop-blur">
+            <p className="text-xs font-medium text-ink-soft">Unsaved changes</p>
+            <Button variant="brand" size="pill-lg" onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </m.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

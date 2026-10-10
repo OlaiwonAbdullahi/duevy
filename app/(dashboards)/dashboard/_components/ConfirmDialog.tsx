@@ -25,6 +25,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   tone = "danger",
   icon = Alert01Icon,
+  sheetOnMobile = true,
   onConfirm,
   onClose,
 }: {
@@ -35,6 +36,8 @@ export function ConfirmDialog({
   cancelLabel?: string;
   tone?: "danger" | "brand";
   icon?: HugeIcon;
+  /** Bottom sheet on phones (default); false keeps it a centred dialog. */
+  sheetOnMobile?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -43,8 +46,9 @@ export function ConfirmDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
+        sheetOnMobile={sheetOnMobile}
         showCloseButton={false}
-        className="gap-0 rounded-3xl border border-cloud bg-canvas p-6 sm:max-w-sm"
+        className="gap-0 rounded-3xl border border-cloud bg-canvas p-6 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:max-w-sm"
       >
         <DialogHeader className="items-center gap-3 text-center sm:text-center">
           <IconChip icon={icon} size="md" tone={danger ? "danger" : "brand"} />

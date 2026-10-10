@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys, spaceQuery } from "@/lib/api/queries";
 import { toast } from "sonner";
-import { Building03Icon } from "@hugeicons/core-free-icons";
+import { AnimatePresence, m } from "motion/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Building03Icon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,7 +106,29 @@ export function DepartmentProfileCard() {
     }
   };
 
+  const initials = acronym.slice(0, 3).toUpperCase();
+
   return (
+    <>
+    {/* Phones: a profile cover — doodle banner with the crest overlapping it. */}
+    <section className="overflow-hidden rounded-3xl border border-cloud bg-canvas sm:hidden">
+      <div className="doodle-card h-24" />
+      <div className="px-4 pb-4">
+        <div className="-mt-9 flex items-end justify-between gap-3">
+          <span className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-3xl bg-brand text-xl font-semibold text-white shadow-[0_10px_24px_-12px_var(--p-primary)] ring-4 ring-canvas">
+            {initials || "—"}
+          </span>
+          <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
+            <HugeiconsIcon icon={UserMultipleIcon} size={13} />
+            {memberCount.toLocaleString("en-NG")} members
+          </span>
+        </div>
+        <p className="mt-3 text-lg font-semibold leading-snug tracking-tight text-ink">{name}</p>
+        {faculty && <p className="mt-0.5 text-xs text-ink-soft">{faculty}</p>}
+        {about && <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-ink-soft">{about}</p>}
+      </div>
+    </section>
+
     <SettingsCard
       icon={Building03Icon}
       title="Department profile"
@@ -115,16 +139,16 @@ export function DepartmentProfileCard() {
       }
       action={
         !readOnly && (
-          <Button variant="brand" size="pill" onClick={save} disabled={!dirty || saving}>
+          <Button variant="brand" size="pill" onClick={save} disabled={!dirty || saving} className="max-sm:hidden">
             Save
           </Button>
         )
       }
     >
-      {/* Identity strip */}
-      <div className="flex items-center gap-4 border-b border-cloud pb-5">
+      {/* Identity strip (phones get the cover above instead) */}
+      <div className="hidden items-center gap-4 border-b border-cloud pb-5 sm:flex">
         <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-semibold text-white">
-          {acronym.slice(0, 3).toUpperCase()}
+          {initials}
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
@@ -134,7 +158,7 @@ export function DepartmentProfileCard() {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:mt-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Field label="Department name" value={name} onChange={edit(setName)} disabled={readOnly} />
         </div>
@@ -153,5 +177,26 @@ export function DepartmentProfileCard() {
         </div>
       </div>
     </SettingsCard>
+
+    {/* Phones: Save rides above the tab bar once something's changed. */}
+    <AnimatePresence>
+      {!readOnly && dirty && (
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="fixed inset-x-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-20 sm:hidden"
+        >
+          <div className="mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-cloud bg-canvas/95 p-1.5 pl-5 shadow-[0_18px_40px_-20px_rgba(11,110,79,0.5)] backdrop-blur">
+            <p className="text-xs font-medium text-ink-soft">Unsaved changes</p>
+            <Button variant="brand" size="pill-lg" onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </m.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

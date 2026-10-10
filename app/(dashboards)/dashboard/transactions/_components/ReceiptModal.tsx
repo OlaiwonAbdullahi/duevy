@@ -62,76 +62,100 @@ export function ReceiptModal({
     }
   };
 
-  const rows: [string, string][] = [
-    ["Description", txn.title],
-    ["Details", txn.detail],
-    ["Type", TXN_META[txn.type].label],
-    ["Payment method", txn.method],
-    ["Date", formatDateTime(txn.date)],
-  ];
+  const meta = TXN_META[txn.type];
+  const isIn = txn.amount > 0;
 
   return (
     <Modal title="Payment receipt" icon={ReceiptDollarIcon} onClose={onClose}>
-      <div className="rounded-2xl border border-cloud bg-paper p-5 text-center">
-        <p className="text-2xl font-semibold tracking-tight text-ink">
+      {/* Hero — the amount on the doodle artwork. */}
+      <section className="doodle-card relative overflow-hidden rounded-3xl p-5 text-white ">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-medium text-white/75">
+            {isIn ? "Money in" : "Money out"}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm">
+            <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[txn.status]}`} />
+            {status.label}
+          </span>
+        </div>
+        <p
+          className={`mt-3 text-[34px] font-semibold leading-none tracking-tight tabular-nums ${
+            txn.status === "failed" ? "line-through decoration-white/50" : ""
+          }`}
+        >
           {signedAmount(txn)}
         </p>
-        <span
-          className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${status.className}`}
-        >
-          {status.label}
-        </span>
-      </div>
+        <p className="mt-2 truncate text-xs text-white/75">{formatDateTime(txn.date)}</p>
+      </section>
 
-      <dl className="mt-4 flex flex-col">
-        <Row label="Reference" value={txn.reference} mono />
-        {rows.map(([label, value]) => (
-          <Row key={label} label={label} value={value} />
-        ))}
+      {/* What it was for. */}
+      <section className="mt-3 flex items-center gap-3 rounded-2xl border border-cloud bg-canvas p-3.5">
+        <span
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${
+            isIn ? "bg-cloud text-brand" : "bg-paper text-ink-soft"
+          }`}
+        >
+          <HugeiconsIcon icon={meta.icon} size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink">{txn.title}</p>
+          <p className="truncate text-xs text-ink-soft">{txn.detail}</p>
+        </div>
+      </section>
+
+      {/* Details. */}
+      <dl className="mt-3 rounded-2xl bg-paper px-4 py-1">
+        <Row label="Type" value={meta.label} />
+        <Row label="Payment method" value={txn.method} />
+        <Row label="Date" value={formatDateTime(txn.date)} />
+        <Row label="Status" value={status.label} />
       </dl>
 
-      <div className="mt-6 flex gap-3">
+      {/* Reference. */}
+      <section className="mt-3 flex items-center gap-3 rounded-2xl border border-cloud bg-canvas px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium text-ink-soft">Reference</p>
+          <p className="truncate font-mono text-[13px] font-semibold text-ink">{txn.reference}</p>
+        </div>
         <button
           type="button"
           onClick={copyRef}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          aria-label="Copy reference"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cloud text-brand transition-colors active:bg-cloud/70 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={16} />
-          {copied ? "Copied" : "Copy ref"}
         </button>
-        <button
-          type="button"
-          onClick={downloadReceipt}
-          disabled={downloading}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
+      </section>
+
+      <button
+        type="button"
+        onClick={downloadReceipt}
+        disabled={downloading}
+        className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-70 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+      >
+        {downloading ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        ) : (
           <HugeiconsIcon icon={Download01Icon} size={16} />
-          {downloading ? "Downloading…" : "Download PDF"}
-        </button>
-      </div>
+        )}
+        {downloading ? "Downloading…" : "Download receipt"}
+      </button>
     </Modal>
   );
 }
 
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
+/** Status dot colour on the doodle header. */
+const STATUS_DOT: Record<Transaction["status"], string> = {
+  completed: "bg-emerald-300",
+  pending: "bg-amber-300",
+  failed: "bg-rose-300",
+};
+
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-t border-cloud py-3 first:border-t-0">
+    <div className="flex items-start justify-between gap-4 border-t border-ink-soft/10 py-3 first:border-t-0">
       <dt className="shrink-0 text-xs text-ink-soft">{label}</dt>
-      <dd
-        className={`min-w-0 text-right text-sm font-semibold text-ink ${
-          mono ? "tabular-nums" : ""
-        }`}
-      >
-        {value}
-      </dd>
+      <dd className="min-w-0 text-right text-sm font-semibold text-ink">{value}</dd>
     </div>
   );
 }

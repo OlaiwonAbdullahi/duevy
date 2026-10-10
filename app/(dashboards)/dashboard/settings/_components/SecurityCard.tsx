@@ -26,24 +26,40 @@ function ActionRow({
   icon: HugeIconType;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-t border-cloud py-4 first:border-t-0 first:pt-0">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-ink">{title}</p>
-        <p className="mt-0.5 text-xs text-ink-soft">{description}</p>
-      </div>
+    <div className="border-t border-cloud first:border-t-0">
+      {/* Phones: the whole row is the tap target, with a chevron. */}
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-paper px-4 py-2 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer"
+        className="flex w-full items-center gap-3 py-3.5 text-left transition-colors active:bg-paper/60 cursor-pointer sm:hidden"
       >
-        <HugeiconsIcon icon={icon} size={14} />
-        {cta}
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-ink">{title}</span>
+          <span className="mt-0.5 block text-xs text-ink-soft">{description}</span>
+        </span>
+        <HugeiconsIcon icon={ChevronRight} size={16} className="shrink-0 text-ink-soft/70" />
       </button>
+
+      <div className="hidden items-center justify-between gap-4 py-4 sm:flex">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink">{title}</p>
+          <p className="mt-0.5 text-xs text-ink-soft">{description}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClick}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-paper px-4 py-2 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-cloud cursor-pointer"
+        >
+          <HugeiconsIcon icon={icon} size={14} />
+          {cta}
+        </button>
+      </div>
     </div>
   );
 }
 
 type HugeIconType = typeof Shield01Icon;
+const ChevronRight = ArrowRight01Icon;
 
 export function SecurityCard() {
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -55,7 +71,7 @@ export function SecurityCard() {
       title="Security"
       description="Keep your account and payments protected."
     >
-      <div className="flex flex-col">
+      <div className="-my-3.5 flex flex-col sm:-mt-4 sm:mb-0">
         <ActionRow
           title="Password"
           description="Change the password you use to sign in."

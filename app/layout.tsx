@@ -91,6 +91,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Lets the installed app draw under the home indicator; the dashboard's tab
+  // bar pads itself with env(safe-area-inset-bottom).
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#0b6e4f" },
     { media: "(prefers-color-scheme: dark)", color: "#0e1411" },

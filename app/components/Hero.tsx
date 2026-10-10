@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRightIcon } from "./icons";
 import { CheckCircle } from "@hugeicons/core-free-icons";
+import { InstallAppButton } from "./pwa/InstallAppButton";
 
 export default function Hero() {
   return (
@@ -41,12 +42,7 @@ export default function Hero() {
               className="transition-transform duration-500 group-hover:translate-x-1"
             />
           </a>
-          <a
-            href="#how-it-works"
-            className="inline-flex items-center justify-center bg-[#f4f2ec] text-[#1b2520] text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#e6f2ec] transition-colors duration-300 cursor-pointer"
-          >
-            See how it works
-          </a>
+          <InstallAppButton className="inline-flex items-center justify-center gap-2 bg-[#f4f2ec] text-[#1b2520] text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#e6f2ec] transition-colors duration-300 cursor-pointer" />
         </div>
       </div>
     </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getKycStatus, listBanks } from "./payouts";
+import { getKycStatus, listBanks, listSpaceLedger } from "./payouts";
 import { getSpace } from "./spaces";
 import { getRepOverview, listReps } from "./rep";
 import { getStudentOverview } from "./me";
@@ -18,6 +18,7 @@ export const queryKeys = {
   space: (spaceId: string) => ["space", spaceId] as const,
   spaceReps: (spaceId: string) => ["space", spaceId, "reps"] as const,
   repOverview: (spaceId: string) => ["space", spaceId, "overview"] as const,
+  spaceLedger: (spaceId: string) => ["space", spaceId, "ledger"] as const,
   studentOverview: ["me", "overview"] as const,
   banks: ["banks"] as const,
 };
@@ -75,6 +76,14 @@ export const repOverviewQuery = (spaceId: string) => ({
 
 export function useRepOverview(spaceId: string | undefined) {
   return useQuery({ ...repOverviewQuery(spaceId ?? ""), enabled: !!spaceId });
+}
+
+export function useSpaceLedger(spaceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.spaceLedger(spaceId ?? ""),
+    queryFn: () => listSpaceLedger(spaceId!),
+    enabled: !!spaceId,
+  });
 }
 
 export function useStudentOverview() {

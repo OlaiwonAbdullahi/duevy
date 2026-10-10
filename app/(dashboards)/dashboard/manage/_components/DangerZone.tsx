@@ -100,7 +100,7 @@ function Row({
   onClick: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-white/70 p-4 dark:bg-white/5">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-ink">{title}</p>
         <p className="mt-0.5 text-xs text-ink-soft">{description}</p>
@@ -110,7 +110,7 @@ function Row({
         size="pill-lg"
         onClick={onClick}
         disabled={disabled}
-        className="h-10 px-5 text-xs"
+        className="h-9 shrink-0 px-4 text-xs sm:h-10 sm:px-5"
       >
         {action}
       </Button>

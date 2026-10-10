@@ -172,7 +172,7 @@ export function ShellSkeleton({ children }: { children?: React.ReactNode }) {
         ))}
       </aside>
       <div className="flex min-h-screen flex-col lg:pl-72">
-        <div className="flex h-18 items-center gap-4 border-b border-cloud px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center gap-4 border-b border-cloud px-4 sm:h-18 sm:px-6 lg:px-8">
           <Skeleton className="h-9 w-48 rounded-full" />
           <Skeleton className="ml-auto h-9 w-9 rounded-full" />
         </div>

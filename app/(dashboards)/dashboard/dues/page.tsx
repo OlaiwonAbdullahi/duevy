@@ -14,6 +14,8 @@ import type { Due, JoinableDepartment, Space } from "./_components/types";
 import { naira } from "./_components/data";
 import { adaptSpace, adaptDue } from "./_components/adapt";
 import { SpaceCard } from "./_components/SpaceCard";
+import { SpaceRow } from "./_components/SpaceRow";
+import { InlineStat } from "../_components/overview/OverviewUI";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
 import { payPageHref, toastCheckoutError } from "./_components/checkout";
@@ -153,7 +155,9 @@ export default function DuesPage() {
         targetDues.length === 1
           ? await payDue(targetDues[0].id)
           : await payDuesApi(targetDues.map((d) => d.id));
-      goToPayment(checkout.reference);
+      // Hosted checkout: pay on the provider's page, which returns to the pay page.
+      if (checkout.checkoutUrl) window.location.href = checkout.checkoutUrl;
+      else goToPayment(checkout.reference);
     } catch (err) {
       setPendingIds([]);
       toastCheckoutError(err, (reference) => {
@@ -195,13 +199,13 @@ export default function DuesPage() {
                 <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
                   My dues
                 </h1>
-                <p className="mt-1 text-[13px] text-ink-soft">
+                <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
                   Every space you belong to or pay at, in one place. Open one to
                   settle its dues.
                 </p>
               </div>
               {!loading && (
-                <div className="flex items-center gap-4 rounded-2xl border border-cloud bg-canvas px-4 py-3">
+                <div className="hidden items-center gap-4 rounded-2xl sm:flex border border-cloud bg-canvas px-4 py-3">
                   <div>
                     <p className="text-[11px] font-medium text-ink-soft">
                       Total outstanding
@@ -225,7 +229,20 @@ export default function DuesPage() {
                 <ListSkeleton rows={3} />
               </div>
             ) : (
-              <>
+              <div className="flex flex-col">
+                {/* Phones: the portfolio total as an inline headline figure. */}
+                <div className="mt-4 sm:hidden">
+                  <InlineStat
+                    label="Total outstanding"
+                    value={naira(totals.outstanding)}
+                    caption={
+                      totals.overdue > 0
+                        ? `${totals.overdue} overdue · across ${spaces.length} space${spaces.length === 1 ? "" : "s"}`
+                        : `Nothing overdue · across ${spaces.length} space${spaces.length === 1 ? "" : "s"}`
+                    }
+                  />
+                </div>
+
                 {/* Join a new department by code. */}
                 <div id="join" className="mt-6 scroll-mt-24">
                   <JoinDepartmentCard
@@ -247,7 +264,9 @@ export default function DuesPage() {
                       description="Join a department using its code above to see it here."
                     />
                   ) : (
-                    <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <>
+                    <SpaceList spaces={members} dues={dues} onOpen={openSpace} syncing={syncing} />
+                    <div className="mt-3 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                       {members.map((space) => (
                         <SpaceCard
                           key={space.id}
@@ -258,6 +277,7 @@ export default function DuesPage() {
                         />
                       ))}
                     </div>
+                    </>
                   )}
                 </section>
 
@@ -270,7 +290,8 @@ export default function DuesPage() {
                     <p className="mt-0.5 text-xs text-ink-soft">
                       Spaces outside your department where you have dues to settle.
                     </p>
-                    <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <SpaceList spaces={guests} dues={dues} onOpen={openSpace} syncing={syncing} />
+                    <div className="mt-3 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                       {guests.map((space) => (
                         <SpaceCard
                           key={space.id}
@@ -283,7 +304,7 @@ export default function DuesPage() {
                     </div>
                   </section>
                 )}
-              </>
+              </div>
             )}
           </m.div>
         )}
@@ -298,6 +319,27 @@ export default function DuesPage() {
           onConfirm={confirmPay}
         />
       )}
+    </div>
+  );
+}
+
+/** Phones: spaces as rows in one rounded list instead of a grid of tiles. */
+function SpaceList({
+  spaces,
+  dues,
+  onOpen,
+  syncing,
+}: {
+  spaces: Space[];
+  dues: Due[];
+  onOpen: (space: Space) => void;
+  syncing: Record<string, "joining" | "loading">;
+}) {
+  return (
+    <div className="mt-3 divide-y divide-cloud overflow-hidden rounded-3xl border border-cloud bg-canvas sm:hidden">
+      {spaces.map((space) => (
+        <SpaceRow key={space.id} space={space} dues={dues} onOpen={onOpen} status={syncing[space.id]} />
+      ))}
     </div>
   );
 }

@@ -15,19 +15,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { joinLink } from "./data";
 
-/**
- * The join code as a stat card — carries its own copy / share / regenerate
- * actions so access lives in one place instead of a separate full-width panel.
- */
-export function JoinCodeStat({
-  code,
-  spaceName,
-  onRegenerate,
-}: {
-  code: string;
-  spaceName: string;
-  onRegenerate: () => Promise<void>;
-}) {
+/** Copy / copy-link / share / regenerate for a join code, shared by both layouts. */
+function useJoinCodeActions(
+  code: string,
+  spaceName: string,
+  onRegenerate: () => Promise<void>,
+) {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -84,6 +77,25 @@ export function JoinCodeStat({
     }
   };
 
+  return { copied, linkCopied, regenerating, copy, copyLink, share, regenerate };
+}
+
+/**
+ * The join code as a stat card — carries its own copy / share / regenerate
+ * actions so access lives in one place instead of a separate full-width panel.
+ */
+export function JoinCodeStat({
+  code,
+  spaceName,
+  onRegenerate,
+}: {
+  code: string;
+  spaceName: string;
+  onRegenerate: () => Promise<void>;
+}) {
+  const { copied, linkCopied, regenerating, copy, copyLink, share, regenerate } =
+    useJoinCodeActions(code, spaceName, onRegenerate);
+
   return (
     <div className="rounded-3xl border border-cloud bg-canvas p-5">
       <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-cloud text-brand">
@@ -139,6 +151,66 @@ export function JoinCodeStat({
             <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={14} />
           )}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Phone layout: the code beside the member count — tap the code to copy it,
+ * with share / link / regenerate as small round buttons underneath.
+ */
+export function JoinCodeInline({
+  code,
+  spaceName,
+  onRegenerate,
+}: {
+  code: string;
+  spaceName: string;
+  onRegenerate: () => Promise<void>;
+}) {
+  const { copied, linkCopied, regenerating, copy, copyLink, share, regenerate } =
+    useJoinCodeActions(code, spaceName, onRegenerate);
+
+  const iconBtn =
+    "grid h-8 w-8 place-items-center rounded-full border border-cloud bg-canvas text-ink-soft transition-colors active:bg-paper disabled:opacity-60 cursor-pointer";
+
+  return (
+    <div className="flex shrink-0 flex-col items-end">
+      <p className="text-xs font-medium text-ink-soft">Join code</p>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={`Copy join code ${code}`}
+        className="mt-1 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-brand/30 bg-cloud/50 px-2.5 py-1.5 transition-colors active:bg-cloud cursor-pointer"
+      >
+        <span className="font-mono text-sm font-semibold tracking-[0.15em] text-ink">{code}</span>
+        <HugeiconsIcon
+          icon={copied ? CopyCheckIcon : Copy01Icon}
+          size={14}
+          className="shrink-0 text-brand"
+        />
+      </button>
+      <div className="mt-2 flex gap-1.5">
+        <button type="button" onClick={share} aria-label="Share invite" className={iconBtn}>
+          <HugeiconsIcon icon={Share08Icon} size={14} />
+        </button>
+        <button type="button" onClick={copyLink} aria-label="Copy join link" className={iconBtn}>
+          <HugeiconsIcon icon={linkCopied ? Tick02Icon : Link04Icon} size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={regenerate}
+          disabled={regenerating}
+          aria-label="Regenerate code"
+          className={iconBtn}
+        >
+          {regenerating ? (
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-ink-soft/30 border-t-ink-soft" />
+          ) : (
+            <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={14} />
+          )}
+        </button>
       </div>
     </div>
   );

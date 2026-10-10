@@ -62,8 +62,8 @@ export type Checkout = {
   breakdown: { face: number; fee: number; total: number };
   items: CheckoutItem[];
   bankTransfer: CheckoutBankTransfer | null;
-  /** Always `null` — bank transfer is the only method. Kept for older clients. */
-  checkoutUrl: null;
+  /** Hosted checkout page to redirect the student to while pending; `null` otherwise. */
+  checkoutUrl: string | null;
   expiresAt: string;
   paidAt: string | null;
   receivedKobo: number | null;

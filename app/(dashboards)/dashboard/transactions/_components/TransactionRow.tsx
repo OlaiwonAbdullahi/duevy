@@ -21,7 +21,7 @@ export function TransactionRow({
         type="button"
         onClick={() => onSelect(txn)}
         aria-label={`View receipt for ${txn.title}`}
-        className="group flex w-full items-center gap-3 py-3.5 text-left transition-colors duration-300 hover:bg-paper/60 sm:gap-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-2xl"
+        className="group flex w-full items-center gap-3 py-3.5 text-left transition-colors duration-300 hover:bg-paper/60 active:bg-paper/60 sm:gap-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-2xl"
       >
         <span
           className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
@@ -51,8 +51,11 @@ export function TransactionRow({
             {isIn ? "+" : "−"}
             {naira(txn.amount)}
           </span>
+          {/* Phones only flag what's not settled; "Completed" is the norm. */}
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className}`}
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className} ${
+              txn.status === "completed" ? "max-sm:hidden" : ""
+            }`}
           >
             {status.label}
           </span>
@@ -61,7 +64,7 @@ export function TransactionRow({
         <HugeiconsIcon
           icon={ArrowRight01Icon}
           size={16}
-          className="shrink-0 text-ink-soft opacity-0 transition-opacity group-hover:opacity-100"
+          className="shrink-0 text-ink-soft/70 transition-opacity sm:text-ink-soft sm:opacity-0 sm:group-hover:opacity-100"
         />
       </button>
     </li>

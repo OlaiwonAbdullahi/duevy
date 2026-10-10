@@ -12,7 +12,9 @@ import {
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { fromKobo } from "../../_components/format";
+import { fromKobo, naira } from "../../_components/format";
+import { relativeDue } from "../../dues/_components/data";
+import { InlineStat } from "../../_components/overview/OverviewUI";
 import { timeAgo } from "../../_components/notifications-data";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { getAllCollections, remindUnpaid, reassignDue } from "@/lib/api/rep";
@@ -205,7 +207,7 @@ export function DueCollections({
   return (
     <div>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={onBack}
@@ -214,16 +216,29 @@ export function DueCollections({
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
           </button>
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold tracking-tight text-ink sm:text-2xl">
               {due.title}
             </h1>
-            <p className="mt-0.5 text-[13px] text-ink-soft">
+            <p className="mt-0.5 text-[13px] text-ink-soft max-sm:hidden">
               Who&apos;s paid and who still owes.
             </p>
+            <p className="mt-0.5 truncate text-xs text-ink-soft sm:hidden">
+              {naira(due.amount)} per student · {relativeDue(due.dueDate).text}
+            </p>
           </div>
+          {/* Phones: export sits in the header; the other actions are on the card. */}
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={filteredStudents.length === 0}
+            aria-label="Export list as CSV"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-cloud text-ink transition-colors active:bg-paper disabled:opacity-40 cursor-pointer sm:hidden"
+          >
+            <HugeiconsIcon icon={Download04Icon} size={17} />
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden flex-wrap items-center gap-2 sm:flex">
           {/* Withdrawals are space-wide and lead-only; no per-due payouts. */}
           {isLead && (
             <Button variant="brand" size="pill" asChild>
@@ -298,7 +313,44 @@ export function DueCollections({
         </div>
       ) : (
         <>
-          <div className="mt-6">
+          {/* Phones: the due's position as an inline headline figure. */}
+          <div className="mt-4 sm:hidden">
+            <InlineStat
+              label="Collected"
+              value={naira(totals.collected)}
+              rate={totals.rate}
+              caption={`${totals.paid} of ${students.length} students paid · ${naira(
+                totals.expected - totals.collected,
+              )} to go`}
+            >
+              <div className="flex gap-2.5">
+                <Button
+                  variant="brand"
+                  size="pill-lg"
+                  onClick={handleReminders}
+                  disabled={sendingReminders}
+                  className="flex-1"
+                >
+                  {sendingReminders ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  ) : (
+                    <HugeiconsIcon icon={Notification03Icon} size={16} />
+                  )}
+                  {sendingReminders ? "Sending…" : "Remind unpaid"}
+                </Button>
+                {isLead && (
+                  <Button variant="brand-outline" size="pill-lg" asChild className="flex-1">
+                    <Link href="/dashboard/payout">
+                      <HugeiconsIcon icon={MoneySend01Icon} size={16} />
+                      Withdraw
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </InlineStat>
+          </div>
+
+          <div className="mt-6 hidden sm:block">
             <CollectionSummary totals={totals} trackedCount={students.length} />
           </div>
           <CollectionTable

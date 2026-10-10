@@ -21,7 +21,7 @@ export function SettingsCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+    <section className="rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
       <div className="flex items-start gap-3">
         <IconChip icon={icon} />
         <div className="min-w-0 flex-1">
@@ -34,7 +34,7 @@ export function SettingsCard({
         </div>
         {action}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-4 sm:mt-5">{children}</div>
     </section>
   );
 }

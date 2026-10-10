@@ -16,6 +16,8 @@ import { TourProvider } from "./DashboardTour";
 import { getDashboardGroups, isRepOnlyPath, isFeatureGatedPath } from "./nav-config";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import BottomNav from "./BottomNav";
+import MoreSheet from "./MoreSheet";
 import { RepOnlyNotice } from "./RepOnlyNotice";
 import { FeatureUnavailableNotice } from "./FeatureUnavailableNotice";
 
@@ -98,6 +100,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Students who reach a rep-only route by URL get a graceful notice, not the tool.
   // Rep applicants still need the KYC page — it's part of their application.
@@ -116,8 +119,9 @@ function ShellInner({ children }: { children: ReactNode }) {
       />
 
       <div className="flex min-h-screen flex-col lg:pl-72">
-        <Topbar onMenu={() => setOpen(true)} onSearch={() => setSearchOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <Topbar onSearch={() => setSearchOpen(true)} />
+        {/* Bottom padding clears the mobile tab bar (and the home indicator). */}
+        <main className="flex-1 p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(7rem+env(safe-area-inset-bottom))] lg:p-8">
           {isPendingRep && <PendingRepBanner />}
           {!isPendingRep && user && !user.emailVerified && <VerifyEmailBanner />}
           {featureBlocked ? (
@@ -129,6 +133,9 @@ function ShellInner({ children }: { children: ReactNode }) {
           )}
         </main>
       </div>
+
+      <BottomNav isRep={isRep} onMore={() => setMoreOpen(true)} />
+      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} groups={getDashboardGroups(isRep)} />
 
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} isRep={isRep} />
     </div>

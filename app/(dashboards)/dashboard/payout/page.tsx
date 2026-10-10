@@ -42,6 +42,14 @@ function adaptPayout(p: ApiPayout): Payout {
     account: p.account,
     accountName: p.accountName ?? null,
     failureReason: p.failureReason,
+    note: p.note ?? null,
+    timeline: {
+      requestedAt: p.requestedAt,
+      processingAt: p.processingAt,
+      settledAt: p.settledAt,
+      failedAt: p.failedAt,
+      reversedAt: p.reversedAt,
+    },
   };
 }
 
@@ -196,13 +204,13 @@ export default function PayoutPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <span className="mb-2 inline-block rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
+        <span className="mb-2 hidden rounded-full bg-cloud sm:inline-block px-3 py-1 text-[11px] font-semibold text-brand">
           Rep tools
         </span>
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           Payout
         </h1>
-        <p className="mt-1 text-[13px] text-ink-soft">
+        <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
           Send the funds your department has collected to any bank account: yours, a lecturer&apos;s or a vendor&apos;s.
         </p>
       </header>
@@ -217,7 +225,7 @@ export default function PayoutPage() {
           {summary && !summary.kyc.canWithdraw && (
             <Link
               href="/dashboard/kyc"
-              className="mt-6 flex items-center justify-between gap-4 rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 transition-colors hover:bg-amber-100/60"
+              className="mt-4 flex flex-col gap-2 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3.5 transition-colors hover:bg-amber-100/60 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4"
             >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink">Finish verification to withdraw</p>
@@ -230,7 +238,7 @@ export default function PayoutPage() {
               <span className="shrink-0 text-[13px] font-semibold text-brand">Go to verification →</span>
             </Link>
           )}
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+          <div className="mt-4 grid gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[1.3fr_1fr]">
             <PayoutBalanceCard
               available={available}
               collected={fromKobo(summary?.collected ?? 0)}
@@ -249,7 +257,7 @@ export default function PayoutPage() {
         </>
       )}
 
-      <div className="mt-6">
+      <div className="mt-5 sm:mt-6">
         {loading ? (
           <Skeleton className="h-64 rounded-3xl" />
         ) : (

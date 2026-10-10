@@ -27,18 +27,18 @@ export function StudentsTable({
   const hasQuery = query.trim() !== "";
 
   return (
-    <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
+    <section className="mt-6 sm:rounded-3xl sm:border sm:border-cloud sm:bg-canvas sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight text-ink">
+          <h2 className="text-base font-semibold tracking-tight text-ink sm:text-lg">
             Department students
           </h2>
-          <p className="mt-1 text-xs text-ink-soft">
+          <p className="mt-1 text-xs text-ink-soft max-sm:hidden">
             Everyone who joined with your department code.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-full border border-cloud bg-paper px-4 transition-colors focus-within:border-brand sm:w-72">
+        <div className="flex items-center gap-2 rounded-full border border-cloud bg-canvas px-4 transition-colors focus-within:border-brand sm:w-72 sm:bg-paper">
           <HugeiconsIcon
             icon={Search01Icon}
             size={16}
@@ -64,7 +64,7 @@ export function StudentsTable({
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-ink-soft" aria-live="polite">
+      <p className="mt-4 px-1 text-xs text-ink-soft sm:px-0" aria-live="polite">
         Showing{" "}
         <span className="font-semibold text-ink tabular-nums">
           {students.length}
@@ -73,7 +73,7 @@ export function StudentsTable({
         {hasQuery ? " matching your search" : ""}.
       </p>
 
-      <div className="mt-3 overflow-hidden rounded-3xl border border-cloud">
+      <div className="mt-3 overflow-hidden rounded-3xl border border-cloud bg-canvas">
         <div className="hidden grid-cols-[1.3fr_0.8fr_0.55fr_0.75fr] gap-4 bg-paper px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:grid">
           <span>Student</span>
           <span>Matric no</span>
@@ -85,9 +85,22 @@ export function StudentsTable({
           {students.map((student) => (
             <li
               key={student.id}
-              className="grid gap-3 px-4 py-4 transition-colors duration-300 hover:bg-paper/70 md:grid-cols-[1.3fr_0.8fr_0.55fr_0.75fr] md:items-center md:gap-4"
+              className="px-4 py-3.5 transition-colors duration-300 hover:bg-paper/70 md:grid md:grid-cols-[1.3fr_0.8fr_0.55fr_0.75fr] md:items-center md:gap-4 md:py-4"
             >
-              <div className="flex min-w-0 items-center gap-3">
+              {/* Phones: avatar, name + matric · level, joined on the right. */}
+              <div className="flex items-center gap-3 md:hidden">
+                <UserAvatar name={student.name} size={38} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink">{student.name}</p>
+                  <p className="truncate text-xs text-ink-soft">
+                    {student.matricNo}
+                    {student.level ? ` · ${student.level}` : ""}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[11px] text-ink-soft">{student.joinedAt}</span>
+              </div>
+
+              <div className="hidden min-w-0 items-center gap-3 md:flex">
                 <UserAvatar name={student.name} size={40} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">
@@ -98,14 +111,14 @@ export function StudentsTable({
                   </p>
                 </div>
               </div>
-              <p className="text-sm font-medium text-ink">
+              <p className="hidden text-sm font-medium text-ink md:block">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:hidden">
                   Matric:{" "}
                 </span>
                 {student.matricNo}
               </p>
-              <p className="text-sm text-ink-soft">{student.level}</p>
-              <div className="flex items-center justify-between gap-3 md:block">
+              <p className="hidden text-sm text-ink-soft md:block">{student.level}</p>
+              <div className="hidden md:block">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand">
                   <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} />
                   Member

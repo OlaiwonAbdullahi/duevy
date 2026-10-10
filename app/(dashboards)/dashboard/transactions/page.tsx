@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { listTransactions } from "@/lib/api/transactions";
 import type { Transaction as ApiTransaction } from "@/lib/api/types";
 import { StatCard } from "../_components/StatCard";
+import { InlineStat } from "../_components/overview/OverviewUI";
 import { BARE_INPUT } from "../_components/form-styles";
 import type { Transaction, TxnFilter, TxnType } from "./_components/types";
 import { TXN_META, naira, groupByDay } from "./_components/data";
@@ -103,13 +104,30 @@ export default function TransactionsPage() {
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           Transactions
         </h1>
-        <p className="mt-1 text-[13px] text-ink-soft">
+        <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
           Every top up, due and bonus — your full money trail.
         </p>
       </header>
 
+      {/* Phones: money out as the headline figure, money in beside it. */}
+      <div className="mt-4 sm:hidden">
+        <InlineStat
+          label="Money out"
+          value={naira(totals.out)}
+          caption={`Net ${totals.in - totals.out < 0 ? "−" : ""}${naira(totals.in - totals.out)} · settled only`}
+          aside={
+            <div className="shrink-0 text-right">
+              <p className="text-xs font-medium text-ink-soft">Money in</p>
+              <p className="mt-1 text-lg font-semibold tracking-tight text-brand tabular-nums">
+                +{naira(totals.in)}
+              </p>
+            </div>
+          }
+        />
+      </div>
+
       {/* Money in / out this session. */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-3">
         <StatCard
           icon={MoneyReceive02Icon}
           label="Money in"
@@ -131,7 +149,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Controls. */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 flex flex-col gap-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-between">
         <div
           role="tablist"
           aria-label="Filter transactions"
@@ -144,7 +162,7 @@ export default function TransactionsPage() {
               role="tab"
               aria-selected={filter === tab.value}
               onClick={() => setFilter(tab.value)}
-              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              className={`flex-1 rounded-full px-4 py-2 text-[13px] font-semibold sm:flex-none sm:py-1.5 transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                 filter === tab.value
                   ? "bg-brand text-white"
                   : "text-ink-soft hover:text-ink"
@@ -172,7 +190,8 @@ export default function TransactionsPage() {
       </div>
 
       {/* Ledger. */}
-      <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+      {/* Phones: no outer card — each day is its own card below. */}
+      <div className="mt-4 sm:rounded-3xl sm:border sm:border-cloud sm:bg-canvas sm:p-6">
         {loading ? (
           <ul className="flex animate-pulse flex-col gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -206,13 +225,13 @@ export default function TransactionsPage() {
             }
           />
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5 sm:gap-6">
             {groups.map(([label, txns]) => (
               <div key={label}>
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-ink-soft sm:mb-1 sm:px-0">
                   {label}
                 </p>
-                <ul className="flex flex-col">
+                <ul className="flex flex-col max-sm:rounded-3xl max-sm:border max-sm:border-cloud max-sm:bg-canvas max-sm:px-4">
                   {txns.map((txn) => (
                     <TransactionRow
                       key={txn.id}

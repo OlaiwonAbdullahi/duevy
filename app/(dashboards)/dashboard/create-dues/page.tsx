@@ -12,6 +12,7 @@ import {
   Invoice01Icon,
 } from "@hugeicons/core-free-icons";
 import { StatCard } from "../_components/StatCard";
+import { InlineStat } from "../_components/overview/OverviewUI";
 import { naira } from "./_components/data";
 import type { DueDraft, RepDue, RepDueStatus } from "./_components/types";
 import { DueListRow } from "./_components/DueListRow";
@@ -33,6 +34,13 @@ import {
 import type { RepDue as ApiRepDue } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
 import { normalizeDueType } from "../dues/_components/adapt";
+
+const FILTERS: { id: "all" | RepDueStatus; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "draft", label: "Drafts" },
+  { id: "closed", label: "Closed" },
+];
 
 /** API rep due (kobo) → the page's RepDue (whole naira). */
 function adaptRepDue(api: ApiRepDue): RepDue {
@@ -78,6 +86,7 @@ export default function CreateDuesPage() {
   const [toDelete, setToDelete] = useState<RepDue | null>(null);
   const [toClose, setToClose] = useState<RepDue | null>(null);
 
+
   useEffect(() => {
     if (!spaceId) return;
     let cancelled = false;
@@ -113,8 +122,14 @@ export default function CreateDuesPage() {
       (s, d) => s + (d.memberCount - d.paidCount) * d.amount,
       0,
     );
-    return { activeCount: active.length, collected, outstanding };
+    const expected = collected + outstanding;
+    const rate = expected ? Math.round((collected / expected) * 100) : 0;
+    return { activeCount: active.length, collected, outstanding, rate };
   }, [dues]);
+
+  // The status filter only shows on phones, so desktop always sees "all".
+  const [filter, setFilter] = useState<"all" | RepDueStatus>("all");
+  const visibleDues = filter === "all" ? dues : dues.filter((d) => d.status === filter);
 
   const openCreate = () => {
     setEditing(null);
@@ -265,22 +280,22 @@ export default function CreateDuesPage() {
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <header className="flex items-center justify-between gap-4 sm:items-end">
               <div>
-                <span className="mb-2 inline-block rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
+                <span className="mb-2 hidden rounded-full sm:inline-block bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
                   Rep tools
                 </span>
                 <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
                   Dues
                 </h1>
-                <p className="mt-1 text-[13px] text-ink-soft">
+                <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
                   Dues you&apos;ve raised for {repSpace?.name ?? "your department"}.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={openCreate}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_var(--p-primary)] transition-colors duration-300 hover:bg-brand-bright cursor-pointer sm:h-11 sm:gap-2 sm:px-6 sm:shadow-none"
               >
                 <HugeiconsIcon icon={Add01Icon} size={16} />
                 New due
@@ -296,7 +311,19 @@ export default function CreateDuesPage() {
               </div>
             ) : (
               <>
-                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {/* Phones: collected-to-date as an inline headline figure. */}
+                <div className="mt-4 sm:hidden">
+                  <InlineStat
+                    label="Collected on active dues"
+                    value={naira(totals.collected)}
+                    rate={totals.rate}
+                    caption={`${naira(totals.outstanding)} outstanding · ${totals.activeCount} active due${
+                      totals.activeCount === 1 ? "" : "s"
+                    }`}
+                  />
+                </div>
+
+                <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-3">
                   <StatCard
                     icon={Invoice01Icon}
                     label="Active dues"
@@ -315,7 +342,31 @@ export default function CreateDuesPage() {
                   />
                 </div>
 
-                <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+                {/* Phones: filter by status. */}
+                {dues.length > 0 && (
+                  <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:hidden">
+                    {FILTERS.map((f) => {
+                      const count = f.id === "all" ? dues.length : dues.filter((d) => d.status === f.id).length;
+                      const on = filter === f.id;
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setFilter(f.id)}
+                          aria-pressed={on}
+                          className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors cursor-pointer ${
+                            on ? "bg-ink text-canvas" : "border border-cloud bg-canvas text-ink-soft"
+                          }`}
+                        >
+                          {f.label}
+                          <span className={`tabular-nums ${on ? "text-canvas/60" : "text-ink-soft/70"}`}>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-3 rounded-3xl border border-cloud bg-canvas px-4 py-1 sm:mt-4 sm:p-6">
                   {dues.length === 0 ? (
                     <EmptyState
                       icon={Invoice01Icon}
@@ -334,7 +385,12 @@ export default function CreateDuesPage() {
                     />
                   ) : (
                     <ul className="flex flex-col">
-                      {dues.map((due) => (
+                      {visibleDues.length === 0 && (
+                        <li className="py-8 text-center text-xs text-ink-soft sm:hidden">
+                          No {filter} dues.
+                        </li>
+                      )}
+                      {visibleDues.map((due) => (
                         <DueListRow
                           key={due.id}
                           due={due}

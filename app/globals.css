@@ -95,6 +95,7 @@
   --color-ink-soft: var(--p-ink-soft);
   --color-brand: var(--p-primary);
   --color-brand-bright: var(--p-primary-bright);
+  --color-brand-deep: var(--p-primary-deep);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -267,6 +268,25 @@ h1, h2, h3, h4, h5, h6 {
  * Emerald is the default (:root / .dark above) and needs no block. Each theme
  * has a light and a dark scheme, mirroring the emerald pairs.
  */
+/* Lets the tab bar's notch slide: a registered property can be transitioned. */
+@property --notch-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+/*
+ * Doodle artwork behind the rep's "Collected" hero card. It's drawn in Duevy
+ * green; under any other space theme it's blended onto that theme's deep
+ * shade so the card keeps the pattern but matches the space colour.
+ */
+.doodle-card {
+  background: url("/doodle-card.jpg") center / cover no-repeat, var(--p-primary-deep);
+}
+html[data-space-theme] .doodle-card {
+  background-blend-mode: luminosity;
+}
+
 html[data-space-theme="ocean"] {
   --p-primary: #0a5c8c;
   --p-primary-bright: #0e7fb8;

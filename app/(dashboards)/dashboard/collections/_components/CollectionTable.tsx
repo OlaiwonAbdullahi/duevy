@@ -39,9 +39,10 @@ export function CollectionTable({
   const isFiltered = hasQuery || filter !== "all";
 
   return (
-    <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+    <section className="mt-5 sm:mt-6 sm:rounded-3xl sm:border sm:border-cloud sm:bg-canvas sm:p-6">
+      <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {/* The header above already names the due on phones. */}
+        <div className="max-sm:hidden">
           <h2 className="text-lg font-semibold tracking-tight text-ink">
             {due.title}
           </h2>
@@ -65,7 +66,7 @@ export function CollectionTable({
                   role="tab"
                   aria-selected={active}
                   onClick={() => onFilterChange(tab.value)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                  className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold sm:flex-none sm:py-1.5 transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                     active
                       ? "bg-brand text-white"
                       : "text-ink-soft hover:text-ink"
@@ -84,7 +85,7 @@ export function CollectionTable({
             })}
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-cloud bg-paper px-4 transition-colors focus-within:border-brand md:w-72">
+          <div className="flex items-center gap-2 rounded-full border border-cloud bg-canvas px-4 transition-colors focus-within:border-brand sm:bg-paper md:w-72">
             <HugeiconsIcon
               icon={Search01Icon}
               size={16}
@@ -111,7 +112,7 @@ export function CollectionTable({
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-ink-soft" aria-live="polite">
+      <p className="mt-4 px-1 text-xs text-ink-soft sm:px-0" aria-live="polite">
         Showing{" "}
         <span className="font-semibold text-ink tabular-nums">
           {students.length}
@@ -120,7 +121,7 @@ export function CollectionTable({
         {isFiltered ? " matching your filters" : ""}.
       </p>
 
-      <div className="mt-3 overflow-hidden rounded-3xl border border-cloud">
+      <div className="mt-3 overflow-hidden rounded-3xl border border-cloud bg-canvas">
         <div className="hidden grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] gap-4 bg-paper px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:grid">
           <span>Student</span>
           <span>Matric no</span>
@@ -133,9 +134,37 @@ export function CollectionTable({
           {students.map((student) => (
             <li
               key={student.id}
-              className="grid gap-3 px-4 py-4 transition-colors duration-300 hover:bg-paper/70 md:grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] md:items-center md:gap-4"
+              className="px-4 py-3.5 transition-colors duration-300 hover:bg-paper/70 md:grid md:grid-cols-[1.25fr_0.8fr_0.55fr_0.75fr_0.7fr] md:items-center md:gap-4 md:py-4"
             >
-              <div className="flex min-w-0 items-center gap-3">
+              {/* Phones: one line — avatar, name + matric, status on the right. */}
+              <div className="flex items-center gap-3 md:hidden">
+                <UserAvatar name={student.name} size={38} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink">{student.name}</p>
+                  <p className="truncate text-xs text-ink-soft">
+                    {student.matricNo}
+                    {student.level ? ` · ${student.level}` : ""}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      student.status === "paid" ? "bg-cloud text-brand" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    <HugeiconsIcon
+                      icon={student.status === "paid" ? CheckmarkCircle02Icon : Clock01Icon}
+                      size={11}
+                    />
+                    {student.status === "paid" ? "Paid" : "Unpaid"}
+                  </span>
+                  {student.paidAt && (
+                    <p className="mt-0.5 text-[10px] text-ink-soft">{student.paidAt}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="hidden min-w-0 items-center gap-3 md:flex">
                 <UserAvatar name={student.name} size={40} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">
@@ -146,14 +175,14 @@ export function CollectionTable({
                   </p>
                 </div>
               </div>
-              <p className="text-sm font-medium text-ink">
+              <p className="hidden text-sm font-medium text-ink md:block">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft md:hidden">
                   Matric:{" "}
                 </span>
                 {student.matricNo}
               </p>
-              <p className="text-sm text-ink-soft">{student.level}</p>
-              <div>
+              <p className="hidden text-sm text-ink-soft md:block">{student.level}</p>
+              <div className="hidden md:block">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                     student.status === "paid"
@@ -175,7 +204,7 @@ export function CollectionTable({
                   <p className="mt-1 text-xs text-ink-soft">{student.paidAt}</p>
                 )}
               </div>
-              <p className="text-sm font-medium text-ink-soft">
+              <p className="hidden text-sm font-medium text-ink-soft md:block">
                 {student.reference ?? "—"}
               </p>
             </li>

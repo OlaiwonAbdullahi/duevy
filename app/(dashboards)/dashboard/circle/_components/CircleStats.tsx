@@ -1,6 +1,7 @@
 import { UserMultipleIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { StatCard } from "../../_components/StatCard";
-import { JoinCodeStat } from "./JoinCodeStat";
+import { JoinCodeStat, JoinCodeInline } from "./JoinCodeStat";
+import { InlineStat } from "../../_components/overview/OverviewUI";
 
 export function CircleStats({
   studentCount,
@@ -16,7 +17,22 @@ export function CircleStats({
   onRegenerate: () => Promise<void>;
 }) {
   return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-3">
+    <>
+    {/* Phones: inline member count with the join code beside it. */}
+    <div className="mt-4 sm:hidden">
+      <InlineStat
+        label="Members"
+        value={studentCount.toLocaleString("en-NG")}
+        caption={
+          recentCount > 0
+            ? `+${recentCount} joined this week`
+            : "No new joins this week"
+        }
+        aside={<JoinCodeInline code={code} spaceName={spaceName} onRegenerate={onRegenerate} />}
+      />
+    </div>
+
+    <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-3">
       <StatCard
         icon={UserMultipleIcon}
         label="Members"
@@ -32,5 +48,6 @@ export function CircleStats({
       />
       <JoinCodeStat code={code} spaceName={spaceName} onRegenerate={onRegenerate} />
     </div>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Delete02Icon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../../_components/EmptyState";
+import { ConfirmDialog } from "../../_components/ConfirmDialog";
 import { BankLogo } from "./BankLogo";
 import type { Beneficiary } from "./types";
 
@@ -22,32 +23,28 @@ export function BeneficiariesCard({
   onAdd: () => void;
   onRemove: (beneficiary: Beneficiary) => Promise<void>;
 }) {
-  // Two-step remove: the first tap arms the row, the second removes it.
-  const [armedId, setArmedId] = useState<string | null>(null);
+  // Removing asks first; the row shows a spinner while the request runs.
+  const [toRemove, setToRemove] = useState<Beneficiary | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const remove = async (b: Beneficiary) => {
-    if (armedId !== b.id) {
-      setArmedId(b.id);
-      return;
-    }
+    setToRemove(null);
     setRemovingId(b.id);
     try {
       await onRemove(b);
     } finally {
       setRemovingId(null);
-      setArmedId(null);
     }
   };
 
   return (
-    <section className="flex flex-col rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+    <section className="flex flex-col rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-base font-semibold tracking-tight text-ink">
             Beneficiaries
           </h2>
-          <p className="mt-0.5 text-xs text-ink-soft">
+          <p className="mt-0.5 text-xs text-ink-soft max-sm:hidden">
             Accounts you can withdraw to: yours, a lecturer&apos;s or a vendor&apos;s.
           </p>
         </div>
@@ -88,7 +85,7 @@ export function BeneficiariesCard({
           }
         />
       ) : (
-        <ul className="mt-5 max-h-80 divide-y divide-cloud overflow-y-auto rounded-2xl border border-cloud">
+        <ul className="mt-4 max-h-80 sm:mt-5 divide-y divide-cloud overflow-y-auto rounded-2xl border border-cloud">
           {beneficiaries.map((b) => (
             <li key={b.id} className="flex items-center gap-3 px-4 py-3">
               <BankLogo name={b.bankName} code={b.bankCode} className="h-9 w-9 shrink-0 text-[11px]" />
@@ -104,18 +101,13 @@ export function BeneficiariesCard({
               {canManage && (
                 <button
                   type="button"
-                  onClick={() => remove(b)}
-                  onBlur={() => armedId === b.id && removingId !== b.id && setArmedId(null)}
+                  onClick={() => setToRemove(b)}
                   disabled={removingId === b.id}
                   aria-label={`Remove ${b.label ?? b.accountName}`}
-                  className={
-                    armedId === b.id
-                      ? "inline-flex h-8 shrink-0 items-center rounded-full bg-rose-600 px-3 text-[11px] font-semibold text-white transition-colors disabled:opacity-60 cursor-pointer"
-                      : "grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                  }
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-progress cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
-                  {armedId === b.id ? (
-                    removingId === b.id ? "Removing…" : "Remove?"
+                  {removingId === b.id ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-600/30 border-t-rose-600" />
                   ) : (
                     <HugeiconsIcon icon={Delete02Icon} size={16} />
                   )}
@@ -125,6 +117,20 @@ export function BeneficiariesCard({
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={!!toRemove}
+        icon={Delete02Icon}
+        title="Remove this beneficiary?"
+        description={
+          toRemove
+            ? `You won't be able to withdraw to ${toRemove.label ?? toRemove.accountName} (${toRemove.bankName} ${toRemove.accountNumber}) until it's added again. Past withdrawals aren't affected.`
+            : ""
+        }
+        confirmLabel="Remove"
+        onConfirm={() => toRemove && remove(toRemove)}
+        onClose={() => setToRemove(null)}
+      />
     </section>
   );
 }

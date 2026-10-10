@@ -4,6 +4,7 @@ import type {
   DueCategory,
   DueType,
   KycState,
+  LedgerEntry,
   Payout,
   PayoutQuote,
   PayoutSummary,
@@ -29,6 +30,11 @@ export function listBanks() {
 /** Ledger balance, the lead rep's KYC state, beneficiary count and the withdrawal fee schedule. */
 export function getPayoutSummary(spaceId: string) {
   return apiClient.get<PayoutSummary>(`/spaces/${spaceId}/payout/summary`);
+}
+
+/** The space's ledger — collections, withdrawals, fees, refunds — newest first. */
+export function listSpaceLedger(spaceId: string) {
+  return apiClient.get<LedgerEntry[]>(`/spaces/${spaceId}/ledger`);
 }
 
 export type BeneficiaryInput = {

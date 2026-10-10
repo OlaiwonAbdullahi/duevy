@@ -254,6 +254,7 @@ export default function Sidebar({
         open={confirmingLogout}
         icon={Logout01Icon}
         title="Sign out?"
+        sheetOnMobile={false}
         description="You'll need to sign in again to access your dashboard."
         confirmLabel="Sign out"
         tone="danger"

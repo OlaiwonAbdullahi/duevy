@@ -15,7 +15,7 @@ export function TourCard() {
       title="Product tour"
       description="New here, or just forgot where things live? Take the walkthrough again."
     >
-      <Button variant="brand" size="pill" onClick={start}>
+      <Button variant="brand-outline" size="pill" onClick={start} className="max-sm:w-full">
         Replay the tour
       </Button>
     </SettingsCard>

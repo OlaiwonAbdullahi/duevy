@@ -19,10 +19,10 @@ import { DueRow } from "./DueRow";
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "brand" }) {
   return (
-    <div className="rounded-2xl border border-cloud bg-canvas px-4 py-3">
-      <p className="text-[11px] font-medium text-ink-soft">{label}</p>
+    <div className="min-w-0 px-3 py-3 sm:rounded-2xl sm:border sm:border-cloud sm:bg-canvas sm:px-4">
+      <p className="truncate text-[11px] font-medium text-ink-soft">{label}</p>
       <p
-        className={`mt-0.5 text-lg font-semibold tracking-tight ${
+        className={`mt-0.5 truncate text-base font-semibold tracking-tight tabular-nums sm:text-lg ${
           tone === "brand" ? "text-brand" : "text-ink"
         }`}
       >
@@ -90,18 +90,25 @@ export function SpaceDetail({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 rounded-full text-sm font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="inline-flex items-center gap-2 rounded-full text-sm font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
-        <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+        <span className="grid h-9 w-9 place-items-center rounded-full border border-cloud bg-canvas text-ink sm:h-auto sm:w-auto sm:border-0 sm:bg-transparent sm:text-current">
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+        </span>
         All spaces
       </button>
 
       {/* Space header — the crest, up close. */}
-      <div className="mt-4 flex flex-col gap-5 rounded-3xl border border-cloud bg-canvas p-5 sm:flex-row sm:items-center sm:p-6">
-        <SpaceEmblem space={space} glyph={KIND_GLYPH[space.kind]} size={72} />
-        <div className="flex-1">
+      <div className="mt-4 flex items-center gap-4 rounded-3xl border border-cloud bg-canvas p-4 sm:gap-5 sm:p-6">
+        <span className="sm:hidden">
+          <SpaceEmblem space={space} glyph={KIND_GLYPH[space.kind]} size={56} />
+        </span>
+        <span className="hidden sm:inline-grid">
+          <SpaceEmblem space={space} glyph={KIND_GLYPH[space.kind]} size={72} />
+        </span>
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight text-ink">
+            <h2 className="text-base font-semibold leading-snug tracking-tight text-ink sm:text-lg">
               {space.name}
             </h2>
             <span
@@ -126,7 +133,7 @@ export function SpaceDetail({
       </div>
 
       {/* Summary strip. */}
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mt-3 grid grid-cols-3 divide-x divide-cloud rounded-2xl border border-cloud bg-canvas sm:mt-4 sm:gap-3 sm:divide-x-0 sm:rounded-none sm:border-0 sm:bg-transparent">
         <Stat
           label="Outstanding"
           value={settled ? "₦0" : naira(s.outstanding)}
@@ -137,7 +144,7 @@ export function SpaceDetail({
       </div>
 
       {/* Dues list. */}
-      <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+      <div className="mt-4 rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
         <div className="mb-1 flex items-center justify-between">
           <h3 className="text-base font-semibold tracking-tight text-ink">Dues</h3>
           {openDues.length > 0 ? (
@@ -178,9 +185,9 @@ export function SpaceDetail({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="sticky bottom-4 z-10 mt-4"
+            className="sticky bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-10 mt-4 lg:bottom-4"
           >
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 rounded-full border border-cloud bg-canvas/95 p-2 pl-5 shadow-[0_18px_40px_-20px_rgba(11,110,79,0.5)] backdrop-blur">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-full border border-cloud bg-canvas/95 p-1.5 pl-5 sm:gap-4 sm:p-2 sm:pl-5 shadow-[0_18px_40px_-20px_rgba(11,110,79,0.5)] backdrop-blur">
               <div className="min-w-0">
                 <p className="text-xs text-ink-soft">
                   {selectedDues.length} due{selectedDues.length === 1 ? "" : "s"}{" "}

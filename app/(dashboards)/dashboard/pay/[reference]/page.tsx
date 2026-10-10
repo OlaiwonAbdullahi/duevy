@@ -12,6 +12,7 @@ import {
   Clock01Icon,
   Copy01Icon,
   Download04Icon,
+  LinkSquare01Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import {
@@ -224,6 +225,10 @@ export default function PaymentPage() {
   const msLeft = expiresAt ? new Date(expiresAt).getTime() - now : null;
   const items = checkout?.items ?? [];
   const canDownload = !!checkout?.receiptNumber || !!dueId;
+  // Hosted checkout: the student pays on the provider's page, not to an account shown here.
+  const hostedUrl = !bank ? checkout?.checkoutUrl ?? null : null;
+  // The provider appends ?checkout_id= when it sends the student back.
+  const returned = !!searchParams.get("checkout_id");
 
   const backButton = (
     <button
@@ -325,8 +330,8 @@ export default function PaymentPage() {
             </span>
             <h1 className="text-lg font-semibold text-ink">This payment expired</h1>
             <p className="text-sm text-ink-soft">
-              The transfer account closed before any money arrived, so nothing was charged. Go
-              back and start a new payment — you&apos;ll get a fresh account number.
+              This payment closed before any money arrived, so nothing was charged. Go back and
+              start a new payment.
             </p>
             <p className="text-xs text-ink-soft">
               Already sent money to this account? Contact support with reference{" "}
@@ -358,14 +363,66 @@ export default function PaymentPage() {
               <span className="grid h-12 w-12 place-items-center rounded-full bg-brand/10 text-brand">
                 <HugeiconsIcon icon={BankIcon} size={22} />
               </span>
-              <h1 className="text-lg font-semibold text-ink">Pay by bank transfer</h1>
-              <p className="text-sm text-ink-soft">
-                Send the <span className="font-semibold text-ink">exact amount</span> below to
-                this one-time account from any bank app. We&apos;ll confirm it automatically.
-              </p>
+              {hostedUrl ? (
+                <>
+                  <h1 className="text-lg font-semibold text-ink">
+                    {returned ? "Confirming your payment" : "Complete your payment"}
+                  </h1>
+                  <p className="text-sm text-ink-soft">
+                    {returned
+                      ? "Finished on the checkout page? We'll confirm it here automatically — usually within a minute."
+                      : "You'll pay on our secure checkout page, then come back here. We'll confirm it automatically."}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-lg font-semibold text-ink">Pay by bank transfer</h1>
+                  <p className="text-sm text-ink-soft">
+                    Send the <span className="font-semibold text-ink">exact amount</span> below to
+                    this one-time account from any bank app. We&apos;ll confirm it automatically.
+                  </p>
+                </>
+              )}
             </div>
 
-            {bank ? (
+            {hostedUrl ? (
+              <div className="mt-5 flex flex-col gap-3">
+                <div className="rounded-2xl border border-brand/20 bg-cloud/60 p-4 text-center">
+                  <p className="text-[11px] font-medium text-ink-soft">Amount to pay</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                    {total !== null ? exactNaira(total) : "—"}
+                  </p>
+                </div>
+
+                <a
+                  href={hostedUrl}
+                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                >
+                  <HugeiconsIcon icon={LinkSquare01Icon} size={16} />
+                  {returned ? "Back to the checkout page" : "Continue to payment"}
+                </a>
+
+                {msLeft !== null && (
+                  <p
+                    className={`inline-flex items-center justify-center gap-1.5 text-xs ${
+                      msLeft > 0 ? "text-ink-soft" : "text-rose-600"
+                    }`}
+                  >
+                    <HugeiconsIcon icon={Clock01Icon} size={13} />
+                    {msLeft > 0 ? (
+                      <>
+                        Payment link expires in{" "}
+                        <span className="font-semibold tabular-nums">
+                          {formatCountdown(msLeft)}
+                        </span>
+                      </>
+                    ) : (
+                      "This payment link has expired. Checking for a final update…"
+                    )}
+                  </p>
+                )}
+              </div>
+            ) : bank ? (
               <div className="mt-5 flex flex-col gap-3">
                 <div className="rounded-2xl border border-brand/20 bg-cloud/60 p-4">
                   <p className="text-[11px] font-medium text-ink-soft">Amount to send</p>
@@ -438,21 +495,31 @@ export default function PaymentPage() {
 
             <div className="mt-5 flex items-center justify-center gap-2 text-xs text-ink-soft">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-              Waiting for your transfer — this page updates on its own.
+              {hostedUrl
+                ? "Waiting for confirmation — this page updates on its own."
+                : "Waiting for your transfer — this page updates on its own."}
             </div>
 
             <button
               type="button"
               disabled={checking}
               onClick={() => check(true)}
-              className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              className={`mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors duration-300 disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                hostedUrl
+                  ? "border border-cloud text-ink hover:border-brand/40 hover:text-brand"
+                  : "bg-brand text-white hover:bg-brand-bright"
+              }`}
             >
               {checking ? (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <span
+                  className={`h-4 w-4 animate-spin rounded-full border-2 ${
+                    hostedUrl ? "border-brand/30 border-t-brand" : "border-white/40 border-t-white"
+                  }`}
+                />
               ) : (
                 <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
               )}
-              {checking ? "Checking…" : "I've sent the money"}
+              {checking ? "Checking…" : hostedUrl ? "I've paid — check now" : "I've sent the money"}
             </button>
             <p className="mt-3 text-center text-[11px] text-ink-soft">
               Reference <span className="font-semibold text-ink">{reference}</span>

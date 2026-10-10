@@ -82,7 +82,7 @@ export function JoinDepartmentCard({
   };
 
   return (
-    <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+    <section className="rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
       <div className="flex items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cloud text-brand">
           <HugeiconsIcon icon={UserAdd01Icon} size={18} />

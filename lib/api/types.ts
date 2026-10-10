@@ -272,6 +272,29 @@ export type RepOverview = {
   }>;
 };
 
+/** One line of a space's ledger (`GET /spaces/:spaceId/ledger`). Amounts in kobo. */
+export type LedgerEntryType =
+  | "due_payment"
+  | "manual_credit"
+  | "payout"
+  | "payout_fee"
+  | "payout_reversal"
+  | "refund";
+
+export type LedgerEntry = {
+  id: string;
+  type: LedgerEntryType;
+  direction: "credit" | "debit";
+  amount: number;
+  /** Positive for credits, negative for debits. */
+  signedAmount: number;
+  reference: string | null;
+  description: string | null;
+  dueId: string | null;
+  payoutId: string | null;
+  createdAt: string;
+};
+
 // ---- Payouts (§10) --------------------------------------------------------
 
 /** `pending → processing → success | failed | reversed`. Failed/reversed amounts go back to the balance. */

@@ -12,6 +12,8 @@ import {
   UserAdd01Icon,
   Alert01Icon,
   AiChat01Icon,
+  Wallet01Icon,
+  Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { useStudentOverview } from "@/lib/api/queries";
@@ -26,7 +28,15 @@ import {
 } from "../../dues/_components/data";
 import { TXN_META, formatTime } from "../../transactions/_components/data";
 import type { HugeIcon } from "../nav-config";
-import { StatCard, QuickAction, PanelHeader } from "./OverviewUI";
+import {
+  StatCard,
+  QuickAction,
+  PanelHeader,
+  BalanceCard,
+  BalanceCardButton,
+  ActionRow,
+  MiniStat,
+} from "./OverviewUI";
 import { OverviewBodySkeleton } from "../Skeleton";
 import { FEATURES } from "@/lib/features";
 
@@ -73,7 +83,8 @@ export function StudentOverview() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      {/* Phones get the greeting in the top bar instead. */}
+      <div className="hidden gap-4 sm:flex sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
             Welcome back, {name}
@@ -103,7 +114,49 @@ export function StudentOverview() {
         <OverviewBodySkeleton />
       ) : (
         <>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Phones: banking-app home — hero balance, shortcuts, two figures. */}
+          <div className="sm:hidden">
+            <BalanceCard
+              doodle
+              label="Outstanding dues"
+              value={nairaFromKobo(data?.outstanding.amount ?? 0)}
+              hint={`${data?.outstanding.count ?? 0} due${
+                data?.outstanding.count === 1 ? "" : "s"
+              } awaiting payment`}
+            >
+              <div className="flex gap-2.5">
+                <BalanceCardButton href="/dashboard/dues" icon={Wallet01Icon} label="Pay dues" />
+                <BalanceCardButton
+                  href="/dashboard/transactions"
+                  icon={ReceiptDollarIcon}
+                  label="History"
+                  variant="ghost"
+                />
+              </div>
+            </BalanceCard>
+
+            <ActionRow
+              actions={[
+                { href: "/dashboard/dues", icon: Invoice01Icon, label: "My dues" },
+                { href: "/dashboard/dues#join", icon: UserAdd01Icon, label: "Join dept." },
+                { href: "/dashboard/transactions", icon: ReceiptDollarIcon, label: "Receipts" },
+                FEATURES.assistant
+                  ? { href: "/dashboard/assistant", icon: AiChat01Icon, label: "Ask Duey" }
+                  : { href: "/dashboard/settings", icon: Settings02Icon, label: "Settings" },
+              ]}
+            />
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <MiniStat label="Paid this session" value={nairaFromKobo(data?.paidThisSession ?? 0)} />
+              <MiniStat
+                label="Overdue"
+                value={overdueCount === 0 ? "None" : String(overdueCount)}
+                tone={overdueCount > 0 ? "danger" : undefined}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
             <StatCard
               icon={Invoice01Icon}
               label="Outstanding dues"
@@ -127,7 +180,7 @@ export function StudentOverview() {
             />
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
             <QuickAction
               href="/dashboard/dues"
               icon={Invoice01Icon}
@@ -185,7 +238,7 @@ export function StudentOverview() {
                 </ul>
               )}
 
-              <Button variant="brand" size="pill-lg" asChild className="mt-4 w-full">
+              <Button variant="brand" size="pill-lg" asChild className="mt-4 w-full max-sm:hidden">
                 <Link href="/dashboard/dues">
                   Pay dues
                   <HugeiconsIcon icon={ArrowRight01Icon} size={16} />

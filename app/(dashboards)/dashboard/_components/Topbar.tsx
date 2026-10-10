@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Search01Icon, Logout01Icon, BubbleChatEditIcon } from "@hugeicons/core-free-icons";
+import { Search01Icon, Logout01Icon, BubbleChatEditIcon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   Popover,
@@ -16,13 +17,12 @@ import { UserAvatar } from "./UserAvatar";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FeedbackModal } from "./FeedbackModal";
 
-export default function Topbar({
-  onMenu,
-  onSearch,
-}: {
-  onMenu: () => void;
-  onSearch: () => void;
-}) {
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+export default function Topbar({ onSearch }: { onSearch: () => void }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,17 +35,23 @@ export default function Topbar({
     router.push("/login");
   }
 
+  const firstName = user?.name?.split(" ")[0] ?? "there";
+
   return (
-    <header className="sticky top-0 z-30 flex h-18 items-center gap-2.5 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:gap-4 sm:px-6 lg:px-8">
-      {/* Mobile menu */}
-      <button
-        onClick={onMenu}
-        data-tour="menu"
-        aria-label="Open menu"
-        className="lg:hidden grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-paper transition-colors duration-300 cursor-pointer"
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2.5 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:h-18 sm:gap-4 sm:px-6 lg:px-8">
+      {/* Phones: app-style greeting in place of the search field. The tab bar
+          handles navigation, so there's no hamburger up here. */}
+      <Link
+        href="/dashboard/settings"
+        aria-label="Account settings"
+        className="flex min-w-0 items-center gap-2.5 rounded-full sm:hidden"
       >
-        <HugeiconsIcon icon={Menu01Icon} size={22} />
-      </button>
+        <UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} size={38} />
+        <span className="min-w-0 leading-tight">
+          <span className="block text-[11px] font-medium text-ink-soft">{greeting()}</span>
+          <span className="block truncate text-[15px] font-semibold text-ink">{firstName}</span>
+        </span>
+      </Link>
 
       {/* Search trigger — opens the ⌘K command palette. */}
       <button
@@ -66,12 +72,12 @@ export default function Topbar({
         onClick={onSearch}
         data-tour="search"
         aria-label="Search"
-        className="grid h-10 w-10 place-items-center rounded-full text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:hidden"
+        className="ml-auto grid h-10 w-10 place-items-center rounded-full text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:hidden"
       >
         <HugeiconsIcon icon={Search01Icon} size={20} />
       </button>
 
-      <div className="ml-auto flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1 sm:ml-auto sm:gap-3">
         <ThemeToggle />
 
         <NotificationsMenu />
@@ -81,7 +87,7 @@ export default function Topbar({
             <button
               type="button"
               aria-label="Account menu"
-              className="grid place-items-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              className="hidden place-items-center sm:grid rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               <UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} size={36} />
             </button>
@@ -122,6 +128,7 @@ export default function Topbar({
         open={confirmingLogout}
         icon={Logout01Icon}
         title="Sign out?"
+        sheetOnMobile={false}
         description="You'll need to sign in again to access your dashboard."
         confirmLabel="Sign out"
         tone="danger"

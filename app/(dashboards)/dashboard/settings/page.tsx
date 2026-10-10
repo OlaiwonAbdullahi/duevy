@@ -15,12 +15,12 @@ export default function SettingsPage() {
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           Settings
         </h1>
-        <p className="mt-1 text-[13px] text-ink-soft">
+        <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
           Manage your profile, notifications and how Duevy looks.
         </p>
       </header>
 
-      <div className="mt-6 flex flex-col gap-5">
+      <div className="mt-4 flex flex-col gap-4 sm:mt-6 sm:gap-5">
         <ProfileCard />
         <VerificationCard />
         <NotificationsCard />

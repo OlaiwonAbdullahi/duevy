@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { AnimatePresence, m } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -93,6 +94,8 @@ export function InstallBanner() {
   };
 
   const show = !hidden && (promptEvent !== null || iosHint);
+  // The dashboard has a floating tab bar below lg; sit above it.
+  const aboveTabBar = usePathname().startsWith("/dashboard");
 
   return (
     <AnimatePresence>
@@ -102,7 +105,11 @@ export function InstallBanner() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-x-0 bottom-4 z-60 mx-auto flex w-[calc(100%-2rem)] max-w-md items-center gap-3 rounded-3xl border border-cloud bg-canvas/95 p-3 pr-2 shadow-[0_20px_50px_-24px_rgba(11,110,79,0.5)] backdrop-blur sm:bottom-6"
+          className={`fixed inset-x-0 z-60 mx-auto flex w-[calc(100%-2rem)] max-w-md items-center gap-3 rounded-3xl border border-cloud bg-canvas/95 p-3 pr-2 shadow-[0_20px_50px_-24px_rgba(11,110,79,0.5)] backdrop-blur ${
+            aboveTabBar
+              ? "bottom-[calc(6.5rem+env(safe-area-inset-bottom))] lg:bottom-6"
+              : "bottom-4 sm:bottom-6"
+          }`}
           role="dialog"
           aria-label="Install Duevy"
         >
