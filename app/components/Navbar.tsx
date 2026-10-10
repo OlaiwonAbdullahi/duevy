@@ -7,7 +7,7 @@ import Link from "next/link";
 
 const links = [
   { label: "How it works", href: "#how-it-works" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Pricing", href: "#pricing-fee" },
 ];
 
 export default function Navbar() {

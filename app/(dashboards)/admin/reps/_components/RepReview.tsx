@@ -261,6 +261,10 @@ export function ApplicationReviewModal({
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <ModalField label="Matric number">{app.applicant?.matricNo ?? "—"}</ModalField>
               <ModalField label="Level">{app.applicant?.level ?? "—"}</ModalField>
+              <ModalField label="Phone">{app.applicant?.phone || "—"}</ModalField>
+              <ModalField label="Gender">
+                <span className="capitalize">{app.applicant?.gender || "—"}</span>
+              </ModalField>
               <ModalField label="Applied">{new Date(app.submittedAt).toLocaleDateString("en-NG")}</ModalField>
             </div>
           </div>

@@ -1,21 +1,24 @@
 import Image from "next/image";
 
+// Only links that go somewhere; add more as their pages ship.
 const columns = [
   {
     title: "Product",
-    links: ["How it works", "Pricing", "Demo"],
-  },
-  {
-    title: "Audience",
-    links: ["For Reps", "For Students", "For Departments"],
+    links: [
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Pricing", href: "/#pricing-fee" },
+    ],
   },
   {
     title: "Company",
-    links: ["About", "Contact", "Career"],
+    links: [{ label: "Contact", href: "mailto:useduevy@gmail.com" }],
   },
   {
     title: "Legal",
-    links: ["Privacy", "Terms"],
+    links: [
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+    ],
   },
 ];
 
@@ -44,7 +47,7 @@ export default function Footer() {
           </div>
 
           {/* Link columns */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
             {columns.map((col) => (
               <div key={col.title}>
                 <p className="text-[#1b2520] font-semibold text-sm mb-4">
@@ -52,12 +55,12 @@ export default function Footer() {
                 </p>
                 <ul className="flex flex-col gap-3">
                   {col.links.map((link) => (
-                    <li key={link}>
+                    <li key={link.label}>
                       <a
-                        href="#"
+                        href={link.href}
                         className="text-[#7a847f] text-[15px] font-medium hover:text-[#1b2520] transition-colors duration-300 cursor-pointer"
                       >
-                        {link}
+                        {link.label}
                       </a>
                     </li>
                   ))}

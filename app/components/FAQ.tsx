@@ -10,7 +10,7 @@ const faqs = [
   },
   {
     q: "How is my money kept safe?",
-    a: "Student funds sit in a separate, partitioned account from platform revenue, on Bachs's secure rails.",
+    a: "Student funds sit in a safe on and secure payment rails.",
   },
   {
     q: "Can a rep run away with the money?",
@@ -20,10 +20,7 @@ const faqs = [
     q: "What does it cost?",
     a: "2% + ₦20 per dues payment, capped at ₦2,020. Withdrawals cost ₦100 under ₦50,000 and ₦200 from ₦50,000.",
   },
-  {
-    q: "Which schools can use it?",
-    a: "Duevy is launching at LAUTECH and is built to expand to any Nigerian university.",
-  },
+  
 ];
 
 export default function FAQ() {

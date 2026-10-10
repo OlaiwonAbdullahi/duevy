@@ -151,6 +151,14 @@ export type AdminRep = {
   id: string;
   name: string;
   email?: string;
+  emailVerified?: boolean;
+  phone?: string | null;
+  /** From KYC: "male" | "female". */
+  gender?: string | null;
+  matricNo?: string | null;
+  level?: string | null;
+  institution?: string;
+  joinedAt?: string;
   status: "active" | "suspended" | "pending";
   verification?: "verified" | "pending" | "unverified";
   heldAmount: number;
@@ -158,6 +166,24 @@ export type AdminRep = {
   collectionRate: number;
   payoutsFrozen?: boolean;
   departmentIds?: string[];
+  spaces?: { id: string; name: string; short: string; role: "lead" | "co" | string }[];
+  /** KYC as it stands now. NIN/BVN/DOB are never stored, so never returned. */
+  kyc?: {
+    status: ApplicationKyc["identity"]["status"];
+    studentIdStatus: ApplicationKyc["studentId"]["status"];
+    payoutsActive: boolean;
+    submittedAt: string | null;
+    payoutAccount: { bankName: string | null; accountMasked: string; accountName: string | null } | null;
+  };
+  /** What the rep filled in at sign-up. */
+  application?: {
+    status: RepApplicationStatus;
+    requestedSpace: { name: string; short: string; kind: string; school: string; faculty: string | null };
+    coRepInvites: string[];
+    referralCode: string | null;
+    submittedAt: string;
+    reviewedAt: string | null;
+  } | null;
 };
 
 export type RepApplicationStatus = "pending" | "approved" | "rejected";
@@ -226,6 +252,10 @@ export type RepApplication = {
     emailVerified?: boolean;
     matricNo?: string | null;
     level?: string | null;
+    /** From KYC. */
+    phone?: string | null;
+    /** From KYC: "male" | "female". */
+    gender?: string | null;
   } | null;
   /** NIN verification (Bachs) and the student ID card — reviewed before final approval. */
   kyc: ApplicationKyc | null;

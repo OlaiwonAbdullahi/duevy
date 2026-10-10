@@ -84,6 +84,15 @@ const APPLICATION_TONES: Record<RepApplicationStatus, StatusTone> = {
   rejected: "bad",
 };
 
+function RepDetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-4 last:mb-0">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">{title}</h3>
+      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
 function rateTone(rate: number): StatusTone {
   if (rate >= 0.85) return "ok";
   if (rate >= 0.5) return "warn";
@@ -484,13 +493,14 @@ export default function AdminRepsPage() {
                     onClick={() => setSelectedId(r.id)}
                     className="cursor-pointer transition-colors hover:bg-paper/40"
                   >
-                    <td className="p-4 font-semibold text-ink">
-                      {r.name}
+                    <td className="p-4">
+                      <span className="font-semibold text-ink">{r.name}</span>
                       {r.payoutsFrozen && (
                         <span className="ml-2 inline-block align-middle">
                           <StatusBadge tone="bad">Payouts frozen</StatusBadge>
                         </span>
                       )}
+                      {r.email && <p className="mt-0.5 text-xs text-ink-soft">{r.email}</p>}
                     </td>
                     <td className="p-4 font-medium">{spacesLabel(r)}</td>
                     <td className="p-4">
@@ -561,7 +571,103 @@ export default function AdminRepsPage() {
                 </>
               }
             >
-              <div className="grid gap-3 sm:grid-cols-2">
+              <RepDetailSection title="Contact & student details">
+                <ModalField label="Email">
+                  <span className="break-all">{selected.email ?? "—"}</span>
+                  {selected.email && (
+                    <span className="ml-2 inline-block align-middle">
+                      <StatusBadge tone={selected.emailVerified ? "ok" : "warn"}>
+                        {selected.emailVerified ? "verified" : "unverified"}
+                      </StatusBadge>
+                    </span>
+                  )}
+                </ModalField>
+                <ModalField label="Phone">{selected.phone || "—"}</ModalField>
+                <ModalField label="Gender">
+                  <span className="capitalize">{selected.gender || "—"}</span>
+                </ModalField>
+                <ModalField label="Matric number">{selected.matricNo || "—"}</ModalField>
+                <ModalField label="Level">{selected.level || "—"}</ModalField>
+                <ModalField label="Institution">{selected.institution || "—"}</ModalField>
+                <ModalField label="Joined">
+                  {selected.joinedAt ? formatDate(selected.joinedAt) : "—"}
+                </ModalField>
+              </RepDetailSection>
+
+              {selected.application && (
+                <RepDetailSection title="Sign-up application">
+                  <ModalField label="Requested space">
+                    {selected.application.requestedSpace.name} (
+                    {selected.application.requestedSpace.short})
+                  </ModalField>
+                  <ModalField label="Space type">
+                    <span className="capitalize">{selected.application.requestedSpace.kind}</span>
+                  </ModalField>
+                  <ModalField label="School">{selected.application.requestedSpace.school}</ModalField>
+                  <ModalField label="Faculty">
+                    {selected.application.requestedSpace.faculty || "—"}
+                  </ModalField>
+                  <ModalField label="Co-rep invites">
+                    {selected.application.coRepInvites.length
+                      ? selected.application.coRepInvites.join(", ")
+                      : "None"}
+                  </ModalField>
+                  <ModalField label="Referral code">
+                    {selected.application.referralCode || "—"}
+                  </ModalField>
+                  <ModalField label="Application">
+                    <StatusBadge tone={APPLICATION_TONES[selected.application.status]}>
+                      {selected.application.status}
+                    </StatusBadge>
+                  </ModalField>
+                  <ModalField label="Submitted">
+                    {formatDate(selected.application.submittedAt)}
+                    {selected.application.reviewedAt &&
+                      ` · reviewed ${formatDate(selected.application.reviewedAt)}`}
+                  </ModalField>
+                </RepDetailSection>
+              )}
+
+              {selected.kyc && (
+                <RepDetailSection title="Verification & payouts">
+                  <ModalField label="Identity (NIN)">
+                    <StatusBadge tone={NIN_META[selected.kyc.status].tone}>
+                      {NIN_META[selected.kyc.status].label}
+                    </StatusBadge>
+                  </ModalField>
+                  <ModalField label="Student ID">
+                    <StatusBadge tone={studentIdMeta(selected.kyc.studentIdStatus).tone}>
+                      {studentIdMeta(selected.kyc.studentIdStatus).label}
+                    </StatusBadge>
+                  </ModalField>
+                  <ModalField label="Payout account">
+                    {selected.kyc.payoutAccount
+                      ? `${selected.kyc.payoutAccount.bankName ?? "Bank"} ${selected.kyc.payoutAccount.accountMasked}${
+                          selected.kyc.payoutAccount.accountName
+                            ? ` · ${selected.kyc.payoutAccount.accountName}`
+                            : ""
+                        }`
+                      : "Not added"}
+                  </ModalField>
+                  <ModalField label="Payouts">
+                    <StatusBadge tone={selected.kyc.payoutsActive ? "ok" : "neutral"}>
+                      {selected.kyc.payoutsActive ? "enabled" : "not enabled"}
+                    </StatusBadge>
+                  </ModalField>
+                </RepDetailSection>
+              )}
+
+              {!!selected.spaces?.length && (
+                <RepDetailSection title="Spaces">
+                  {selected.spaces.map((s) => (
+                    <ModalField key={s.id} label={s.role === "lead" ? "Lead rep" : "Co-rep"}>
+                      {s.name} ({s.short})
+                    </ModalField>
+                  ))}
+                </RepDetailSection>
+              )}
+
+              <RepDetailSection title="Collections">
                 <ModalField label="Status">
                   <StatusBadge tone={STATUS_TONES[selected.status]}>{selected.status}</StatusBadge>
                 </ModalField>
@@ -585,7 +691,7 @@ export default function AdminRepsPage() {
                     <span>{formatPercent01(selected.collectionRate)}</span>
                   </div>
                 </ModalField>
-              </div>
+              </RepDetailSection>
             </AdminModal>
           )}
         </>

@@ -9,17 +9,23 @@ import {
   Key01Icon,
 } from "@hugeicons/core-free-icons";
 
-const features = [
+const features: {
+  icon: typeof BankIcon;
+  title: string;
+  body: string;
+  comingSoon?: boolean;
+}[] = [
   {
-    icon: BankIcon,
-    title: "Pay by bank transfer",
-    body: "Pay straight from any Nigerian bank app — settles in seconds, no float sitting anywhere.",
+    icon: ShoppingBasket01Icon,
+    title: "Pay several dues at once",
+    body: "Students tick the dues they owe and clear them all in one bank transfer.",
   },
-  {
+  
+  /*{
     icon: SecurityCheckIcon,
     title: "Verified withdrawals",
     body: "Only a verified lead rep can withdraw, and only to a bank account in their own name.",
-  },
+  },*/
   {
     icon: Analytics01Icon,
     title: "Live payment tracking",
@@ -30,21 +36,12 @@ const features = [
     title: "Automatic receipts",
     body: "Every payment generates proof for both student and rep.",
   },
-  {
-    icon: ShoppingBasket01Icon,
-    title: "Pay several dues at once",
-    body: "Students tick the dues they owe and clear them all in one bank transfer.",
-  },
-  {
-    icon: Key01Icon,
-    title: "Join with a code",
-    body: "Every department gets its own join code. Share it in the class group and students are in.",
-  },
 
   {
     icon: Building03Icon,
     title: "Multi-school ready",
     body: "Built to run across departments, faculties, and campuses.",
+    comingSoon: true,
   },
 ];
 
@@ -62,18 +59,26 @@ export default function Features() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map(({ icon: Icon, title, body }) => (
+          {features.map(({ icon: Icon, title, body, comingSoon }) => (
             <div
               key={title}
               className="bg-[#fbfaf7] rounded-3xl border border-[#e6f2ec] p-6 flex flex-col"
             >
-              <span className="w-12 h-12 rounded-full bg-[#e6f2ec] text-[#0b6e4f] grid place-items-center mb-6">
-                <HugeiconsIcon
-                  icon={Icon}
-                  size={22}
-                  className="text-[#0b6e4f]"
-                />
-              </span>
+              <div className="mb-6 flex items-start justify-between gap-3">
+                <span className="w-12 h-12 rounded-full bg-[#e6f2ec] text-[#0b6e4f] grid place-items-center">
+                  <HugeiconsIcon
+                    icon={Icon}
+                    size={22}
+                    className="text-[#0b6e4f]"
+                  />
+                </span>
+                {comingSoon && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fdf3e1] px-2.5 py-1 text-[11px] font-semibold text-[#b8761c]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#e8a33d]" />
+                    Coming soon
+                  </span>
+                )}
+              </div>
               <h3 className="text-[#1b2520] font-semibold text-lg mb-3">
                 {title}
               </h3>

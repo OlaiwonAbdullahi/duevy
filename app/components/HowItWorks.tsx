@@ -29,20 +29,7 @@ const steps = [
     Icon: BankIcon,
     color: "#b4562c",
   },
-  {
-    number: "04",
-    title: "Verified reps withdraw",
-    body: "Before a space can collect, the lead rep verifies their identity (NIN) and student ID. Withdrawals only go to a bank account in that rep’s own name.",
-    Icon: CheckmarkBadge01Icon,
-    color: "#5b4a86",
-  },
-  {
-    number: "05",
-    title: "Funds reach the department",
-    body: "Every payment, withdrawal and fee is logged against the department, so there’s always a clear record of where the money went.",
-    Icon: Invoice01Icon,
-    color: "#1b2520",
-  },
+  
 ];
 
 export default function HowItWorks() {
