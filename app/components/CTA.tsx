@@ -1,72 +1,34 @@
-"use client";
-
-import { useState } from "react";
-import { ArrowRightIcon, CheckIcon } from "./icons";
+import { ArrowRightIcon } from "./icons";
 
 export default function CTA() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) setSubmitted(true);
-  };
-
   return (
-    <section
-      className="px-6 md:px-12 py-24 bg-[#faf9f5]"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle, rgba(16,185,129,0.12) 1px, transparent 1px)",
-        backgroundSize: "28px 28px",
-      }}
-    >
-      <div className="max-w-2xl mx-auto text-center">
-        <h2 className="text-[40px] md:text-[48px] font-bold leading-[1.2] text-[#030c0a] mb-4">
-          Be among the first to use Duevy.
-        </h2>
-        <p className="text-xl font-normal leading-relaxed text-[#374151] mb-10">
-          Whether you&apos;re a course rep tired of chasing payments or a
-          student tired of manual transfers — this is for you.
-        </p>
+    <section className="bg-[#e6f2ec] px-6 md:px-12 py-24">
+      <div className="max-w-[1280px] mx-auto">
+        <div className="bg-[#0b6e4f] rounded-[32px] px-8 py-16 md:px-16 md:py-20 text-center flex flex-col items-center">
+          <h2 className="text-white font-semibold tracking-tight text-3xl md:text-4xl leading-tight max-w-3xl mb-4">
+            Ready to run campus money the clean way?
+          </h2>
+          <p className="text-[#e6f2ec] text-base leading-relaxed max-w-xl mb-10">
+            Whether you&apos;re collecting dues or paying them, Duevy keeps
+            everyone honest.
+          </p>
 
-        {!submitted ? (
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row gap-0 max-w-md mx-auto"
-          >
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@university.edu.ng"
-              required
-              className="flex-1 bg-white border border-[#e5e7eb] border-r-0 px-4 py-3 text-sm text-[#030c0a] placeholder:text-[#374151]/40 outline-none focus:border-[#10b981] transition-all cursor-text"
-            />
-            <button
-              type="submit"
-              className="bg-[#10b981] text-white text-xs font-semibold px-6 py-3 hover:bg-[#0ea572] transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <a
+              href="#"
+              className="inline-flex items-center justify-center gap-2 bg-[#fbfaf7] text-[#1b2520] text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#f4f2ec] transition-colors duration-300 cursor-pointer group"
             >
-              Get Early Access
-              <ArrowRightIcon size={14} />
-            </button>
-          </form>
-        ) : (
-          <div className="border border-[#e5e7eb] bg-white px-6 py-4 flex items-center gap-3 max-w-md mx-auto">
-            <div className="w-6 h-6 bg-[#10b981] flex items-center justify-center shrink-0">
-              <CheckIcon size={13} className="text-white" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-[#030c0a]">
-                You&apos;re on the list.
-              </p>
-              <p className="text-xs text-[#374151] mt-0.5">
-                We&apos;ll reach out to{" "}
-                <span className="text-[#10b981] font-medium">{email}</span>
-              </p>
-            </div>
+              Start collecting
+              <ArrowRightIcon size={16} className="transition-transform duration-500 group-hover:translate-x-1" />
+            </a>
+            <a
+              href="#"
+              className="inline-flex items-center justify-center bg-[#0f996d] text-white text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#08583f] transition-colors duration-300 cursor-pointer"
+            >
+              I&apos;m a student
+            </a>
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

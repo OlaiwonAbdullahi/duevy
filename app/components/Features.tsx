@@ -1,97 +1,72 @@
-import { UsersIcon, WalletIcon, ShieldIcon, CheckIcon } from "./icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Wallet01Icon,
+  SecurityCheckIcon,
+  Analytics01Icon,
+  Invoice01Icon,
+  Building03Icon,
+} from "@hugeicons/core-free-icons";
 
-const repFeatures = [
-  "Create unlimited payment types",
-  "Real-time collection dashboard",
-  "Team access management",
-  "Export payment records",
-];
-
-const studentFeatures = [
-  "Instant payment confirmation",
-  "Full transaction history",
-  "Digital receipts always accessible",
-  "No bank transfer friction",
+const features = [
+  {
+    icon: Wallet01Icon,
+    title: "Wallet top-up & spend",
+    body: "Fund once, pay for anything on your department's list.",
+  },
+  {
+    icon: SecurityCheckIcon,
+    title: "Approval-based payouts",
+    body: "Funds release only after a quorum of students or execs approve.",
+  },
+  {
+    icon: Analytics01Icon,
+    title: "Live payment tracking",
+    body: "See who has paid, who hasn't, and send reminders in one tap.",
+  },
+  {
+    icon: Invoice01Icon,
+    title: "Automatic receipts",
+    body: "Every payment generates proof for both student and rep.",
+  },
+  {
+    icon: Building03Icon,
+    title: "Multi-school ready",
+    body: "Built to run across departments, faculties, and campuses.",
+  },
 ];
 
 export default function Features() {
   return (
-    <section className="bg-[#faf9f5] px-6 md:px-12 py-20">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-12">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#10b981] mb-3">Built for both sides</p>
-          {/* display-md */}
-          <h2 className="text-[36px] font-bold leading-[1.2] text-[#030c0a]">
-            Powerful for reps. Simple for students.
+    <section className="bg-[#e6f2ec] px-6 md:px-12 py-24">
+      <div className="max-w-7xl mx-auto">
+        <div className="max-w-2xl mb-16">
+          <span className="inline-flex items-center bg-[#fbfaf7] text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
+            Features
+          </span>
+          <h2 className="text-[#1b2520] font-semibold tracking-tight text-3xl md:text-4xl leading-tight">
+            The whole platform, in plain words.
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-5">
-          {/* Reps card */}
-          <div className="bg-white border border-[#e5e7eb] rounded-2xl p-6 hover:border-[#10b981]/40 transition-all">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-[#f0fdfa] border border-[#10b981]/20 rounded-xl flex items-center justify-center">
-                <UsersIcon size={20} className="text-[#10b981]" />
-              </div>
-              <span className="text-xs font-semibold tracking-[0.15em] uppercase text-[#374151]/60">For Course Reps</span>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map(({ icon: Icon, title, body }) => (
+            <div
+              key={title}
+              className="bg-[#fbfaf7] rounded-3xl border border-[#e6f2ec] p-6 flex flex-col"
+            >
+              <span className="w-12 h-12 rounded-full bg-[#e6f2ec] text-[#0b6e4f] grid place-items-center mb-6">
+                <HugeiconsIcon
+                  icon={Icon}
+                  size={22}
+                  className="text-[#0b6e4f]"
+                />
+              </span>
+              <h3 className="text-[#1b2520] font-semibold text-lg mb-3">
+                {title}
+              </h3>
+              <p className="text-[#7a847f] text-base leading-relaxed">{body}</p>
             </div>
-            {/* display-sm */}
-            <h3 className="text-xl font-semibold leading-[1.3] text-[#030c0a] mb-3">Department control panel</h3>
-            {/* body-md */}
-            <p className="text-base leading-[1.6] text-[#374151] mb-5">
-              Create your department, invite your team, set up payment categories, and track every naira collected — with full visibility across the board.
-            </p>
-            <ul className="space-y-2.5">
-              {repFeatures.map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-[#374151]">
-                  <CheckIcon size={13} className="text-[#10b981] shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Students card */}
-          <div className="bg-white border border-[#e5e7eb] rounded-2xl p-6 hover:border-[#10b981]/40 transition-all">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-[#f0fdfa] border border-[#10b981]/20 rounded-xl flex items-center justify-center">
-                <WalletIcon size={20} className="text-[#10b981]" />
-              </div>
-              <span className="text-xs font-semibold tracking-[0.15em] uppercase text-[#374151]/60">For Students</span>
-            </div>
-            <h3 className="text-xl font-semibold leading-[1.3] text-[#030c0a] mb-3">One wallet, all payments</h3>
-            <p className="text-base leading-[1.6] text-[#374151] mb-5">
-              Fund your Duevy wallet and access every active payment in your department — handouts, dues, levies — paid with a single tap, anytime.
-            </p>
-            <ul className="space-y-2.5">
-              {studentFeatures.map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-[#374151]">
-                  <CheckIcon size={13} className="text-[#10b981] shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Trust card — full width */}
-          <div className="bg-white border border-[#e5e7eb] rounded-2xl p-6 md:col-span-2 flex flex-col md:flex-row md:items-center gap-8 hover:border-[#10b981]/40 transition-all">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-[#f0fdfa] border border-[#10b981]/20 rounded-xl flex items-center justify-center">
-                  <ShieldIcon size={20} className="text-[#10b981]" />
-                </div>
-                <span className="text-xs font-semibold tracking-[0.15em] uppercase text-[#374151]/60">Trust & Security</span>
-              </div>
-              <h3 className="text-xl font-semibold leading-[1.3] text-[#030c0a] mb-3">Built on trust, not chaos</h3>
-              <p className="text-base leading-[1.6] text-[#374151] max-w-lg">
-                Every transaction is verified, recorded, and accessible to both student and rep. No disputed payments. No &quot;I didn&apos;t receive it.&quot; No lost receipts.
-              </p>
-            </div>
-            <div className="bg-[#f0fdfa] border border-[#10b981]/20 rounded-2xl p-6 md:w-60 shrink-0">
-              <div className="text-5xl font-bold text-[#10b981] mb-2">100%</div>
-              <p className="text-sm text-[#374151] leading-normal">of payments logged with real-time receipt generation</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

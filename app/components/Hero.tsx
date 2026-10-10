@@ -1,85 +1,54 @@
-"use client";
-
-import { useState } from "react";
-import { ArrowRightIcon, CheckIcon } from "./icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PartyIcon } from "@hugeicons/core-free-icons";
+import { ArrowRightIcon } from "./icons";
+import { CheckCircle } from "@hugeicons/core-free-icons";
 
 export default function Hero() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) setSubmitted(true);
-  };
-
   return (
-    <section
-      className="relative z-10 px-6 md:px-12 pt-24 pb-20 max-w-6xl mx-auto flex flex-col items-center text-center"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle, rgba(16,185,129,0.12) 1px, transparent 1px)",
-        backgroundSize: "28px 28px",
-      }}
-    >
-      <div className="inline-flex items-center gap-2 border border-[#10B981]/30 bg-[#10B981]/[0.05] px-4 py-2 mb-10">
-        <span className="text-xs font-semibold tracking-[0.15em] uppercase text-[#10B981] flex items-center gap-1.5">
-          We&apos;re building something big
-          <HugeiconsIcon icon={PartyIcon} size={14} color="#10B981" strokeWidth={1.8} />
+    <section className="bg-[#fbfaf7] px-6 md:px-12 pt-20 pb-24 md:pt-24 md:pb-32">
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
+        <span className="inline-flex items-center  text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
+          <HugeiconsIcon icon={CheckCircle} size={16} className="mr-1" />
+          Built for campus reps and students
         </span>
-      </div>
 
-      <h1 className="text-[2.6rem] sm:text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] tracking-tight mb-6 max-w-4xl">
-        University dues,
-        <br />
-        <span className="text-[#10B981]">finally simplified.</span>
-      </h1>
-
-      <p className="text-lg md:text-xl text-black/45 max-w-xl leading-relaxed mb-12 font-light">
-        No more WhatsApp chasing. No more manual bank transfers. No more forms.
-        Duevy is the digital payment layer every Nigerian university department
-        needs.
-      </p>
-
-      <div className="w-full max-w-md">
-        {!submitted ? (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-0">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your university email"
-              required
-              className="flex-1 bg-black/[0.03] border border-black/[0.12] sm:border-r-0 px-4 py-3.5 text-sm text-[#0f172a] placeholder:text-black/30 outline-none focus:border-[#10B981] transition-all"
+        <h1 className="text-[#1b2520] font-semibold tracking-tight text-[2.25rem] sm:text-5xl lg:text-[3.75rem] leading-[1.05] mb-6">
+          Collect dues. Track every kobo.{" "}
+          <span className="relative inline-block text-[#0b6e4f]">
+            No wahala.
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/line.svg"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none select-none absolute left-0 -bottom-2 sm:-bottom-3 w-full h-auto"
             />
-            <button
-              type="submit"
-              className="bg-[#10B981] text-white px-6 py-3.5 text-sm font-bold tracking-wide flex items-center justify-center gap-2 hover:bg-[#0ea572] transition-colors whitespace-nowrap"
-            >
-              Join Waitlist
-              <ArrowRightIcon size={16} />
-            </button>
-          </form>
-        ) : (
-          <div className="border border-[#10B981]/30 bg-[#10B981]/[0.05] px-6 py-4 flex items-center gap-3">
-            <div className="w-6 h-6 bg-[#10B981] flex items-center justify-center shrink-0">
-              <CheckIcon size={13} className="text-white" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-[#0f172a]">
-                You&apos;re on the list.
-              </p>
-              <p className="text-xs text-black/45 mt-0.5">
-                We&apos;ll reach out to{" "}
-                <span className="text-[#10B981]">{email}</span> when we launch.
-              </p>
-            </div>
-          </div>
-        )}
-        <p className="text-xs text-black/25 mt-3">
-          Join 200+ students & course reps already waiting.
+          </span>
+        </h1>
+
+        <p className="text-[#7a847f] text-base md:text-lg leading-relaxed max-w-xl mb-10">
+          Duevy gives class and departmental reps a simple wallet-based way to
+          collect dues, levies, and payments — while every student sees exactly
+          where their money went.
         </p>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <a
+            href="#"
+            className="inline-flex items-center justify-center gap-2 bg-[#0b6e4f] text-white text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#0f996d] transition-colors duration-300 cursor-pointer group"
+          >
+            Get started
+            <ArrowRightIcon
+              size={16}
+              className="transition-transform duration-500 group-hover:translate-x-1"
+            />
+          </a>
+          <a
+            href="#how-it-works"
+            className="inline-flex items-center justify-center bg-[#f4f2ec] text-[#1b2520] text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#e6f2ec] transition-colors duration-300 cursor-pointer"
+          >
+            See how it works
+          </a>
+        </div>
       </div>
     </section>
   );

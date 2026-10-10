@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.guild.com.ng)",
+      "Bash(git checkout *)"
+    ]
+  }
+}
