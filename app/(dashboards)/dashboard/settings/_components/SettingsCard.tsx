@@ -1,0 +1,40 @@
+import type { ReactNode } from "react";
+import type { HugeIcon } from "../../_components/nav-config";
+import { IconChip } from "../../_components/IconChip";
+
+/**
+ * The standard settings container: an icon-chipped header with a title and
+ * short description, then the section body. Flat card, matching the dashboard.
+ */
+export function SettingsCard({
+  icon,
+  title,
+  description,
+  action,
+  children,
+}: {
+  icon: HugeIcon;
+  title: string;
+  description?: string;
+  /** Optional control pinned to the top-right of the header (e.g. a Save button). */
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-cloud bg-canvas p-4 sm:p-6">
+      <div className="flex items-start gap-3">
+        <IconChip icon={icon} />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold tracking-tight text-ink">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-0.5 text-[13px] text-ink-soft">{description}</p>
+          )}
+        </div>
+        {action}
+      </div>
+      <div className="mt-4 sm:mt-5">{children}</div>
+    </section>
+  );
+}

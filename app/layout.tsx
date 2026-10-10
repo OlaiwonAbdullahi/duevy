@@ -1,15 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import SmoothScroll from "./components/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { AuthProvider } from "@/lib/auth/auth-context";
+import { PwaRegister } from "./components/pwa/PwaRegister";
+import { PwaChrome } from "./components/pwa/PwaChrome";
+import { MotionProvider } from "./components/MotionProvider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const BASE_URL = "https://duevy.app";
@@ -21,14 +24,14 @@ export const metadata: Metadata = {
     template: "%s | Duevy",
   },
   description:
-    "Duevy gives Nigerian campus reps a wallet-based way to collect dues, levies, and payments — while every student sees exactly where their money went.",
+    "Duevy gives Nigerian campus reps a simple way to collect dues, levies, and payments — while every student sees exactly where their money went.",
   keywords: [
     "campus dues collection Nigeria",
     "student dues payment",
     "departmental levies",
     "Nigerian university fintech",
     "course rep payments",
-    "class rep wallet",
+    "class rep payments app",
     "duevy",
   ],
   authors: [{ name: "Duevy", url: BASE_URL }],
@@ -41,7 +44,7 @@ export const metadata: Metadata = {
     siteName: "Duevy",
     title: "Duevy — Collect dues. Track every kobo. No wahala.",
     description:
-      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
+      "A simple way for campus reps to collect dues and levies — with full transparency for every student.",
     images: [
       {
         url: "/ogimage.png",
@@ -58,7 +61,7 @@ export const metadata: Metadata = {
     creator: "@duevyapp",
     title: "Duevy — Collect dues. Track every kobo. No wahala.",
     description:
-      "A simple wallet-based way for campus reps to collect dues and levies — with full transparency for every student.",
+      "A simple way for campus reps to collect dues and levies — with full transparency for every student.",
     images: ["/ogimage.png"],
   },
   robots: {
@@ -72,12 +75,32 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/logos/duevy-mark.svg", type: "image/svg+xml" },
+    ],
     shortcut: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
+  },
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Duevy",
   },
   alternates: {
     canonical: BASE_URL,
   },
+};
+
+export const viewport: Viewport = {
+  // Lets the installed app draw under the home indicator; the dashboard's tab
+  // bar pads itself with env(safe-area-inset-bottom).
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0b6e4f" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1411" },
+  ],
 };
 
 export default function RootLayout({
@@ -98,9 +121,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SmoothScroll />
-          {children}
-          <Toaster position="top-center" />
+          <MotionProvider>
+            <AuthProvider>
+              {children}
+              <PwaChrome />
+            </AuthProvider>
+          </MotionProvider>
+          <Toaster position="top-center" richColors />
+          <PwaRegister />
         </ThemeProvider>
       </body>
     </html>

@@ -9,6 +9,7 @@ export function ThemeToggle() {
 
   return (
     <button
+      data-tour="theme"
       aria-label="Toggle theme"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       className="grid h-9 w-9 place-items-center rounded-full text-ink hover:bg-paper transition-colors duration-300 cursor-pointer"

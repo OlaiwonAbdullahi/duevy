@@ -48,25 +48,85 @@ function DialogOverlay({
   )
 }
 
+/**
+ * Phone bottom-sheet look for `sheetOnMobile`: pinned to the bottom edge,
+ * full width, rounded top, sliding up instead of zooming in.
+ */
+const SHEET_ON_MOBILE =
+  "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:rounded-t-[28px] max-sm:border-x-0 max-sm:border-b-0 max-sm:pt-7 max-sm:duration-300 max-sm:data-open:slide-in-from-bottom max-sm:data-open:zoom-in-100 max-sm:data-closed:slide-out-to-bottom max-sm:data-closed:zoom-out-100"
+
+/** How far (px) the sheet has to be dragged down before letting go closes it. */
+const SHEET_DISMISS_DISTANCE = 110
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  sheetOnMobile = false,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /** Below the `sm` breakpoint, render as a draggable bottom sheet. */
+  sheetOnMobile?: boolean
 }) {
+  // Swipe-to-dismiss on the sheet's handle; closing goes through a hidden
+  // Close so the Root's onOpenChange fires as usual.
+  const closeRef = React.useRef<HTMLButtonElement>(null)
+  const startY = React.useRef<number | null>(null)
+  const [dragY, setDragY] = React.useState(0)
+  const [dragging, setDragging] = React.useState(false)
+
+  const endDrag = () => {
+    if (startY.current === null) return
+    startY.current = null
+    setDragging(false)
+    if (dragY > SHEET_DISMISS_DISTANCE) closeRef.current?.click()
+    setDragY(0)
+  }
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        style={
+          sheetOnMobile
+            ? {
+                ...style,
+                ...(dragY ? { transform: `translateY(${dragY}px)` } : null),
+                transition: dragging ? "none" : "transform 300ms cubic-bezier(0.22,1,0.36,1)",
+              }
+            : style
+        }
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl bg-popover p-6 text-sm text-popover-foreground ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
+          className,
+          sheetOnMobile && SHEET_ON_MOBILE
         )}
         {...props}
       >
+        {sheetOnMobile && (
+          <>
+            <div
+              aria-hidden
+              onPointerDown={(e) => {
+                startY.current = e.clientY
+                setDragging(true)
+                e.currentTarget.setPointerCapture(e.pointerId)
+              }}
+              onPointerMove={(e) => {
+                if (startY.current !== null) setDragY(Math.max(0, e.clientY - startY.current))
+              }}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              className="absolute inset-x-16 top-0 z-10 flex h-7 touch-none cursor-grab items-center justify-center active:cursor-grabbing sm:hidden"
+            >
+              <span className="h-1.5 w-10 rounded-full bg-ink-soft/30" />
+            </div>
+            <DialogPrimitive.Close ref={closeRef} tabIndex={-1} aria-hidden className="hidden" />
+          </>
+        )}
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>

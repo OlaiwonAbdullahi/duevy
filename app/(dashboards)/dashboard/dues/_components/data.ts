@@ -1,20 +1,26 @@
 import {
   Book02Icon,
-  Restaurant01Icon,
   Coins01Icon,
-  FootballIcon,
-  FavouriteIcon,
+  Pen01Icon,
+  TestTube01Icon,
+  UserGroupIcon,
+  TShirtIcon,
+  Bus01Icon,
+  CheckmarkBadge01Icon,
+  Tag01Icon,
   Building03Icon,
   UserMultipleIcon,
   MortarboardIcon,
   StarIcon,
 } from "@hugeicons/core-free-icons";
 import type { HugeIcon } from "../../_components/nav-config";
-import type { Card } from "../../wallet/_components/types";
-import type { DueCategory, EmblemHue, Space, Due, SpaceKind } from "./types";
+import type { DueType, EmblemHue, Due, SpaceKind } from "./types";
 
-export const naira = (n: number) =>
-  `₦${Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
+export { naira } from "../../_components/format";
+
+/** Join codes are uppercase alphanumerics with optional dashes, e.g. "CSC29-LMYB". */
+export const MIN_CODE = 4;
+export const MAX_CODE = 20;
 
 /**
  * Emblem palettes. Each space paints its crest from one of these — a deep base
@@ -40,21 +46,40 @@ export const SPACE_KIND_LABEL: Record<SpaceKind, string> = {
   club: "Club",
 };
 
-export const CATEGORY_ICON: Record<DueCategory, HugeIcon> = {
-  levy: Coins01Icon,
-  dinner: Restaurant01Icon,
+export const CATEGORY_ICON: Record<DueType, HugeIcon> = {
   handout: Book02Icon,
-  welfare: FavouriteIcon,
-  sport: FootballIcon,
+  departmental_due: Coins01Icon,
+  exam_levy: Pen01Icon,
+  lab_manual: TestTube01Icon,
+  association_due: UserGroupIcon,
+  departmental_wear: TShirtIcon,
+  trip_fee: Bus01Icon,
+  clearance: CheckmarkBadge01Icon,
+  other: Tag01Icon,
 };
 
-export const CATEGORY_LABEL: Record<DueCategory, string> = {
-  levy: "Levy",
-  dinner: "Dinner",
+/** Mirrors the backend's DUE_TYPE_LABELS (src/lib/dueTypes.ts). */
+export const CATEGORY_LABEL: Record<DueType, string> = {
   handout: "Handout",
-  welfare: "Welfare",
-  sport: "Sports",
+  departmental_due: "Departmental due",
+  exam_levy: "Exam levy",
+  lab_manual: "Lab manual",
+  association_due: "Association due",
+  departmental_wear: "Departmental wear",
+  trip_fee: "Trip fee",
+  clearance: "Clearance",
+  other: "Other",
 };
+
+/** Label for a type that may be missing or unknown (older rows, other clients). */
+export function dueTypeLabel(type: string | null | undefined): string {
+  return (type && CATEGORY_LABEL[type as DueType]) || "Other";
+}
+
+/** Icon for a type that may be missing or unknown. */
+export function dueTypeIcon(type: string | null | undefined): HugeIcon {
+  return (type && CATEGORY_ICON[type as DueType]) || Tag01Icon;
+}
 
 /** Glyph struck into the emblem medallion — reads the kind of body it is. */
 export const KIND_GLYPH: Record<SpaceKind, HugeIcon> = {
@@ -73,10 +98,7 @@ export type SpaceSummary = {
   nextDue?: Due; // soonest-dated open due, if any
 };
 
-export function summarizeSpace(
-  spaceId: string,
-  source: Due[] = DUES,
-): SpaceSummary {
+export function summarizeSpace(spaceId: string, source: Due[]): SpaceSummary {
   const dues = source.filter((d) => d.spaceId === spaceId);
   const open = dues.filter((d) => d.status !== "paid");
   const nextDue = [...open].sort(
@@ -101,158 +123,3 @@ export function relativeDue(iso: string): { text: string; past: boolean } {
   const n = Math.abs(diff);
   return { text: `${n} day${n === 1 ? "" : "s"} overdue`, past: true };
 }
-
-/* ---- Mock data. Swapped for real queries once the API lands. ---- */
-
-/** Saved cards, seeded to match the wallet demo. */
-export const SAVED_CARDS: Card[] = [
-  { id: "c1", brand: "Visa", last4: "4242", expiry: "08/27", isDefault: true },
-  { id: "c2", brand: "Mastercard", last4: "5309", expiry: "11/26", isDefault: false },
-  { id: "c3", brand: "Verve", last4: "8821", expiry: "03/28", isDefault: false },
-];
-
-export const SPACES: Space[] = [
-  {
-    id: "csc",
-    name: "Computer Science Students' Association",
-    short: "CSSA",
-    kind: "association",
-    membership: "member",
-    hue: "emerald",
-    memberCount: 412,
-  },
-  {
-    id: "nacos",
-    name: "Nigeria Association of Computing Students",
-    short: "NACOS",
-    kind: "association",
-    membership: "member",
-    hue: "indigo",
-    memberCount: 1280,
-  },
-  {
-    id: "sug",
-    name: "Faculty of Science Students' Union",
-    short: "FSSU",
-    kind: "faculty",
-    membership: "member",
-    hue: "slate",
-    memberCount: 5400,
-  },
-  {
-    id: "eng",
-    name: "Engineering Students' Society — Dinner",
-    short: "ESS",
-    kind: "association",
-    membership: "guest",
-    hue: "amber",
-    memberCount: 2100,
-  },
-  {
-    id: "robotics",
-    name: "Robotics & Automation Club",
-    short: "RAC",
-    kind: "club",
-    membership: "guest",
-    hue: "rose",
-    memberCount: 96,
-  },
-];
-
-export const DUES: Due[] = [
-  // CSSA
-  {
-    id: "d1",
-    spaceId: "csc",
-    title: "First Semester Departmental Levy",
-    note: "Covers labs, printing credits and the resource portal.",
-    amount: 7500,
-    dueDate: "2026-07-18",
-    status: "unpaid",
-    category: "levy",
-  },
-  {
-    id: "d2",
-    spaceId: "csc",
-    title: "Data Structures Handout",
-    note: "Compiled lecture notes — CSC 201.",
-    amount: 2000,
-    dueDate: "2026-07-10",
-    status: "overdue",
-    category: "handout",
-  },
-  {
-    id: "d3",
-    spaceId: "csc",
-    title: "Welfare Contribution",
-    note: "Termly welfare pool for members in need.",
-    amount: 1500,
-    dueDate: "2026-06-20",
-    status: "paid",
-    category: "welfare",
-  },
-  // NACOS
-  {
-    id: "d4",
-    spaceId: "nacos",
-    title: "Annual Membership Dues",
-    note: "National body registration for the session.",
-    amount: 3000,
-    dueDate: "2026-08-01",
-    status: "unpaid",
-    category: "levy",
-  },
-  {
-    id: "d5",
-    spaceId: "nacos",
-    title: "Tech Week Access Pass",
-    note: "Workshops, hackathon and career fair.",
-    amount: 5000,
-    dueDate: "2026-07-25",
-    status: "unpaid",
-    category: "sport",
-  },
-  // FSSU
-  {
-    id: "d6",
-    spaceId: "sug",
-    title: "Faculty Union Dues",
-    note: "Faculty-wide student representation.",
-    amount: 2500,
-    dueDate: "2026-07-30",
-    status: "unpaid",
-    category: "levy",
-  },
-  {
-    id: "d7",
-    spaceId: "sug",
-    title: "Science Games Levy",
-    note: "Inter-departmental sports festival.",
-    amount: 1000,
-    dueDate: "2026-06-15",
-    status: "paid",
-    category: "sport",
-  },
-  // ESS (guest — paying at another association)
-  {
-    id: "d8",
-    spaceId: "eng",
-    title: "Annual Dinner & Awards Night",
-    note: "Guest ticket — you were invited by a member.",
-    amount: 12000,
-    dueDate: "2026-07-12",
-    status: "unpaid",
-    category: "dinner",
-  },
-  // Robotics (guest)
-  {
-    id: "d9",
-    spaceId: "robotics",
-    title: "Build Season Kit",
-    note: "Shared components for the competition build.",
-    amount: 4500,
-    dueDate: "2026-07-20",
-    status: "unpaid",
-    category: "handout",
-  },
-];

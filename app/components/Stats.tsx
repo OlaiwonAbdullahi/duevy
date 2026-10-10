@@ -2,7 +2,7 @@ const stats = [
   { value: "2M+", label: "students across Nigerian universities paying dues every session" },
   { value: "100%", label: "of payments logged and traceable" },
   { value: "0", label: "cash counting, missing receipts, or “trust me” moments" },
-  { value: "1", label: "wallet for every payment on campus" },
+  { value: "1", label: "app for every payment on campus" },
 ];
 
 export default function Stats() {

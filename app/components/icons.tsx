@@ -1,10 +1,10 @@
 type IconProps = { size?: number; className?: string };
 
-export const WalletIcon = ({ size = 24, className = "" }: IconProps) => (
+export const CardIcon = ({ size = 24, className = "" }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>
-    <path d="M20 7H4C2.89543 7 2 7.89543 2 9V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V9C22 7.89543 21.1046 7 20 7Z"/>
-    <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7"/>
-    <path d="M22 13H18C16.8954 13 16 13.8954 16 15C16 16.1046 16.8954 17 18 17H22"/>
+    <path d="M2 8H22"/>
+    <path d="M20 4H4C2.89543 4 2 4.89543 2 6V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V6C22 4.89543 21.1046 4 20 4Z"/>
+    <path d="M6 15H10"/>
   </svg>
 );
 

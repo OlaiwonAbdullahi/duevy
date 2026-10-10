@@ -1,24 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, m } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon } from "@hugeicons/core-free-icons";
-import type { Due, PayMethod, Space } from "./_components/types";
-import { SPACES, DUES, SAVED_CARDS, naira } from "./_components/data";
+import { Alert01Icon, Building03Icon } from "@hugeicons/core-free-icons";
+import { EmptyState } from "../_components/EmptyState";
+import { ListSkeleton } from "../_components/Skeleton";
+import type { Due, JoinableDepartment, Space } from "./_components/types";
+import { naira } from "./_components/data";
+import { adaptSpace, adaptDue } from "./_components/adapt";
 import { SpaceCard } from "./_components/SpaceCard";
+import { SpaceRow } from "./_components/SpaceRow";
+import { InlineStat } from "../_components/overview/OverviewUI";
 import { SpaceDetail } from "./_components/SpaceDetail";
-import { PayDueModal } from "./_components/PayDueModal";
+import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
+import { payPageHref, toastCheckoutError } from "./_components/checkout";
+import { listSpaces, joinSpace } from "@/lib/api/spaces";
+import { listDues, payDue, payDues as payDuesApi } from "@/lib/api/dues";
+import { queryKeys } from "@/lib/api/queries";
+
+const PayDueModal = dynamic(() => import("./_components/PayDueModal").then((mod) => mod.PayDueModal), { ssr: false });
+
+type DuesPageData = { spaces: Space[]; dues: Due[] };
+const DUES_PAGE_KEY = ["me", "dues-page"] as const;
+const EMPTY_SPACES: Space[] = [];
+const EMPTY_DUES: Due[] = [];
 
 export default function DuesPage() {
-  const [dues, setDues] = useState<Due[]>(DUES);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  // Cached so coming back to Dues renders instantly; local edits (optimistic
+  // joins) write into the same cache entry.
+  const pageQuery = useQuery({
+    queryKey: DUES_PAGE_KEY,
+    queryFn: async () => {
+      const [apiSpaces, apiDues] = await Promise.all([listSpaces(), listDues({ perPage: 100 })]);
+      return { spaces: apiSpaces.map(adaptSpace), dues: apiDues.data.map(adaptDue) };
+    },
+  });
+  const spaces = pageQuery.data?.spaces ?? EMPTY_SPACES;
+  const dues = pageQuery.data?.dues ?? EMPTY_DUES;
+  const loading = pageQuery.isPending;
+  const updatePage = (patch: (page: DuesPageData) => DuesPageData) =>
+    queryClient.setQueryData<DuesPageData>(DUES_PAGE_KEY, (page) =>
+      patch(page ?? { spaces: [], dues: [] }),
+    );
+  const setSpaces = (fn: (list: Space[]) => Space[]) =>
+    updatePage((page) => ({ ...page, spaces: fn(page.spaces) }));
+  const setDues = (fn: (list: Due[]) => Due[]) =>
+    updatePage((page) => ({ ...page, dues: fn(page.dues) }));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [payDues, setPayDues] = useState<Due[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
-  const [balance, setBalance] = useState(8500);
+  // Spaces just joined from the code card: shown straight away, marked until the
+  // join is confirmed and their dues have loaded.
+  const [syncing, setSyncing] = useState<Record<string, "joining" | "loading">>({});
 
-  const selected = SPACES.find((s) => s.id === selectedId) ?? null;
+  useEffect(() => {
+    if (pageQuery.isError) toast.error("Couldn't load your dues.");
+  }, [pageQuery.isError]);
+
+  const selected = spaces.find((s) => s.id === selectedId) ?? null;
   const selectedDues = useMemo(
     () => dues.filter((d) => d.spaceId === selectedId),
     [dues, selectedId],
@@ -33,44 +79,99 @@ export default function DuesPage() {
     };
   }, [dues]);
 
-  const members = SPACES.filter((s) => s.membership === "member");
-  const guests = SPACES.filter((s) => s.membership === "guest");
+  const members = spaces.filter((s) => s.membership === "member");
+  const guests = spaces.filter((s) => s.membership === "guest");
 
   const openSpace = (space: Space) => setSelectedId(space.id);
 
-  const confirmPay = (method: PayMethod) => {
-    if (payDues.length === 0) return;
-    const targetDues = payDues;
-    const targetIds = targetDues.map((d) => d.id);
-    const total = targetDues.reduce((sum, d) => sum + d.amount, 0);
-    setPendingIds(targetIds);
-    // Simulate collection posting. In production this hits the payments API,
-    // and the selected rows flip on the success response.
-    setTimeout(() => {
-      setDues((list) =>
-        list.map((d) =>
-          targetIds.includes(d.id) ? { ...d, status: "paid" } : d,
-        ),
-      );
-      if (method === "wallet") {
-        setBalance((b) => b - total);
-      }
-      setPendingIds([]);
-      setPayDues([]);
-      toast.success(`${naira(total)} paid`, {
-        description:
-          targetDues.length === 1
-            ? targetDues[0].title
-            : `${targetDues.length} dues settled`,
+  // Joining by code needs no approval, so the department goes into "Your
+  // spaces" immediately (optimistically) and is taken back out if the join
+  // fails. Resolves whether it worked, so the code card knows to clear.
+  const joinDepartment = async (dept: JoinableDepartment): Promise<boolean> => {
+    if (spaces.some((s) => s.id === dept.id)) return true;
+    const space: Space = {
+      id: dept.id,
+      name: dept.name,
+      short: dept.short,
+      kind: dept.kind,
+      membership: dept.membership,
+      hue: dept.hue,
+      memberCount: dept.memberCount,
+    };
+    const settle = () =>
+      setSyncing((s) => {
+        const next = { ...s };
+        delete next[dept.id];
+        return next;
       });
-    }, 900);
+
+    setSpaces((list) => [space, ...list]);
+    setSyncing((s) => ({ ...s, [dept.id]: "joining" }));
+    try {
+      await joinSpace(dept.id, { code: dept.code });
+    } catch {
+      setSpaces((list) => list.filter((s) => s.id !== dept.id));
+      settle();
+      toast.error(`Couldn't join ${dept.short}. Please try again.`);
+      return false;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: queryKeys.studentOverview });
+    toast.success(`Joined ${dept.short}`, {
+      description: "It's now under Your spaces.",
+    });
+    // Lookup previews dues without fees or the student's status, so load the
+    // real student view of the new space's dues — in the background.
+    setSyncing((s) => ({ ...s, [dept.id]: "loading" }));
+    void listDues({ spaceId: dept.id, perPage: 100 })
+      .then((joined) => {
+        const fresh = joined.data.map(adaptDue);
+        setDues((list) => [...fresh, ...list.filter((d) => d.spaceId !== dept.id)]);
+      })
+      .catch(() => {})
+      .finally(settle);
+    return true;
+  };
+
+  // One bank-transfer checkout for the whole basket, then the dedicated pay
+  // page shows the account to transfer into and waits for confirmation.
+  const confirmPay = async () => {
+    // Every account is a student, so a pending rep application doesn't block paying.
+    if (payDues.length === 0 || !selected) return;
+    const targetDues = payDues;
+    setPendingIds(targetDues.map((d) => d.id));
+
+    const goToPayment = (reference: string) =>
+      router.push(
+        payPageHref(reference, {
+          // A single due links straight to its receipt once paid.
+          dueId: targetDues.length === 1 ? targetDues[0].id : null,
+          from: "dues",
+        }),
+      );
+
+    try {
+      const checkout =
+        targetDues.length === 1
+          ? await payDue(targetDues[0].id)
+          : await payDuesApi(targetDues.map((d) => d.id));
+      // Hosted checkout: pay on the provider's page, which returns to the pay page.
+      if (checkout.checkoutUrl) window.location.href = checkout.checkoutUrl;
+      else goToPayment(checkout.reference);
+    } catch (err) {
+      setPendingIds([]);
+      toastCheckoutError(err, (reference) => {
+        setPayDues([]);
+        goToPayment(reference);
+      });
+    }
   };
 
   return (
     <div className="mx-auto max-w-6xl">
       <AnimatePresence mode="wait" initial={false}>
         {selected ? (
-          <motion.div
+          <m.div
             key={selected.id}
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -84,9 +185,9 @@ export default function DuesPage() {
               onBack={() => setSelectedId(null)}
               onPay={setPayDues}
             />
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="grid"
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -98,68 +199,114 @@ export default function DuesPage() {
                 <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
                   My dues
                 </h1>
-                <p className="mt-1 text-[13px] text-ink-soft">
+                <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
                   Every space you belong to or pay at, in one place. Open one to
                   settle its dues.
                 </p>
               </div>
-              <div className="flex items-center gap-4 rounded-2xl border border-cloud bg-canvas px-4 py-3">
-                <div>
-                  <p className="text-[11px] font-medium text-ink-soft">
-                    Total outstanding
-                  </p>
-                  <p className="text-lg font-semibold tracking-tight text-ink">
-                    {naira(totals.outstanding)}
-                  </p>
+              {!loading && (
+                <div className="hidden items-center gap-4 rounded-2xl sm:flex border border-cloud bg-canvas px-4 py-3">
+                  <div>
+                    <p className="text-[11px] font-medium text-ink-soft">
+                      Total outstanding
+                    </p>
+                    <p className="text-lg font-semibold tracking-tight text-ink">
+                      {naira(totals.outstanding)}
+                    </p>
+                  </div>
+                  {totals.overdue > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-600">
+                      <HugeiconsIcon icon={Alert01Icon} size={12} />
+                      {totals.overdue} overdue
+                    </span>
+                  )}
                 </div>
-                {totals.overdue > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-600">
-                    <HugeiconsIcon icon={Alert01Icon} size={12} />
-                    {totals.overdue} overdue
-                  </span>
-                )}
-              </div>
+              )}
             </header>
 
-            {/* Spaces you're a member of. */}
-            <section className="mt-8">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-                Your spaces
-              </h2>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {members.map((space) => (
-                  <SpaceCard
-                    key={space.id}
-                    space={space}
-                    dues={dues}
-                    onOpen={openSpace}
-                  />
-                ))}
+            {loading ? (
+              <div className="mt-6">
+                <ListSkeleton rows={3} />
               </div>
-            </section>
-
-            {/* Bodies you're paying at without being a full member. */}
-            {guests.length > 0 && (
-              <section className="mt-8">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-                  Also paying at
-                </h2>
-                <p className="mt-0.5 text-xs text-ink-soft">
-                  Spaces outside your department where you have dues to settle.
-                </p>
-                <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {guests.map((space) => (
-                    <SpaceCard
-                      key={space.id}
-                      space={space}
-                      dues={dues}
-                      onOpen={openSpace}
-                    />
-                  ))}
+            ) : (
+              <div className="flex flex-col">
+                {/* Phones: the portfolio total as an inline headline figure. */}
+                <div className="mt-4 sm:hidden">
+                  <InlineStat
+                    label="Total outstanding"
+                    value={naira(totals.outstanding)}
+                    caption={
+                      totals.overdue > 0
+                        ? `${totals.overdue} overdue · across ${spaces.length} space${spaces.length === 1 ? "" : "s"}`
+                        : `Nothing overdue · across ${spaces.length} space${spaces.length === 1 ? "" : "s"}`
+                    }
+                  />
                 </div>
-              </section>
+
+                {/* Join a new department by code. */}
+                <div id="join" className="mt-6 scroll-mt-24">
+                  <JoinDepartmentCard
+                    joinedIds={spaces.map((s) => s.id)}
+                    onJoin={joinDepartment}
+                  />
+                </div>
+
+                {/* Spaces you're a member of. */}
+                <section className="mt-8">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                    Your spaces
+                  </h2>
+                  {members.length === 0 ? (
+                    <EmptyState
+                      className="mt-3"
+                      icon={Building03Icon}
+                      title="No spaces yet"
+                      description="Join a department using its code above to see it here."
+                    />
+                  ) : (
+                    <>
+                    <SpaceList spaces={members} dues={dues} onOpen={openSpace} syncing={syncing} />
+                    <div className="mt-3 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+                      {members.map((space) => (
+                        <SpaceCard
+                          key={space.id}
+                          space={space}
+                          dues={dues}
+                          onOpen={openSpace}
+                          status={syncing[space.id]}
+                        />
+                      ))}
+                    </div>
+                    </>
+                  )}
+                </section>
+
+                {/* Bodies you're paying at without being a full member. */}
+                {guests.length > 0 && (
+                  <section className="mt-8">
+                    <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Also paying at
+                    </h2>
+                    <p className="mt-0.5 text-xs text-ink-soft">
+                      Spaces outside your department where you have dues to settle.
+                    </p>
+                    <SpaceList spaces={guests} dues={dues} onOpen={openSpace} syncing={syncing} />
+                    <div className="mt-3 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+                      {guests.map((space) => (
+                        <SpaceCard
+                          key={space.id}
+                          space={space}
+                          dues={dues}
+                          onOpen={openSpace}
+                          status={syncing[space.id]}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -167,13 +314,32 @@ export default function DuesPage() {
         <PayDueModal
           dues={payDues}
           space={selected}
-          balance={balance}
-          cards={SAVED_CARDS}
           pending={pendingIds.length > 0}
           onClose={() => (pendingIds.length ? null : setPayDues([]))}
           onConfirm={confirmPay}
         />
       )}
+    </div>
+  );
+}
+
+/** Phones: spaces as rows in one rounded list instead of a grid of tiles. */
+function SpaceList({
+  spaces,
+  dues,
+  onOpen,
+  syncing,
+}: {
+  spaces: Space[];
+  dues: Due[];
+  onOpen: (space: Space) => void;
+  syncing: Record<string, "joining" | "loading">;
+}) {
+  return (
+    <div className="mt-3 divide-y divide-cloud overflow-hidden rounded-3xl border border-cloud bg-canvas sm:hidden">
+      {spaces.map((space) => (
+        <SpaceRow key={space.id} space={space} dues={dues} onOpen={onOpen} status={syncing[space.id]} />
+      ))}
     </div>
   );
 }

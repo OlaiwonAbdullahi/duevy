@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { m, useReducedMotion, type Variants } from "motion/react";
 import type { ReactNode } from "react";
 
 /**
@@ -29,7 +29,7 @@ export default function Reveal({
   };
 
   return (
-    <motion.div
+    <m.div
       variants={variants}
       initial="hidden"
       whileInView="show"
@@ -40,6 +40,6 @@ export default function Reveal({
       className={className}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

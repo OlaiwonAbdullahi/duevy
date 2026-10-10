@@ -1,10 +1,11 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRightIcon } from "./icons";
 import { CheckCircle } from "@hugeicons/core-free-icons";
+import { InstallAppButton } from "./pwa/InstallAppButton";
 
 export default function Hero() {
   return (
-    <section className="bg-[#fbfaf7] px-6 md:px-12 pt-20 pb-24 md:pt-24 md:pb-32">
+    <section className="bg-[#fbfaf7] px-6 md:px-12 pt-20 pb-14 md:pt-24 md:pb-20">
       <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
         <span className="inline-flex items-center  text-[#0b6e4f] text-[13px] font-medium rounded-full px-3 py-1 mb-6">
           <HugeiconsIcon icon={CheckCircle} size={16} className="mr-1" />
@@ -26,14 +27,13 @@ export default function Hero() {
         </h1>
 
         <p className="text-[#7a847f] text-base md:text-lg leading-relaxed max-w-xl mb-10">
-          Duevy gives class and departmental reps a simple wallet-based way to
-          collect dues, levies, and payments — while every student sees exactly
-          where their money went.
+          Duevy gives course reps a simple way to collect dues, levies, and
+          payments. Students pay in a tap, Pay for dues in few clicks.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <a
-            href="#"
+            href="/signup"
             className="inline-flex items-center justify-center gap-2 bg-[#0b6e4f] text-white text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#0f996d] transition-colors duration-300 cursor-pointer group"
           >
             Get started
@@ -42,12 +42,7 @@ export default function Hero() {
               className="transition-transform duration-500 group-hover:translate-x-1"
             />
           </a>
-          <a
-            href="#how-it-works"
-            className="inline-flex items-center justify-center bg-[#f4f2ec] text-[#1b2520] text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#e6f2ec] transition-colors duration-300 cursor-pointer"
-          >
-            See how it works
-          </a>
+          <InstallAppButton className="inline-flex items-center justify-center gap-2 bg-[#f4f2ec] text-[#1b2520] text-base font-semibold rounded-full px-7 h-[52px] hover:bg-[#e6f2ec] transition-colors duration-300 cursor-pointer" />
         </div>
       </div>
     </section>

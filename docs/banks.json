@@ -1,0 +1,1829 @@
+{
+  "metadata": {
+    "country": "Nigeria",
+    "lastUpdated": "2026-06-19",
+    "totalCount": 260
+  },
+  "banks": [
+    {
+      "id": 376,
+      "code": "090270",
+      "name": "AB MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090270.png"
+    },
+    {
+      "id": 265,
+      "code": "070010",
+      "name": "ABBEY MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573052/Bank_logos/ykp2vcyfpankmroce6tg.png"
+    },
+    {
+      "id": 366,
+      "code": "090260",
+      "name": "ABOVE ONLY MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090260.png"
+    },
+    {
+      "id": 360,
+      "code": "090197",
+      "name": "ABU MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090197.png"
+    },
+    {
+      "id": 457,
+      "code": "090202",
+      "name": "ACCELEREX NETWORK",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090202.png"
+    },
+    {
+      "id": 242,
+      "code": "000014",
+      "name": "ACCESS BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/eaxboh3myyzxaawrjmrc.png"
+    },
+    {
+      "id": 233,
+      "code": "000005",
+      "name": "ACCESS(DIAMOND) BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/eaxboh3myyzxaawrjmrc.png"
+    },
+    {
+      "id": 426,
+      "code": "100013",
+      "name": "ACCESS MONEY",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/eaxboh3myyzxaawrjmrc.png"
+    },
+    {
+      "id": 305,
+      "code": "090134",
+      "name": "ACCION MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/nhd17q0avwlsxxww52ex.png"
+    },
+    {
+      "id": 331,
+      "code": "090160",
+      "name": "ADDOSSER MFBB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090160.png"
+    },
+    {
+      "id": 374,
+      "code": "090268",
+      "name": "ADEYEMI COLLEGE STAFF MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090268.png"
+    },
+    {
+      "id": 326,
+      "code": "090155",
+      "name": "ADVANS LA FAYETTE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090155.png"
+    },
+    {
+      "id": 441,
+      "code": "100028",
+      "name": "AG MORTGAGE BANK PLC",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/hfl943b9ehngfjr8qbdn.png"
+    },
+    {
+      "id": 476,
+      "code": "090371",
+      "name": "AGOSASA MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090371.png"
+    },
+    {
+      "id": 304,
+      "code": "090133",
+      "name": "AL-BARKAH MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090133.png"
+    },
+    {
+      "id": 365,
+      "code": "090259",
+      "name": "ALEKUN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090259.png"
+    },
+    {
+      "id": 398,
+      "code": "090297",
+      "name": "ALERT MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090297.png"
+    },
+    {
+      "id": 382,
+      "code": "090277",
+      "name": "ALHAYAT MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090277.png"
+    },
+    {
+      "id": 302,
+      "code": "090131",
+      "name": "ALLWORKERS MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090131.png"
+    },
+    {
+      "id": 340,
+      "code": "090169",
+      "name": "ALPHAKAPITAL MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090169.png"
+    },
+    {
+      "id": 351,
+      "code": "090180",
+      "name": "AMJU MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090180.png"
+    },
+    {
+      "id": 287,
+      "code": "090116",
+      "name": "AMML MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090116.png"
+    },
+    {
+      "id": 314,
+      "code": "090143",
+      "name": "APEKS MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090143.png"
+    },
+    {
+      "id": 480,
+      "code": "090376",
+      "name": "APPLE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090376.png"
+    },
+    {
+      "id": 489,
+      "code": "110011",
+      "name": "ARCA PAYMENTS COMPANY LIMITED",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/110011.png"
+    },
+    {
+      "id": 387,
+      "code": "090282",
+      "name": "ARISE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090282.png"
+    },
+    {
+      "id": 274,
+      "code": "090001",
+      "name": "ASOSAVINGS",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/fl2cxc3dj7djvffpoqbx.png"
+    },
+    {
+      "id": 343,
+      "code": "090172",
+      "name": "ASTRAPOLARIS MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/olvfqqhgkjpdszln3cse.png"
+    },
+    {
+      "id": 370,
+      "code": "090264",
+      "name": "AUCHI MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090264.png"
+    },
+    {
+      "id": 352,
+      "code": "090188",
+      "name": "BAINES CREDIT MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572955/Bank_logos/igsovwotxivr29m2qo5u.png"
+    },
+    {
+      "id": 413,
+      "code": "090326",
+      "name": "BALOGUN GAMBARI MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090326.png"
+    },
+    {
+      "id": 406,
+      "code": "090316",
+      "name": "BAYERO MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090316.png"
+    },
+    {
+      "id": 298,
+      "code": "090127",
+      "name": "BC KASH MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090127.png"
+    },
+    {
+      "id": 446,
+      "code": "100052",
+      "name": "BETA-ACCESS YELLO",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100052.png"
+    },
+    {
+      "id": 468,
+      "code": "090336",
+      "name": "BIPC MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090336.png"
+    },
+    {
+      "id": 288,
+      "code": "090117",
+      "name": "BOCTRUST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090117.png"
+    },
+    {
+      "id": 347,
+      "code": "090176",
+      "name": "BOSAK MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090176.png"
+    },
+    {
+      "id": 319,
+      "code": "090148",
+      "name": "BOWEN MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572956/Bank_logos/xsg7xzdh2qnnksxpl1mx.png"
+    },
+    {
+      "id": 270,
+      "code": "070015",
+      "name": "BRENT MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070015.png"
+    },
+    {
+      "id": 394,
+      "code": "090293",
+      "name": "BRETHREN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090293.png"
+    },
+    {
+      "id": 403,
+      "code": "090308",
+      "name": "BRIGHTWAY MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090308.png"
+    },
+    {
+      "id": 469,
+      "code": "090360",
+      "name": "CASHCONNECT MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572956/Bank_logos/s4px9gsfdxuc64bfb3gv.png"
+    },
+    {
+      "id": 418,
+      "code": "100005",
+      "name": "CELLULANT",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100005.png"
+    },
+    {
+      "id": 325,
+      "code": "090154",
+      "name": "CEMCS MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090154.png"
+    },
+    {
+      "id": 312,
+      "code": "090141",
+      "name": "CHIKUM MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090141.png"
+    },
+    {
+      "id": 315,
+      "code": "090144",
+      "name": "CIT MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090144.png"
+    },
+    {
+      "id": 237,
+      "code": "000009",
+      "name": "CITI BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572956/Bank_logos/qdujnmbylp2eszhljc7v.png"
+    },
+    {
+      "id": 479,
+      "code": "090374",
+      "name": "COASTLINE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090374.png"
+    },
+    {
+      "id": 301,
+      "code": "090130",
+      "name": "CONSUMER MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572956/Bank_logos/kl523h4creavcimcjlld.png"
+    },
+    {
+      "id": 444,
+      "code": "100032",
+      "name": "CONTEC GLOBAL",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100032.png"
+    },
+    {
+      "id": 472,
+      "code": "090365",
+      "name": "Corestep MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090365.png"
+    },
+    {
+      "id": 256,
+      "code": "060001",
+      "name": "CORONATION",
+      "category": "6",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572957/Bank_logos/hfewxqqqbkcavmxeber7.png"
+    },
+    {
+      "id": 261,
+      "code": "070006",
+      "name": "COVENANT MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070006.png"
+    },
+    {
+      "id": 330,
+      "code": "090159",
+      "name": "CREDIT AFRIQUE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090159.png"
+    },
+    {
+      "id": 486,
+      "code": "090391",
+      "name": "Davodani Microfinance Bank",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090391.png"
+    },
+    {
+      "id": 338,
+      "code": "090167",
+      "name": "DAYLIGHT MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090167.png"
+    },
+    {
+      "id": 327,
+      "code": "090156",
+      "name": "E-BARCS MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090156.png"
+    },
+    {
+      "id": 395,
+      "code": "090294",
+      "name": "EAGLE FLIGHT MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090294.png"
+    },
+    {
+      "id": 434,
+      "code": "100021",
+      "name": "EARTHOLEUM",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100021.png"
+    },
+    {
+      "id": 238,
+      "code": "000010",
+      "name": "ECOBANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572957/Bank_logos/ff4vqlsuaopsgslkvqgm.png"
+    },
+    {
+      "id": 238,
+      "code": "000010",
+      "name": "ECOMOBILE",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572957/Bank_logos/ff4vqlsuaopsgslkvqgm.png"
+    },
+    {
+      "id": 421,
+      "code": "100008",
+      "name": "ECOBANK XPRESS ACCOUNT",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572957/Bank_logos/ff4vqlsuaopsgslkvqgm.png"
+    },
+    {
+      "id": 404,
+      "code": "090310",
+      "name": "EDFIN MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090310.png"
+    },
+    {
+      "id": 485,
+      "code": "090389",
+      "name": "EK-Reliable Microfinance Bank",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090389.png"
+    },
+    {
+      "id": 279,
+      "code": "090097",
+      "name": "EKONDO MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/hmiltinpvmjpcjv6bruh.png"
+    },
+    {
+      "id": 379,
+      "code": "090273",
+      "name": "EMERALDS MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090273.png"
+    },
+    {
+      "id": 285,
+      "code": "090114",
+      "name": "EMPIRETRUST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090114.png"
+    },
+    {
+      "id": 247,
+      "code": "000019",
+      "name": "ENTERPRISE BANK",
+      "category": "2",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/000019.png"
+    },
+    {
+      "id": 353,
+      "code": "090189",
+      "name": "ESAN MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090189.png"
+    },
+    {
+      "id": 337,
+      "code": "090166",
+      "name": "ESO-E MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090166.png"
+    },
+    {
+      "id": 419,
+      "code": "100006",
+      "name": "ETRANZACT",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100006.png"
+    },
+    {
+      "id": 459,
+      "code": "090304",
+      "name": "EVANGEL MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090304.png"
+    },
+    {
+      "id": 466,
+      "code": "090332",
+      "name": "EVERGREEN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090332.png"
+    },
+    {
+      "id": 463,
+      "code": "090328",
+      "name": "EYOWO MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/gq0lrv9nwqiuixxahbkq.png"
+    },
+    {
+      "id": 350,
+      "code": "090179",
+      "name": "FAST MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090179.png"
+    },
+    {
+      "id": 280,
+      "code": "090107",
+      "name": "FBN MORGAGES LIMITED",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090107.png"
+    },
+    {
+      "id": 257,
+      "code": "060002",
+      "name": "FBNQUEST MERCHANT BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/060002.png"
+    },
+    {
+      "id": 231,
+      "code": "000003",
+      "name": "FCMB MFB",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/guthqbm9fejgqtqsfmqe.png"
+    },
+    {
+      "id": 443,
+      "code": "100031",
+      "name": "FCMB MOBILE",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/guthqbm9fejgqtqsfmqe.png"
+    },
+    {
+      "id": 392,
+      "code": "090290",
+      "name": "FCT MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090290.png"
+    },
+    {
+      "id": 408,
+      "code": "090318",
+      "name": "FEDERAL UNIVERSITY DUTSE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090318.png"
+    },
+    {
+      "id": 399,
+      "code": "090298",
+      "name": "FEDERALPOLY NASARAWAMFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090298.png"
+    },
+    {
+      "id": 414,
+      "code": "100001",
+      "name": "FETS",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100001.png"
+    },
+    {
+      "id": 324,
+      "code": "090153",
+      "name": "FFS MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090153.png"
+    },
+    {
+      "id": 235,
+      "code": "000007",
+      "name": "FIDELITY BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/gcljwm7lfxrj0k0abr1a.png"
+    },
+    {
+      "id": 432,
+      "code": "100019",
+      "name": "FIDELITY MOBILE",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/gcljwm7lfxrj0k0abr1a.png"
+    },
+    {
+      "id": 297,
+      "code": "090126",
+      "name": "FIDFUND MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090126.png"
+    },
+    {
+      "id": 283,
+      "code": "090111",
+      "name": "FINATRUST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090111.png"
+    },
+    {
+      "id": 386,
+      "code": "090281",
+      "name": "FINEX MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090281.png"
+    },
+    {
+      "id": 473,
+      "code": "090366",
+      "name": "Firmus MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572958/Bank_logos/ep0ucmj1b08ime8yg1bu.png"
+    },
+    {
+      "id": 244,
+      "code": "000016",
+      "name": "FIRST BANK OF NIGERIA",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572959/Bank_logos/qwswdn4dnhd17yug4sho.png"
+    },
+    {
+      "id": 269,
+      "code": "070014",
+      "name": "FIRST GENERATION MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070014.png"
+    },
+    {
+      "id": 334,
+      "code": "090163",
+      "name": "FIRST MULTIPLE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090163.png"
+    },
+    {
+      "id": 389,
+      "code": "090285",
+      "name": "FIRST OPTION MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090285.png"
+    },
+    {
+      "id": 335,
+      "code": "090164",
+      "name": "FIRST ROYAL MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090164.png"
+    },
+    {
+      "id": 427,
+      "code": "100014",
+      "name": "FIRSTMONIE WALLET",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100014.png"
+    },
+    {
+      "id": 260,
+      "code": "070002",
+      "name": "FORTIS MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070002.png"
+    },
+    {
+      "id": 429,
+      "code": "100016",
+      "name": "FORTISMOBILE",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100016.png"
+    },
+    {
+      "id": 454,
+      "code": "400001",
+      "name": "FSDH",
+      "category": "6",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572959/Bank_logos/ko39coxtcwdatsy3xoj2.png"
+    },
+    {
+      "id": 316,
+      "code": "090145",
+      "name": "FULL RANGE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090145.png"
+    },
+    {
+      "id": 329,
+      "code": "090158",
+      "name": "FUTO MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090158.png"
+    },
+    {
+      "id": 339,
+      "code": "090168",
+      "name": "GASHUA MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090168.png"
+    },
+    {
+      "id": 264,
+      "code": "070009",
+      "name": "GATEWAY MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572960/Bank_logos/s5btxbjhmtkzjub0adt5.png"
+    },
+    {
+      "id": 255,
+      "code": "000027",
+      "name": "GLOBUS BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572960/Bank_logos/x1hhtn8udrrfvgbsa64w.png"
+    },
+    {
+      "id": 383,
+      "code": "090278",
+      "name": "GLORY MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090278.png"
+    },
+    {
+      "id": 435,
+      "code": "100022",
+      "name": "GOMONEY",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573004/Bank_logos/mujdezcuh3tqivcjcfdz.png"
+    },
+    {
+      "id": 293,
+      "code": "090122",
+      "name": "GOWANS MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090122.png"
+    },
+    {
+      "id": 349,
+      "code": "090178",
+      "name": "GREENBANK MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090178.png"
+    },
+    {
+      "id": 375,
+      "code": "090269",
+      "name": "GREENVILLE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090269.png"
+    },
+    {
+      "id": 358,
+      "code": "090195",
+      "name": "GROOMING MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090195.png"
+    },
+    {
+      "id": 241,
+      "code": "000013",
+      "name": "GTBANK PLC",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/gqtdvttjaz7yxd1fxggj.png"
+    },
+    {
+      "id": 484,
+      "code": "090385",
+      "name": "GTI Microfinance Bank",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090385.png"
+    },
+    {
+      "id": 422,
+      "code": "100009",
+      "name": "GT MOBILE",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/gqtdvttjaz7yxd1fxggj.png"
+    },
+    {
+      "id": 318,
+      "code": "090147",
+      "name": "HACKMAN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090147.png"
+    },
+    {
+      "id": 272,
+      "code": "070017",
+      "name": "HAGGAI MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070017.png"
+    },
+    {
+      "id": 393,
+      "code": "090291",
+      "name": "HALA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090291.png"
+    },
+    {
+      "id": 292,
+      "code": "090121",
+      "name": "HASAL MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/ondva6pdxro2dsyrpw29.png"
+    },
+    {
+      "id": 430,
+      "code": "100017",
+      "name": "HEDONMARK",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100017.png"
+    },
+    {
+      "id": 248,
+      "code": "000020",
+      "name": "HERITAGE",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/etpgrsdydyhbdgtbvx8h.png"
+    },
+    {
+      "id": 289,
+      "code": "090118",
+      "name": "IBILE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/xh7ahnsqg8zp0ywubut4.png"
+    },
+    {
+      "id": 461,
+      "code": "090324",
+      "name": "IKENNE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090324.png"
+    },
+    {
+      "id": 384,
+      "code": "090279",
+      "name": "IKIRE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090279.png"
+    },
+    {
+      "id": 475,
+      "code": "090370",
+      "name": "ILASAN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090370.png"
+    },
+    {
+      "id": 364,
+      "code": "090258",
+      "name": "IMO MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090258.png"
+    },
+    {
+      "id": 437,
+      "code": "100024",
+      "name": "IMPERIAL HOMES MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/k6d2x1se0mu2ebrbvzsm.png"
+    },
+    {
+      "id": 328,
+      "code": "090157",
+      "name": "INFINITY MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090157.png"
+    },
+    {
+      "id": 271,
+      "code": "070016",
+      "name": "INFINITY TRUST MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070016.png"
+    },
+    {
+      "id": 442,
+      "code": "100029",
+      "name": "INNOVECTIVES KESH",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100029.png"
+    },
+    {
+      "id": 440,
+      "code": "100027",
+      "name": "INTELLIFIN",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100027.png"
+    },
+    {
+      "id": 320,
+      "code": "090149",
+      "name": "IRL MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090149.png"
+    },
+    {
+      "id": 481,
+      "code": "090377",
+      "name": "ISALEOYO MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090377.png"
+    },
+    {
+      "id": 234,
+      "code": "000006",
+      "name": "JAIZ BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573005/Bank_logos/gkzjsakrg56nnylqkr1m.png"
+    },
+    {
+      "id": 275,
+      "code": "090003",
+      "name": "JUBILEELIFE",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090003.png"
+    },
+    {
+      "id": 487,
+      "code": "110008",
+      "name": "KADICK INTEGRATION LIMITED",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/110008.png"
+    },
+    {
+      "id": 409,
+      "code": "090320",
+      "name": "KADPOLY MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090320.png"
+    },
+    {
+      "id": 355,
+      "code": "090191",
+      "name": "KCMB MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090191.png"
+    },
+    {
+      "id": 428,
+      "code": "100015",
+      "name": "KEGOW",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100015.png"
+    },
+    {
+      "id": 230,
+      "code": "000002",
+      "name": "KEYSTONE BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573006/Bank_logos/uls4xo3vgo78jpwvsjww.png"
+    },
+    {
+      "id": 400,
+      "code": "090299",
+      "name": "KONTAGORA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090299.png"
+    },
+    {
+      "id": 373,
+      "code": "090267",
+      "name": "KUDA MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573006/Bank_logos/dguuouthck9tbq3luhfb.png"
+    },
+    {
+      "id": 348,
+      "code": "090177",
+      "name": "LAPO MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090177.png"
+    },
+    {
+      "id": 377,
+      "code": "090271",
+      "name": "LAVENDER MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090271.png"
+    },
+    {
+      "id": 267,
+      "code": "070012",
+      "name": "LBIC MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070012.png"
+    },
+    {
+      "id": 477,
+      "code": "090372",
+      "name": "LEGEND MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090372.png"
+    },
+    {
+      "id": 371,
+      "code": "090265",
+      "name": "LOVONUS MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090265.png"
+    },
+    {
+      "id": 411,
+      "code": "090323",
+      "name": "MAINLAND MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573012/Bank_logos/tnafijd97gljafa2jsn4.png"
+    },
+    {
+      "id": 342,
+      "code": "090171",
+      "name": "MAINSTREET MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090171.png"
+    },
+    {
+      "id": 345,
+      "code": "090174",
+      "name": "MALACHY MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090174.png"
+    },
+    {
+      "id": 483,
+      "code": "090383",
+      "name": "MANNY MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090383.png"
+    },
+    {
+      "id": 410,
+      "code": "090321",
+      "name": "MAYFAIR MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090321.png"
+    },
+    {
+      "id": 273,
+      "code": "070019",
+      "name": "MAYFRESH MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070019.png"
+    },
+    {
+      "id": 385,
+      "code": "090280",
+      "name": "MEGAPRAISE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090280.png"
+    },
+    {
+      "id": 381,
+      "code": "090275",
+      "name": "MERIDIAN MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090275.png"
+    },
+    {
+      "id": 307,
+      "code": "090136",
+      "name": "MICROCRED MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090136.png"
+    },
+    {
+      "id": 424,
+      "code": "100011",
+      "name": "MKUDI",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100011.png"
+    },
+    {
+      "id": 470,
+      "code": "090362",
+      "name": "MOLUSI MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090362.png"
+    },
+    {
+      "id": 433,
+      "code": "100020",
+      "name": "MONEYBOX",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100020.png"
+    },
+    {
+      "id": 300,
+      "code": "090129",
+      "name": "MONEYTRUST MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090129.png"
+    },
+    {
+      "id": 300,
+      "code": "090129",
+      "name": "MONIEPOINT MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573012/Bank_logos/zojmxzsvvzdqqcdpy0oh.png"
+    },
+    {
+      "id": 354,
+      "code": "090190",
+      "name": "MUTUAL BENEFITS MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090190.png"
+    },
+    {
+      "id": 322,
+      "code": "090151",
+      "name": "MUTUAL TRUST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090151.png"
+    },
+    {
+      "id": 323,
+      "code": "090152",
+      "name": "NARGATA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090152.png"
+    },
+    {
+      "id": 369,
+      "code": "090263",
+      "name": "NAVY MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573014/Bank_logos/slycn3p91uabnitmuplo.png"
+    },
+    {
+      "id": 299,
+      "code": "090128",
+      "name": "NDIORAH MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090128.png"
+    },
+    {
+      "id": 464,
+      "code": "090329",
+      "name": "NEPTUNE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090329.png"
+    },
+    {
+      "id": 482,
+      "code": "090378",
+      "name": "NEW GOLDEN PASTURES MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090378.png"
+    },
+    {
+      "id": 281,
+      "code": "090108",
+      "name": "NEW PRUDENTIAL BANK",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090108.png"
+    },
+    {
+      "id": 362,
+      "code": "090205",
+      "name": "NEWDAWN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090205.png"
+    },
+    {
+      "id": 455,
+      "code": "999999",
+      "name": "NIP VIRTUAL BANK",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/999999.png"
+    },
+    {
+      "id": 357,
+      "code": "090194",
+      "name": "NIRSAL NATIONAL MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090194.png"
+    },
+    {
+      "id": 388,
+      "code": "090283",
+      "name": "NNEW WOMEN MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090283.png"
+    },
+    {
+      "id": 258,
+      "code": "060003",
+      "name": "NOVA MB",
+      "category": "6",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/060003.png"
+    },
+    {
+      "id": 259,
+      "code": "070001",
+      "name": "NPF MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070001.png"
+    },
+    {
+      "id": 471,
+      "code": "090364",
+      "name": "NUTURE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090364.png"
+    },
+    {
+      "id": 467,
+      "code": "090333",
+      "name": "OCHE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090333.png"
+    },
+    {
+      "id": 290,
+      "code": "090119",
+      "name": "OHAFIA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090119.png"
+    },
+    {
+      "id": 332,
+      "code": "090161",
+      "name": "OKPOGA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090161.png"
+    },
+    {
+      "id": 378,
+      "code": "090272",
+      "name": "OLABISI ONABANJO UNIVERSITY MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090272.png"
+    },
+    {
+      "id": 396,
+      "code": "090295",
+      "name": "OMIYE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090295.png"
+    },
+    {
+      "id": 262,
+      "code": "070007",
+      "name": "OMOLUABI MORTGAGE BANK PLC",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070007.png"
+    },
+    {
+      "id": 439,
+      "code": "100026",
+      "name": "ONE FINANCE",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573014/Bank_logos/k7jksmmosyd7cjfsyrrh.png"
+    },
+    {
+      "id": 417,
+      "code": "100004",
+      "name": "OPAY",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573014/Bank_logos/cytinuyvppvhxspbnbdz.png"
+    },
+    {
+      "id": 415,
+      "code": "100002",
+      "name": "PAGA",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573015/Bank_logos/gkzleutdyojmrqedwz61.png"
+    },
+    {
+      "id": 263,
+      "code": "070008",
+      "name": "PAGE FINANCIALS",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/070008.png"
+    },
+    {
+      "id": 445,
+      "code": "100033",
+      "name": "PALMPAY",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573015/Bank_logos/gdc9z96kbqv0jspfbvlg.png"
+    },
+    {
+      "id": 416,
+      "code": "100003",
+      "name": "PARKWAY-READYCASH",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573015/Bank_logos/tppffulfrklux2cn3eij.png"
+    },
+    {
+      "id": 276,
+      "code": "090004",
+      "name": "PARRALEX",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573015/Bank_logos/f4r5lcmwxkmoezeqvdpq.png"
+    },
+    {
+      "id": 407,
+      "code": "090317",
+      "name": "PATRICK GOLD",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090317.png"
+    },
+    {
+      "id": 447,
+      "code": "110001",
+      "name": "PAYATTITUDE ONLINE",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/110001.png"
+    },
+    {
+      "id": 417,
+      "code": "100004",
+      "name": "PAYCOM",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100004.png"
+    },
+    {
+      "id": 308,
+      "code": "090137",
+      "name": "PECAN TRUST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573015/Bank_logos/fm9dmk7rz9kadcsryk1d.png"
+    },
+    {
+      "id": 359,
+      "code": "090196",
+      "name": "PENNYWISE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090196.png"
+    },
+    {
+      "id": 306,
+      "code": "090135",
+      "name": "PERSONAL TRUST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573016/Bank_logos/qvahk9hnyqdmscqdoxef.png"
+    },
+    {
+      "id": 336,
+      "code": "090165",
+      "name": "PETRA MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090165.png"
+    },
+    {
+      "id": 391,
+      "code": "090289",
+      "name": "PILLAR MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090289.png"
+    },
+    {
+      "id": 268,
+      "code": "070013",
+      "name": "PLATINUM MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573016/Bank_logos/njiqohpgh5rwrsww9yeh.png"
+    },
+    {
+      "id": 236,
+      "code": "000008",
+      "name": "POLARIS BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/zdqrpoz4twfp105i5zwp.png"
+    },
+    {
+      "id": 397,
+      "code": "090296",
+      "name": "POLYUWANNA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090296.png"
+    },
+    {
+      "id": 380,
+      "code": "090274",
+      "name": "PRESTIGE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090274.png"
+    },
+    {
+      "id": 251,
+      "code": "000023",
+      "name": "PROVIDUS BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/cag1p98gcgbsilfbtkta.png"
+    },
+    {
+      "id": 401,
+      "code": "090303",
+      "name": "PURPLEMONEY MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090303.png"
+    },
+    {
+      "id": 367,
+      "code": "090261",
+      "name": "QUICKFUND MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/vrevlpaetp7howyvcqfl.png"
+    },
+    {
+      "id": 341,
+      "code": "090170",
+      "name": "RAHAMA MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090170.png"
+    },
+    {
+      "id": 252,
+      "code": "000024",
+      "name": "RAND MERCHANT BANK",
+      "category": "6",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/pgdurdchpgk9rbmodsz6.png"
+    },
+    {
+      "id": 266,
+      "code": "070011",
+      "name": "REFUGE MORTGAGE BANK",
+      "category": "7",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/gyq0zhgp2yd9r0iczjeg.png"
+    },
+    {
+      "id": 296,
+      "code": "090125",
+      "name": "REGENT MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090125.png"
+    },
+    {
+      "id": 344,
+      "code": "090173",
+      "name": "RELIANCE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090173.png"
+    },
+    {
+      "id": 361,
+      "code": "090198",
+      "name": "RENMONEY MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090198.png"
+    },
+    {
+      "id": 460,
+      "code": "090322",
+      "name": "REPHIDIM MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090322.png"
+    },
+    {
+      "id": 303,
+      "code": "090132",
+      "name": "RICHWAY MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090132.png"
+    },
+    {
+      "id": 490,
+      "code": "090405",
+      "name": "ROLEZ MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090405.png"
+    },
+    {
+      "id": 309,
+      "code": "090138",
+      "name": "ROYAL EXCHANGE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090138.png"
+    },
+    {
+      "id": 346,
+      "code": "090175",
+      "name": "RUBIES MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/wchll6jdsd0k4jlxig0p.png"
+    },
+    {
+      "id": 390,
+      "code": "090286",
+      "name": "SAFE HAVEN MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573049/Bank_logos/clypkmmnrly4ddtc84ju.png"
+    },
+    {
+      "id": 278,
+      "code": "090006",
+      "name": "SAFETRUST",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090006.png"
+    },
+    {
+      "id": 311,
+      "code": "090140",
+      "name": "SAGAMU MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090140.png"
+    },
+    {
+      "id": 284,
+      "code": "090112",
+      "name": "SEED CAPITAL MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090112.png"
+    },
+    {
+      "id": 474,
+      "code": "090369",
+      "name": "SEEDVEST MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090369.png"
+    },
+    {
+      "id": 420,
+      "code": "100007",
+      "name": "STANBIC IBTC @EASE WALLET",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/nsnoz4ewvhwtyplz3ubm.png"
+    },
+    {
+      "id": 240,
+      "code": "000012",
+      "name": "STANBIC IBTC BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/nsnoz4ewvhwtyplz3ubm.png"
+    },
+    {
+      "id": 249,
+      "code": "000021",
+      "name": "STANDARDCHARTERED",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/bfzo4oyat3sj46yul9p7.png"
+    },
+    {
+      "id": 333,
+      "code": "090162",
+      "name": "STANFORD MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090162.png"
+    },
+    {
+      "id": 368,
+      "code": "090262",
+      "name": "STELLAS MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/pvfcuv1hlqsybqq58bad.png"
+    },
+    {
+      "id": 229,
+      "code": "000001",
+      "name": "STERLING BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/wwo5ou159jpowsszgjgt.png"
+    },
+    {
+      "id": 402,
+      "code": "090305",
+      "name": "SULSAP MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090305.png"
+    },
+    {
+      "id": 250,
+      "code": "000022",
+      "name": "SUNTRUST BANK",
+      "category": "2",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/000022.png"
+    },
+    {
+      "id": 436,
+      "code": "100023",
+      "name": "TAGPAY",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100023.png"
+    },
+    {
+      "id": 254,
+      "code": "000026",
+      "name": "TAJ BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/lfsnxvwpxffodkuoep8e.png"
+    },
+    {
+      "id": 286,
+      "code": "090115",
+      "name": "TCF",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090115.png"
+    },
+    {
+      "id": 423,
+      "code": "100010",
+      "name": "TEASY MOBILE",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100010.png"
+    },
+    {
+      "id": 478,
+      "code": "090373",
+      "name": "TF MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090373.png"
+    },
+    {
+      "id": 253,
+      "code": "000025",
+      "name": "TITAN TRUST BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573050/Bank_logos/htkjmfp7mrft7irwymdb.png"
+    },
+    {
+      "id": 317,
+      "code": "090146",
+      "name": "TRIDENT MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090146.png"
+    },
+    {
+      "id": 462,
+      "code": "090327",
+      "name": "TRUST MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090327.png"
+    },
+    {
+      "id": 294,
+      "code": "090123",
+      "name": "TRUSTBANC J6 MICROFINANCE BANK LIMITED",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090123.png"
+    },
+    {
+      "id": 277,
+      "code": "090005",
+      "name": "TRUSTBOND",
+      "category": "7",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090005.png"
+    },
+    {
+      "id": 458,
+      "code": "090276",
+      "name": "TRUSTFUND MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090276.png"
+    },
+    {
+      "id": 405,
+      "code": "090315",
+      "name": "U AND C MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090315.png"
+    },
+    {
+      "id": 465,
+      "code": "090331",
+      "name": "UNAAB MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090331.png"
+    },
+    {
+      "id": 372,
+      "code": "090266",
+      "name": "UNIBEN MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090266.png"
+    },
+    {
+      "id": 356,
+      "code": "090193",
+      "name": "UNICAL MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090193.png"
+    },
+    {
+      "id": 246,
+      "code": "000018",
+      "name": "UNION BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573051/Bank_logos/neycepqnqx6mwxcn362m.png"
+    },
+    {
+      "id": 232,
+      "code": "000004",
+      "name": "UNITED BANK FOR AFRICA",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573051/Bank_logos/yguwkhwud6ks4kpxgtzy.png"
+    },
+    {
+      "id": 232,
+      "code": "000004",
+      "name": "UBA MONI",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573051/Bank_logos/yguwkhwud6ks4kpxgtzy.png"
+    },
+    {
+      "id": 239,
+      "code": "000011",
+      "name": "UNITY BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573051/Bank_logos/lmqvinzkjgrowdgqvyxk.png"
+    },
+    {
+      "id": 488,
+      "code": "110009",
+      "name": "Venture Garden Nigeria Limited",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/110009.png"
+    },
+    {
+      "id": 282,
+      "code": "090110",
+      "name": "VFD MFB",
+      "category": "9",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573051/Bank_logos/z8v31sh7scvdta7tbiij.png"
+    },
+    {
+      "id": 321,
+      "code": "090150",
+      "name": "VIRTUE MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090150.png"
+    },
+    {
+      "id": 310,
+      "code": "090139",
+      "name": "VISA MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090139.png"
+    },
+    {
+      "id": 425,
+      "code": "100012",
+      "name": "VTNETWORKS",
+      "category": "10",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/100012.png"
+    },
+    {
+      "id": 245,
+      "code": "000017",
+      "name": "WEMA BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573051/Bank_logos/phm15t4t7gjwehwl1br5.png"
+    },
+    {
+      "id": 291,
+      "code": "090120",
+      "name": "WETLAND MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090120.png"
+    },
+    {
+      "id": 456,
+      "code": "090201",
+      "name": "XPRESS PAYMENTS",
+      "category": "11",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090201.png"
+    },
+    {
+      "id": 295,
+      "code": "090124",
+      "name": "XSLNCE MICROFINANCE BANK",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090124.png"
+    },
+    {
+      "id": 313,
+      "code": "090142",
+      "name": "YES MFB",
+      "category": "9",
+      "logo": "https://cloudfilesstore.blob.core.windows.net/icons/Banks/090142.png"
+    },
+    {
+      "id": 243,
+      "code": "000015",
+      "name": "ZENITH BANK",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573052/Bank_logos/esrelpvg5ziubpikbshl.png"
+    },
+    {
+      "id": 243,
+      "code": "000015",
+      "name": "ZENITH EASY WALLET",
+      "category": "2",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573052/Bank_logos/esrelpvg5ziubpikbshl.png"
+    },
+    {
+      "id": 431,
+      "code": "100018",
+      "name": "ZENITH MOBILE",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573052/Bank_logos/esrelpvg5ziubpikbshl.png"
+    },
+    {
+      "id": 438,
+      "code": "100025",
+      "name": "ZINTERNET - KONGAPAY",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740573006/Bank_logos/la0qw3kxmtfilfu8l5uj.png"
+    },
+    {
+      "id": 439,
+      "code": "100025",
+      "name": "9 Payment Service Bank",
+      "category": "10",
+      "logo": "https://res.cloudinary.com/dzvqoypcs/image/upload/v1740572954/Bank_logos/pscgfycxxqtqm26czyqb.png"
+    }
+  ]
+}

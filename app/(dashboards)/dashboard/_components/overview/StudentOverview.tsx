@@ -1,0 +1,302 @@
+"use client";
+
+import { useEffect, useMemo } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ReceiptDollarIcon,
+  Invoice01Icon,
+  ArrowRight01Icon,
+  CheckmarkCircle02Icon,
+  UserAdd01Icon,
+  Alert01Icon,
+  AiChat01Icon,
+  Wallet01Icon,
+  Settings02Icon,
+} from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { useStudentOverview } from "@/lib/api/queries";
+import type { StudentOverview as StudentOverviewData } from "@/lib/api/types";
+import { useAuth } from "@/lib/auth/auth-context";
+import { EmptyState } from "../EmptyState";
+import { nairaFromKobo } from "../format";
+import {
+  relativeDue,
+  dueTypeIcon,
+  dueTypeLabel,
+} from "../../dues/_components/data";
+import { TXN_META, formatTime } from "../../transactions/_components/data";
+import type { HugeIcon } from "../nav-config";
+import {
+  StatCard,
+  QuickAction,
+  PanelHeader,
+  BalanceCard,
+  BalanceCardButton,
+  ActionRow,
+  MiniStat,
+} from "./OverviewUI";
+import { OverviewBodySkeleton } from "../Skeleton";
+import { FEATURES } from "@/lib/features";
+
+const TXN_FALLBACK = { icon: ReceiptDollarIcon as HugeIcon, label: "Activity" };
+function txnMeta(type: string) {
+  return (TXN_META as Record<string, { icon: HugeIcon; label: string }>)[type] ?? TXN_FALLBACK;
+}
+
+// `/me/overview` open dues carry the rep lifecycle `status` ("active") plus a
+// separate boolean `overdue`; older payloads used status "overdue".
+type OverviewDue = StudentOverviewData["openDues"][number];
+const isOverdue = (d: OverviewDue) => d.overdue === true || d.status === "overdue";
+
+export function StudentOverview() {
+  const { user } = useAuth();
+  const name = user?.name?.split(" ")[0] ?? "there";
+
+  // Cached: coming back to the dashboard shows the last overview instantly
+  // while it refreshes in the background.
+  const overview = useStudentOverview();
+  const data: StudentOverviewData | null = overview.data ?? null;
+  const loading = overview.isPending;
+  const error = overview.isError;
+
+  useEffect(() => {
+    if (overview.isError) toast.error("Couldn't load your dashboard. Pull to refresh.");
+  }, [overview.isError]);
+
+  // Overdue first, then soonest deadline — matches the old mock ordering.
+  const openDues = useMemo(() => {
+    const dues = data?.openDues ?? [];
+    return [...dues].sort((a, b) => {
+      const rank = (d: OverviewDue) => (isOverdue(d) ? 0 : 1);
+      return rank(a) - rank(b) || +new Date(a.dueDate) - +new Date(b.dueDate);
+    });
+  }, [data]);
+
+  const overdueCount = useMemo(
+    () => (data?.openDues ?? []).filter(isOverdue).length,
+    [data],
+  );
+
+  const recent = data?.recentTransactions ?? [];
+
+  return (
+    <div className="mx-auto max-w-6xl">
+      {/* Phones get the greeting in the top bar instead. */}
+      <div className="hidden gap-4 sm:flex sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+            Welcome back, {name}
+          </h1>
+          <p className="mt-1 text-[13px] text-ink-soft">
+            Your dues and payments at a glance.
+          </p>
+        </div>
+        {FEATURES.assistant && (
+          <Link
+            href="/dashboard/assistant"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
+          >
+            <HugeiconsIcon icon={AiChat01Icon} size={16} />
+            Chat with Duey
+          </Link>
+        )}
+      </div>
+
+      {error && !loading ? (
+        <EmptyState
+          icon={Alert01Icon}
+          title="Couldn't load your dashboard"
+          description="Something went wrong reaching the server. Refresh the page to try again."
+        />
+      ) : loading ? (
+        <OverviewBodySkeleton />
+      ) : (
+        <>
+          {/* Phones: banking-app home — hero balance, shortcuts, two figures. */}
+          <div className="sm:hidden">
+            <BalanceCard
+              doodle
+              label="Outstanding dues"
+              value={nairaFromKobo(data?.outstanding.amount ?? 0)}
+              hint={`${data?.outstanding.count ?? 0} due${
+                data?.outstanding.count === 1 ? "" : "s"
+              } awaiting payment`}
+            >
+              <div className="flex gap-2.5">
+                <BalanceCardButton href="/dashboard/dues" icon={Wallet01Icon} label="Pay dues" />
+                <BalanceCardButton
+                  href="/dashboard/transactions"
+                  icon={ReceiptDollarIcon}
+                  label="History"
+                  variant="ghost"
+                />
+              </div>
+            </BalanceCard>
+
+            <ActionRow
+              actions={[
+                { href: "/dashboard/dues", icon: Invoice01Icon, label: "My dues" },
+                { href: "/dashboard/dues#join", icon: UserAdd01Icon, label: "Join dept." },
+                { href: "/dashboard/transactions", icon: ReceiptDollarIcon, label: "Receipts" },
+                FEATURES.assistant
+                  ? { href: "/dashboard/assistant", icon: AiChat01Icon, label: "Ask Duey" }
+                  : { href: "/dashboard/settings", icon: Settings02Icon, label: "Settings" },
+              ]}
+            />
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <MiniStat label="Paid this session" value={nairaFromKobo(data?.paidThisSession ?? 0)} />
+              <MiniStat
+                label="Overdue"
+                value={overdueCount === 0 ? "None" : String(overdueCount)}
+                tone={overdueCount > 0 ? "danger" : undefined}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              icon={Invoice01Icon}
+              label="Outstanding dues"
+              value={nairaFromKobo(data?.outstanding.amount ?? 0)}
+              hint={`${data?.outstanding.count ?? 0} due${
+                data?.outstanding.count === 1 ? "" : "s"
+              } awaiting payment`}
+            />
+            <StatCard
+              icon={ReceiptDollarIcon}
+              label="Paid this session"
+              value={nairaFromKobo(data?.paidThisSession ?? 0)}
+              hint="Across your settled dues"
+            />
+            <StatCard
+              icon={Alert01Icon}
+              label="Overdue"
+              value={String(overdueCount)}
+              hint={overdueCount === 0 ? "You're all caught up" : "Needs attention"}
+              tone="brand"
+            />
+          </div>
+
+          <div className="mt-4 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+            <QuickAction
+              href="/dashboard/dues"
+              icon={Invoice01Icon}
+              label="Pay dues"
+              hint="Settle what you owe"
+            />
+            <QuickAction
+              href="/dashboard/dues#join"
+              icon={UserAdd01Icon}
+              label="Join a department"
+              hint="Enter a code to join"
+            />
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+            <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+              <PanelHeader title="Outstanding dues" href="/dashboard/dues" />
+
+              {openDues.length === 0 ? (
+                <EmptyState
+                  icon={CheckmarkCircle02Icon}
+                  title="You're all settled"
+                  description="No outstanding dues right now. New dues from your spaces will show up here."
+                />
+              ) : (
+                <ul className="mt-3 flex flex-col">
+                  {openDues.slice(0, 4).map((due) => {
+                    const rel = relativeDue(due.dueDate);
+                    return (
+                      <li
+                        key={due.id}
+                        className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0"
+                      >
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cloud text-brand">
+                          <HugeiconsIcon icon={dueTypeIcon(due.type ?? due.category)} size={18} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink">
+                            {due.title}
+                          </p>
+                          <p
+                            className={`truncate text-xs ${
+                              rel.past ? "text-rose-600" : "text-ink-soft"
+                            }`}
+                          >
+                            {dueTypeLabel(due.type ?? due.category)} · {rel.text}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold text-ink">
+                          {nairaFromKobo(due.amount)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              <Button variant="brand" size="pill-lg" asChild className="mt-4 w-full max-sm:hidden">
+                <Link href="/dashboard/dues">
+                  Pay dues
+                  <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+                </Link>
+              </Button>
+            </section>
+
+            <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+              <PanelHeader title="Recent activity" href="/dashboard/transactions" />
+
+              {recent.length === 0 ? (
+                <EmptyState
+                  icon={ReceiptDollarIcon}
+                  title="No activity yet"
+                  description="Your payments will appear here."
+                />
+              ) : (
+                <ul className="mt-3 flex flex-col">
+                  {recent.map((txn) => {
+                    const isIn = txn.amount > 0;
+                    const meta = txnMeta(txn.type);
+                    return (
+                      <li
+                        key={txn.id}
+                        className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0"
+                      >
+                        <span
+                          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
+                            isIn ? "bg-cloud text-brand" : "bg-paper text-ink-soft"
+                          }`}
+                        >
+                          <HugeiconsIcon icon={meta.icon} size={16} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink">
+                            {txn.title ?? meta.label}
+                          </p>
+                          <p className="truncate text-xs text-ink-soft">
+                            {formatTime(txn.createdAt)}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 text-sm font-semibold ${
+                            isIn ? "text-brand" : "text-ink"
+                          }`}
+                        >
+                          {isIn ? "+" : "−"}
+                          {nairaFromKobo(txn.amount)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

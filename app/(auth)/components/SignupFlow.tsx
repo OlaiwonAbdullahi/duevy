@@ -1,0 +1,412 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowRight01Icon,
+  UserIcon,
+  Building03Icon,
+} from "@hugeicons/core-free-icons";
+import { useAuth } from "@/lib/auth/auth-context";
+import { savePostAuthNext } from "@/lib/auth/post-auth-next";
+import { ApiError } from "@/lib/api/errors";
+import AuthField from "./AuthField";
+import RoleSelect, { type SignupRole } from "./RoleSelect";
+import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
+import { CheckEmailNotice } from "./CheckEmailNotice";
+
+type StepId = "role" | "account" | "space";
+
+const STEPS: Record<SignupRole, StepId[]> = {
+  student: ["role", "account"],
+  rep: ["role", "account", "space"],
+};
+
+const ROLE_META: Record<SignupRole, { label: string; icon: typeof UserIcon }> =
+  {
+    student: { label: "Student", icon: UserIcon },
+    rep: { label: "Department rep", icon: Building03Icon },
+  };
+
+type Account = {
+  name: string;
+  matricNo: string;
+  email: string;
+  password: string;
+  acceptedTerms: boolean;
+};
+
+const EMPTY_SPACE: SpaceDetails = {
+  spaceName: "",
+  short: "",
+  kind: "department",
+  school: "",
+  faculty: "",
+};
+
+/** Only ever follow an internal path — never let `next` redirect off-site. */
+function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
+export default function SignupFlow() {
+  const { register } = useAuth();
+  const [stepIndex, setStepIndex] = useState(0);
+  // Read once on mount rather than via `useSearchParams()`, which would force
+  // this route into a Suspense boundary just for a value we only need at submit time.
+  const [next] = useState(() =>
+    typeof window === "undefined"
+      ? null
+      : safeNext(new URLSearchParams(window.location.search).get("next")),
+  );
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+  // A join link implies the visitor is joining as a member, not registering
+  // as a rep — skip the role picker entirely and go straight to account details.
+  const joinFlow = next?.startsWith("/join/") ?? false;
+  const [role, setRole] = useState<SignupRole>("student");
+
+  useEffect(() => {
+    if (next) savePostAuthNext(next);
+    // Only needs to run once, on mount, to cover the case where the user
+    // verifies their email in a different tab/device than the one that
+    // started signup (the `next` query param alone can't survive that hop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [submitting, setSubmitting] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+
+  const [account, setAccount] = useState<Account>({
+    name: "",
+    matricNo: "",
+    email: "",
+    password: "",
+    acceptedTerms: false,
+  });
+  const [space, setSpace] = useState<SpaceDetails>(EMPTY_SPACE);
+
+  const steps = joinFlow ? (["account"] as StepId[]) : STEPS[role];
+  const currentId = steps[stepIndex];
+  const total = steps.length;
+
+  const goBack = () => setStepIndex((index) => Math.max(0, index - 1));
+  const goNext = () => setStepIndex((index) => index + 1);
+
+  async function handleAccountSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting) return;
+    const data = new FormData(event.currentTarget);
+    const nextAccount: Account = {
+      name: String(data.get("name") ?? "").trim(),
+      matricNo: String(data.get("matricNo") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
+      password: String(data.get("password") ?? ""),
+      acceptedTerms: data.get("terms") === "on",
+    };
+    setAccount(nextAccount);
+
+    // Reps continue into department setup; the API call happens once that's collected too.
+    if (role === "rep") {
+      goNext();
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await register({
+        role: "student",
+        name: nextAccount.name,
+        matricNo: nextAccount.matricNo,
+        email: nextAccount.email,
+        password: nextAccount.password,
+        acceptedTerms: nextAccount.acceptedTerms,
+      });
+      setSubmittedEmail(nextAccount.email);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't reach the server. Check your connection and try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // The space theme isn't chosen at signup; the rep can change it later from Manage.
+  async function handleSpaceSubmit(data: SpaceDetails) {
+    if (submitting) return;
+    setSpace(data);
+    setSubmitting(true);
+    try {
+      await register({
+        role: "rep",
+        name: account.name,
+        matricNo: account.matricNo,
+        email: account.email,
+        password: account.password,
+        acceptedTerms: account.acceptedTerms,
+        space: {
+          name: data.spaceName,
+          short: data.short,
+          kind: data.kind,
+          school: data.school,
+          faculty: data.faculty || undefined,
+        },
+      });
+      setSubmittedEmail(account.email);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't reach the server. Check your connection and try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const RoleIcon = ROLE_META[role].icon;
+  const { title, subtitle } = headerFor(currentId, role, joinFlow);
+
+  if (submittedEmail) {
+    return (
+      <CheckEmailNotice
+        email={submittedEmail}
+        loginHref={loginHref}
+        isRep={role === "rep"}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col">
+      {/* Heading */}
+      <div className="mb-8">
+        {total > 1 && (
+          <p className="text-[#0b6e4f] text-[12px] font-semibold uppercase tracking-[0.14em] mb-3">
+            Step {stepIndex + 1} of {total}
+          </p>
+        )}
+        <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
+          {title}
+        </h1>
+        <p className="text-[#7a847f] text-[15px] leading-relaxed">{subtitle}</p>
+      </div>
+
+      {currentId === "role" && (
+        <div className="flex flex-col gap-6">
+          <RoleSelect value={role} onChange={setRole} />
+          <button
+            type="button"
+            onClick={goNext}
+            className="group inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
+          >
+            Continue
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              size={16}
+              className="transition-transform duration-500 group-hover:translate-x-1"
+            />
+          </button>
+        </div>
+      )}
+
+      {currentId === "account" && (
+        <div className="flex flex-col">
+          {/* Chosen role summary — tap to change. Hidden on a join-link
+              signup: there's no role step to jump back to, since it's skipped. */}
+          {!joinFlow && (
+            <button
+              type="button"
+              onClick={() => setStepIndex(0)}
+              disabled={submitting}
+              className="mb-6 flex items-center justify-between rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] px-4 py-3 text-left transition-colors duration-300 hover:border-[#0b6e4f]/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[#e6f2ec]"
+            >
+              <span className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e6f2ec] text-[#0b6e4f]">
+                  <HugeiconsIcon icon={RoleIcon} size={18} />
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-[#7a847f] text-[12px] leading-none mb-1">
+                    Signing up as
+                  </span>
+                  <span className="text-[#1b2520] text-[14px] font-semibold leading-none">
+                    {ROLE_META[role].label}
+                  </span>
+                </span>
+              </span>
+              <span className="text-[#0b6e4f] text-[13px] font-medium">
+                Change
+              </span>
+            </button>
+          )}
+
+          {/* Form */}
+          <form
+            className="flex flex-col gap-5"
+            onSubmit={handleAccountSubmit}
+            aria-busy={submitting}
+          >
+            {/* A disabled fieldset locks every input while the request is in flight. */}
+            <fieldset
+              disabled={submitting}
+              className="flex min-w-0 flex-col gap-5 transition-opacity duration-300 disabled:opacity-60"
+            >
+              <AuthField
+                id="name"
+                label="Full name"
+                icon="user"
+                type="text"
+                name="name"
+                autoComplete="name"
+                placeholder="e.g. Ada Okeke"
+                defaultValue={account.name}
+                required
+              />
+
+              <AuthField
+                id="matricNo"
+                label="Matric number"
+                icon="matric"
+                type="text"
+                name="matricNo"
+                autoComplete="off"
+                placeholder="e.g. CSC/2021/045"
+                defaultValue={account.matricNo}
+                required
+              />
+
+              <AuthField
+                id="email"
+                label="Email address"
+                icon="mail"
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="you@school.edu.ng"
+                defaultValue={account.email}
+                required
+              />
+
+              <AuthField
+                id="password"
+                label="Password"
+                icon="lock"
+                type="password"
+                name="password"
+                autoComplete="new-password"
+                placeholder="Create a password"
+                defaultValue={account.password}
+                minLength={8}
+                required
+                hint="Use at least 8 characters."
+              />
+
+              <label className="flex items-start gap-3 text-[#7a847f] text-[13px] leading-relaxed cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="terms"
+                  required
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#e6f2ec] accent-[#0b6e4f] cursor-pointer"
+                />
+                <span>
+                  I agree to Duevy&apos;s{" "}
+                  <Link
+                    href="/terms"
+                    className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+                  >
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+            </fieldset>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer disabled:cursor-not-allowed disabled:bg-[#0b6e4f]/60 disabled:hover:bg-[#0b6e4f]/60"
+            >
+              {submitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {submitting
+                ? "Creating account…"
+                : role === "rep"
+                  ? "Continue"
+                  : "Create account"}
+              {!submitting && (
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  size={16}
+                  className="transition-transform duration-500 group-hover:translate-x-1"
+                />
+              )}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {currentId === "space" && (
+        <SpaceDetailsStep
+          defaultValues={space}
+          submitLabel={submitting ? "Finishing setup…" : "Finish setup"}
+          submitting={submitting}
+          onBack={goBack}
+          onSubmit={handleSpaceSubmit}
+        />
+      )}
+
+      {/* Footer — only on the entry steps */}
+      {(currentId === "role" || currentId === "account") && (
+        <p className="mt-8 text-center text-[#7a847f] text-[14px]">
+          Already have an account?{" "}
+          <Link
+            href={loginHref}
+            className="text-[#0b6e4f] font-semibold hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+          >
+            Sign in
+          </Link>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function headerFor(
+  step: StepId,
+  role: SignupRole,
+  joinFlow: boolean,
+): { title: string; subtitle: string } {
+  switch (step) {
+    case "role":
+      return {
+        title: "Create your account",
+        subtitle: "First, tell us how you'll use Duevy.",
+      };
+    case "account":
+      return {
+        title: "Your details",
+        subtitle: joinFlow
+          ? "You're joining via a rep's invite — create your account and we'll add you next."
+          : role === "rep"
+            ? "Tell us about you — you'll set up your department next."
+            : "Setting up as a student — it's free to start.",
+      };
+    case "space":
+      return {
+        title: "Your department",
+        subtitle: "Set up the space you'll collect dues for.",
+      };
+  }
+}

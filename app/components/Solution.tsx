@@ -1,10 +1,10 @@
-import { WalletIcon, EyeIcon, ShieldIcon } from "./icons";
+import { CardIcon, EyeIcon, ShieldIcon } from "./icons";
 
 const blocks = [
   {
-    icon: WalletIcon,
-    title: "Wallet-based collection",
-    body: "Students top up their Duevy wallet, then pay dues, levies, and fees in seconds. No chasing transfers or counting cash.",
+    icon: CardIcon,
+    title: "Direct bank transfer collection",
+    body: "Students pay dues, levies, and fees by bank transfer in seconds. No chasing transfers or counting cash.",
   },
   {
     icon: EyeIcon,
@@ -14,7 +14,7 @@ const blocks = [
   {
     icon: ShieldIcon,
     title: "Reps stay accountable",
-    body: "Payouts need approval from a quorum before funds are released. The rep can't move money alone, and nobody can accuse them of it.",
+    body: "Every department gets its own verified payout account, and every withdrawal is logged and traceable back to who requested it.",
   },
 ];
 

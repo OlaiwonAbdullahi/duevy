@@ -1,72 +1,141 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Notification02Icon } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
-import { useRole, type Role } from "./role-context";
+import { Search01Icon, Logout01Icon, BubbleChatEditIcon } from "@hugeicons/core-free-icons";
+import { useAuth } from "@/lib/auth/auth-context";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationsMenu } from "./NotificationsMenu";
+import { UserAvatar } from "./UserAvatar";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { FeedbackModal } from "./FeedbackModal";
 
-const ROLES: { value: Role; label: string }[] = [
-  { value: "student", label: "Student" },
-  { value: "rep", label: "Rep" },
-];
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
 
-export default function Topbar({ onMenu }: { onMenu: () => void }) {
-  const { role, setRole } = useRole();
+export default function Topbar({ onSearch }: { onSearch: () => void }) {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
+  async function handleLogout() {
+    setConfirmingLogout(false);
+    await logout();
+    router.push("/login");
+  }
+
+  const firstName = user?.name?.split(" ")[0] ?? "there";
 
   return (
-    <header className="sticky top-0 z-30 flex h-18 items-center gap-4 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:px-6 lg:px-8">
-      {/* Mobile menu */}
-      <button
-        onClick={onMenu}
-        aria-label="Open menu"
-        className="lg:hidden grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-paper transition-colors duration-300 cursor-pointer"
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2.5 border-b border-cloud bg-canvas/80 px-4 backdrop-blur-md sm:h-18 sm:gap-4 sm:px-6 lg:px-8">
+      {/* Phones: app-style greeting in place of the search field. The tab bar
+          handles navigation, so there's no hamburger up here. */}
+      <Link
+        href="/dashboard/settings"
+        aria-label="Account settings"
+        className="flex min-w-0 items-center gap-2.5 rounded-full sm:hidden"
       >
-        <HugeiconsIcon icon={Menu01Icon} size={22} />
+        <UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} size={38} />
+        <span className="min-w-0 leading-tight">
+          <span className="block text-[11px] font-medium text-ink-soft">{greeting()}</span>
+          <span className="block truncate text-[15px] font-semibold text-ink">{firstName}</span>
+        </span>
+      </Link>
+
+      {/* Search trigger — opens the ⌘K command palette. */}
+      <button
+        type="button"
+        onClick={onSearch}
+        data-tour="search"
+        className="hidden items-center gap-2 rounded-full border border-cloud bg-paper py-2 pl-3 pr-2 text-ink-soft transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:flex sm:w-64 md:w-72"
+      >
+        <HugeiconsIcon icon={Search01Icon} size={16} className="shrink-0" />
+        <span className="flex-1 text-left text-sm">Search…</span>
+        <kbd className="rounded-md border border-cloud bg-canvas px-1.5 py-0.5 text-[10px] font-semibold">
+          ⌘K
+        </kbd>
       </button>
 
-      <div className="hidden sm:block">
-        <p className="text-sm font-semibold text-ink">Good afternoon, Amara</p>
-        <p className="text-xs text-ink-soft">Computer Science · 300 level</p>
-      </div>
+      <button
+        type="button"
+        onClick={onSearch}
+        data-tour="search"
+        aria-label="Search"
+        className="ml-auto grid h-10 w-10 place-items-center rounded-full text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:hidden"
+      >
+        <HugeiconsIcon icon={Search01Icon} size={20} />
+      </button>
 
-      <div className="ml-auto flex items-center gap-3">
-        {/* Role switch — demo only. Lets you see how one route renders per role.
-            Replace with the real signed-in role once auth is wired up. */}
-        <div className="flex items-center rounded-full border border-cloud bg-paper p-1">
-          <span className="hidden px-2 text-[11px] font-medium text-ink-soft md:inline">
-            View as
-          </span>
-          {ROLES.map((r) => (
-            <button
-              key={r.value}
-              onClick={() => setRole(r.value)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors duration-300 cursor-pointer",
-                role === r.value
-                  ? "bg-brand text-white"
-                  : "text-ink-soft hover:text-ink"
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-
+      <div className="flex items-center gap-1 sm:ml-auto sm:gap-3">
         <ThemeToggle />
 
-        <button
-          aria-label="Notifications"
-          className="relative grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-paper transition-colors duration-300 cursor-pointer"
-        >
-          <HugeiconsIcon icon={Notification02Icon} size={20} />
-          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-brand" />
-        </button>
+        <NotificationsMenu />
 
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-brand text-[13px] font-semibold text-white">
-          AO
-        </div>
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Account menu"
+              className="hidden place-items-center sm:grid rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              <UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} size={36} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 p-1.5">
+            <div className="px-2.5 py-2">
+              <p className="truncate text-sm font-semibold text-ink">{user?.name}</p>
+              <p className="truncate text-xs text-ink-soft">{user?.email}</p>
+            </div>
+            <div className="my-1 h-px bg-cloud" />
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setFeedbackOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
+            >
+              <HugeiconsIcon icon={BubbleChatEditIcon} size={16} />
+              Send feedback
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmingLogout(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors duration-300 hover:bg-paper cursor-pointer"
+            >
+              <HugeiconsIcon icon={Logout01Icon} size={16} />
+              Log out
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
+
+      <ConfirmDialog
+        open={confirmingLogout}
+        icon={Logout01Icon}
+        title="Sign out?"
+        sheetOnMobile={false}
+        description="You'll need to sign in again to access your dashboard."
+        confirmLabel="Sign out"
+        tone="danger"
+        onConfirm={handleLogout}
+        onClose={() => setConfirmingLogout(false)}
+      />
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </header>
   );
 }

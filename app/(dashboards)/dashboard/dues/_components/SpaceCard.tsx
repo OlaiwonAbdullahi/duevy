@@ -18,10 +18,13 @@ export function SpaceCard({
   space,
   dues,
   onOpen,
+  status,
 }: {
   space: Space;
   dues: Due[];
   onOpen: (space: Space) => void;
+  /** Just joined: the join is being confirmed, or its dues are still loading. */
+  status?: "joining" | "loading";
 }) {
   const s = summarizeSpace(space.id, dues);
   const settled = s.openCount === 0;
@@ -31,7 +34,10 @@ export function SpaceCard({
     <button
       type="button"
       onClick={() => onOpen(space)}
-      className="group relative flex w-full flex-col overflow-hidden rounded-3xl border border-cloud bg-canvas p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_18px_40px_-24px_rgba(11,110,79,0.45)] focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/20 cursor-pointer"
+      // Nothing to open until the join is confirmed.
+      disabled={status === "joining"}
+      aria-busy={status ? true : undefined}
+      className="group relative flex disabled:cursor-progress disabled:opacity-80 w-full flex-col overflow-hidden rounded-3xl border border-cloud bg-canvas p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_18px_40px_-24px_rgba(11,110,79,0.45)] focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/20 cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
         <SpaceEmblem
@@ -63,7 +69,14 @@ export function SpaceCard({
         </span>
       </div>
 
-      {/* Outstanding position — the number a student actually cares about. */}
+      {/* Outstanding position — the number a student actually cares about. Hidden
+          until a just-joined space's dues arrive, so it never flashes "₦0". */}
+      {status ? (
+        <div className="mt-5 flex items-center gap-2 border-t border-cloud pt-4 text-xs font-medium text-ink-soft">
+          <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+          {status === "joining" ? "Joining…" : "Loading dues…"}
+        </div>
+      ) : (
       <div className="mt-5 flex items-end justify-between border-t border-cloud pt-4">
         <div>
           <p className="text-[11px] font-medium text-ink-soft">
@@ -98,6 +111,7 @@ export function SpaceCard({
           )
         )}
       </div>
+      )}
     </button>
   );
 }

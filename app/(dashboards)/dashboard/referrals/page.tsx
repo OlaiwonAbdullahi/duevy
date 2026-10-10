@@ -1,0 +1,319 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  GiftIcon,
+  Copy01Icon,
+  Tick02Icon,
+  Share08Icon,
+  UserAdd01Icon,
+  AddTeamIcon,
+  Coins01Icon,
+  CheckmarkCircle02Icon,
+} from "@hugeicons/core-free-icons";
+import { StatCard } from "../_components/StatCard";
+import { IconChip } from "../_components/IconChip";
+import { Skeleton } from "../_components/Skeleton";
+import type { HugeIcon } from "../_components/nav-config";
+import { naira, STATUS_META, summarizeReferrals, formatDate, initials } from "./_components/data";
+import { EmptyState } from "../_components/EmptyState";
+import { getReferrals } from "@/lib/api/referrals";
+import type { ReferralsResponse } from "@/lib/api/types";
+
+function buildSteps(rewardPerReferral: number): { icon: HugeIcon; title: string; body: string }[] {
+  return [
+    {
+      icon: Share08Icon,
+      title: "Share your link",
+      body: "Send your code to other reps and department leads you know.",
+    },
+    {
+      icon: UserAdd01Icon,
+      title: "They sign up as a rep",
+      body: "They register their own department with your link.",
+    },
+    {
+      icon: Coins01Icon,
+      title: "You both earn",
+      body: `You each get ${naira(rewardPerReferral)} once they receive their first due payment.`,
+    },
+  ];
+}
+
+export default function ReferralsPage() {
+  const [copied, setCopied] = useState(false);
+  const [data, setData] = useState<ReferralsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        const res = await getReferrals();
+        if (!cancelled) setData(res);
+      } catch {
+        if (!cancelled) {
+          setError(true);
+          toast.error("Couldn't load your referrals.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const copy = async () => {
+    if (!data) return;
+    try {
+      await navigator.clipboard.writeText(data.link);
+      setCopied(true);
+      toast.success("Referral link copied");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy — long-press the code to copy it");
+    }
+  };
+
+  const share = async () => {
+    if (!data) return;
+    const shareData = {
+      title: "Run your department's dues on Duevy",
+      text: `Collect your department's dues the easy way. Sign up as a rep with my code ${data.code} and we both earn ${naira(
+        data.rewardPerReferral,
+      )}.`,
+      url: data.link,
+    };
+    // Native share sheet on mobile; fall back to copying the link elsewhere.
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user cancelled the share sheet — nothing to do
+      }
+    } else {
+      await copy();
+    }
+  };
+
+  // The API's amounts are kobo; the summary rows carry over in whatever unit
+  // `getReferrals` returned, so convert once here.
+  const rewardPerReferral = data ? data.rewardPerReferral / 100 : 0;
+  const referrals = data?.referrals ?? [];
+  const stats = summarizeReferrals(referrals);
+  const steps = buildSteps(rewardPerReferral);
+
+  return (
+    <div className="mx-auto max-w-6xl">
+      <header>
+        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+          Refer &amp; earn
+        </h1>
+        <p className="mt-1 text-[13px] text-ink-soft">
+          Invite other reps to Duevy and earn together.
+        </p>
+      </header>
+
+      {/* Hero — the invite card. */}
+      <div className="relative mt-6 overflow-hidden rounded-3xl bg-brand p-6 sm:p-8">
+        {/* Dotted texture fading from the top-right. */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1.5px)",
+            backgroundSize: "18px 18px",
+            maskImage:
+              "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+            WebkitMaskImage:
+              "radial-gradient(130% 130% at 100% 0%, #000 0%, transparent 55%)",
+          }}
+        />
+        {/* Logo-derived motif: concentric rounded-square badges with the D's arc, top-right */}
+        <div className="pointer-events-none absolute right-0 top-0 -translate-y-1/4 translate-x-1/4">
+          <div className="relative h-72 w-72">
+            <span className="absolute inset-0 rounded-[3.25rem] border border-white/15" />
+            <span className="absolute inset-8 rounded-[2.5rem] border border-white/10" />
+            <span className="absolute inset-16 rounded-[1.75rem] border border-white/[0.07]" />
+            {/* the bowl of the "D" */}
+            <span className="absolute inset-16 rounded-l-[1.75rem] rounded-r-[6rem] border-r border-white/10" />
+          </div>
+        </div>
+
+        <div className="relative flex items-center gap-2 text-white/80">
+          <HugeiconsIcon icon={GiftIcon} size={16} />
+          <span className="text-xs font-medium">Referral rewards</span>
+        </div>
+        <p className="relative mt-3 max-w-md text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          Give {naira(rewardPerReferral)}, get {naira(rewardPerReferral)}
+        </p>
+        <p className="relative mt-2 max-w-md text-sm text-white/80">
+          Share your code. When someone signs up as a rep and receives their
+          first due payment, you both earn {naira(rewardPerReferral)}.
+        </p>
+
+        {/* Code + actions. */}
+        <div className="relative mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-1 items-center justify-between gap-3 rounded-2xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">
+                Your code
+              </p>
+              {loading ? (
+                <div className="mt-1 h-6 w-28 animate-pulse rounded bg-white/20" />
+              ) : (
+                <p className="truncate text-lg font-semibold tracking-tight text-white">
+                  {data?.code ?? "—"}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={copy}
+              disabled={!data}
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-4 text-[13px] font-semibold text-white transition-colors duration-300 hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+            >
+              <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={15} />
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={share}
+            disabled={!data}
+            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-brand transition-colors duration-300 hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+          >
+            <HugeiconsIcon icon={Share08Icon} size={16} />
+            Share invite
+          </button>
+        </div>
+      </div>
+
+      {/* Stats. */}
+      {loading ? (
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-24 rounded-3xl" />
+          <Skeleton className="h-24 rounded-3xl" />
+          <Skeleton className="h-24 rounded-3xl" />
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <StatCard icon={AddTeamIcon} label="Reps invited" value={String(stats.invited)} />
+          <StatCard icon={UserAdd01Icon} label="Signed up" value={String(stats.joined)} />
+          <StatCard
+            icon={Coins01Icon}
+            label="Total earned"
+            value={naira(stats.earned / 100)}
+            tone="brand"
+          />
+        </div>
+      )}
+
+      {/* How it works. */}
+      <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+        <h2 className="text-base font-semibold tracking-tight text-ink">
+          How it works
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {steps.map((step, i) => (
+            <div key={step.title} className="rounded-2xl border border-cloud bg-paper/50 p-4">
+              <div className="flex items-center gap-2">
+                <IconChip icon={step.icon} />
+                <span className="text-xs font-semibold text-ink-soft">
+                  Step {i + 1}
+                </span>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-ink">{step.title}</p>
+              <p className="mt-1 text-xs text-ink-soft">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Referred friends. */}
+      <section className="mt-6 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold tracking-tight text-ink">
+            Your referrals
+          </h2>
+          {!loading && (
+            <span className="rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand">
+              {naira(stats.earned / 100)} earned
+            </span>
+          )}
+        </div>
+
+        {loading ? (
+          <ul className="mt-3 flex animate-pulse flex-col gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <li key={i} className="h-14 rounded-2xl bg-paper" />
+            ))}
+          </ul>
+        ) : error ? (
+          <EmptyState
+            icon={UserAdd01Icon}
+            title="Couldn't load referrals"
+            description="Something went wrong reaching the server. Refresh the page to try again."
+          />
+        ) : referrals.length === 0 ? (
+          <EmptyState
+            icon={UserAdd01Icon}
+            title="No referrals yet"
+            description="Share your code with other reps. Once they sign up and receive their first due payment, they'll show up here."
+          />
+        ) : (
+          <ul className="mt-3 flex flex-col">
+            {referrals.map((r) => {
+              const status = STATUS_META[r.status];
+              return (
+                <li
+                  key={r.id}
+                  className="flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0 sm:gap-4"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-[13px] font-semibold text-ink-soft">
+                    {initials(r.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">
+                      {r.name}
+                    </p>
+                    <p className="truncate text-xs text-ink-soft">
+                      Invited {formatDate(r.date)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {r.reward > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+                        <HugeiconsIcon icon={Coins01Icon} size={14} />+
+                        {naira(r.reward / 100)}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-semibold text-ink-soft">
+                        —
+                      </span>
+                    )}
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className}`}
+                    >
+                      {r.status === "paid" && (
+                        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={11} />
+                      )}
+                      {status.label}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}

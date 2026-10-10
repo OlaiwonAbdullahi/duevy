@@ -1,0 +1,27 @@
+import { naira } from "../../create-dues/_components/data";
+import type { Beneficiary, PayoutStatus } from "./types";
+
+export { naira };
+
+/** Mask all but the last four digits of an account number. */
+export function maskAccount(number: string) {
+  const last4 = number.slice(-4);
+  return `•••• ${last4}`;
+}
+
+/** Short destination label for a payout row, e.g. "GTBank •••• 4021". */
+export function accountLabel(account: Pick<Beneficiary, "bankName" | "accountNumber">) {
+  const short = account.bankName.split(" ")[0];
+  return `${short} •••• ${account.accountNumber.slice(-4)}`;
+}
+
+export const PAYOUT_STATUS_META: Record<
+  PayoutStatus,
+  { label: string; className: string }
+> = {
+  pending: { label: "Pending", className: "bg-amber-100 text-amber-700" },
+  processing: { label: "Processing", className: "bg-amber-100 text-amber-700" },
+  success: { label: "Paid out", className: "bg-cloud text-brand" },
+  failed: { label: "Failed", className: "bg-rose-100 text-rose-600" },
+  reversed: { label: "Reversed", className: "bg-paper text-ink-soft" },
+};

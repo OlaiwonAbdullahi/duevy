@@ -1,0 +1,119 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { DangerCard } from "../../_components/DangerCard";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useRepSpace } from "../../_components/use-rep-space";
+import { TransferLeadModal } from "./TransferLeadModal";
+import { ArchiveSpaceModal } from "./ArchiveSpaceModal";
+import { FEATURES } from "@/lib/features";
+
+type PendingAction = "transfer" | "archive" | null;
+
+/**
+ * Irreversible department actions in the shared rose danger shell. Each
+ * routes through its own password-confirmed modal.
+ */
+export function DangerZone() {
+  const repSpace = useRepSpace();
+  const spaceId = repSpace?.id;
+  // Transfer-lead and archive are lead-only on the backend — hide them for
+  // co-reps rather than let the password-confirm modal end in a 403.
+  const isCoRep = repSpace?.membership === "co";
+  const { refreshUser } = useAuth();
+  const router = useRouter();
+  const [pending, setPending] = useState<PendingAction>(null);
+
+  const afterTransfer = async () => {
+    setPending(null);
+    await refreshUser();
+    router.push("/dashboard");
+  };
+
+  const afterArchive = async () => {
+    setPending(null);
+    await refreshUser();
+    router.push("/dashboard");
+  };
+
+  return (
+    <DangerCard
+      title="Danger zone"
+      description="These actions affect the whole department. Handle with care."
+    >
+      {isCoRep ? (
+        <p className="rounded-2xl border border-rose-200 bg-white/70 p-4 text-xs text-ink-soft">
+          Only your lead rep can transfer ownership or archive this department.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {FEATURES.coReps && (
+            <Row
+              title="Transfer lead role"
+              description="Hand over department ownership to another rep. You'll become a co-rep."
+              action="Transfer"
+              disabled={!spaceId}
+              onClick={() => setPending("transfer")}
+            />
+          )}
+          <Row
+            title="Archive department"
+            description="Stop new dues and join requests. Existing records stay available."
+            action="Archive"
+            disabled={!spaceId}
+            onClick={() => setPending("archive")}
+          />
+        </div>
+      )}
+
+      {pending === "transfer" && spaceId && (
+        <TransferLeadModal
+          spaceId={spaceId}
+          onClose={() => setPending(null)}
+          onDone={afterTransfer}
+        />
+      )}
+      {pending === "archive" && spaceId && (
+        <ArchiveSpaceModal
+          spaceId={spaceId}
+          onClose={() => setPending(null)}
+          onDone={afterArchive}
+        />
+      )}
+    </DangerCard>
+  );
+}
+
+function Row({
+  title,
+  description,
+  action,
+  disabled,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  action: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-white/70 p-4 dark:bg-white/5">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="mt-0.5 text-xs text-ink-soft">{description}</p>
+      </div>
+      <Button
+        variant="danger-outline"
+        size="pill-lg"
+        onClick={onClick}
+        disabled={disabled}
+        className="h-9 shrink-0 px-4 text-xs sm:h-10 sm:px-5"
+      >
+        {action}
+      </Button>
+    </div>
+  );
+}

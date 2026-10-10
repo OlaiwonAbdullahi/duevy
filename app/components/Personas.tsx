@@ -7,7 +7,16 @@ import {
   CheckmarkBadge01Icon,
 } from "@hugeicons/core-free-icons";
 
-const personas = [
+const personas: {
+  icon: typeof UserGroup03Icon;
+  role: string;
+  name: string;
+  meta: string;
+  challenge: string;
+  gives: string[];
+  /** Not live yet — flagged with a badge beside the name. */
+  comingSoon?: boolean;
+}[] = [
   {
     icon: UserGroup03Icon,
     role: "The class rep",
@@ -16,7 +25,7 @@ const personas = [
     challenge:
       "Collects ₦2,000 dues from 120 classmates every semester. Spends weeks chasing payments on WhatsApp, tracking who paid in a notebook.",
     gives: [
-      "One link students pay through",
+      "One space students pay through",
       "A live list of who's paid",
       "Automatic receipts — zero notebook",
     ],
@@ -29,7 +38,7 @@ const personas = [
     challenge:
       "Pays dues, departmental levies, and event fees across the year. Never sure if her money reached the right place.",
     gives: [
-      "A wallet she tops up once",
+      "Pay by transfer from any bank app",
       "Instant payment confirmation",
       "A clear view of what every naira funded",
     ],
@@ -43,9 +52,9 @@ const personas = [
       "Runs money across multiple levels and hundreds of students. No unified record for handover to the next set of execs.",
     gives: [
       "One dashboard for all levels",
-      "Verified identities via matric number",
       "A clean audit trail for handover",
     ],
+    comingSoon: true,
   },
 ];
 
@@ -85,9 +94,17 @@ export default function Personas() {
                 </div>
 
                 {/* Name + meta */}
-                <h3 className="text-[#1b2520] font-semibold text-2xl tracking-tight">
-                  {p.name}
-                </h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-[#1b2520] font-semibold text-2xl tracking-tight">
+                    {p.name}
+                  </h3>
+                  {p.comingSoon && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fdf3e1] px-2.5 py-1 text-[11px] font-semibold text-[#b8761c]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#e8a33d]" />
+                      Coming soon
+                    </span>
+                  )}
+                </div>
                 <p className="text-[#7a847f] text-sm mt-1 mb-6">{p.meta}</p>
 
                 {/* Challenge */}

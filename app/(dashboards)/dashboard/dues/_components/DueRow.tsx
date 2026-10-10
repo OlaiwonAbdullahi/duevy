@@ -38,9 +38,25 @@ export function DueRow({
   return (
     <li
       onClick={toggle}
-      className={`flex flex-col gap-4 border-t border-cloud py-4 first:border-t-0 sm:flex-row sm:items-center ${
-        canSelect ? "cursor-pointer" : ""
-      } ${selected ? "sm:-mx-3 sm:rounded-2xl sm:bg-cloud/40 sm:px-3" : ""}`}
+      onKeyDown={
+        canSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toggle();
+              }
+            }
+          : undefined
+      }
+      role={canSelect ? "checkbox" : undefined}
+      aria-checked={canSelect ? selected : undefined}
+      aria-label={canSelect ? `Select ${due.title}` : undefined}
+      tabIndex={canSelect ? 0 : undefined}
+      className={`flex items-center gap-3 border-t border-cloud py-3.5 first:border-t-0 sm:gap-4 sm:py-4 ${
+        canSelect
+          ? "cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:-mx-3 sm:px-3"
+          : ""
+      } ${selected ? "sm:rounded-2xl sm:bg-cloud/40" : ""}`}
     >
       {/* Selection checkbox — only for open dues. */}
       {canSelect && (
@@ -57,7 +73,7 @@ export function DueRow({
       )}
 
       <span
-        className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl sm:h-11 sm:w-11 ${
           paid ? "bg-paper text-ink-soft" : "bg-cloud text-brand"
         }`}
       >
@@ -71,8 +87,8 @@ export function DueRow({
             {CATEGORY_LABEL[due.category]}
           </span>
         </div>
-        <p className="mt-0.5 truncate text-xs text-ink-soft">{due.note}</p>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium">
+        <p className="mt-0.5 truncate text-xs text-ink-soft max-sm:hidden">{due.note}</p>
+        <div className="mt-1 flex sm:mt-1.5 items-center gap-1.5 text-[11px] font-medium">
           {paid ? (
             <span className="inline-flex items-center gap-1 text-brand">
               <HugeiconsIcon icon={CheckmarkCircle02Icon} size={13} />
@@ -94,16 +110,17 @@ export function DueRow({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 sm:justify-end">
+      {/* Phones: amount over a small pay button, right-aligned. */}
+      <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-4">
         <p
-          className={`text-base font-semibold tracking-tight ${
+          className={`text-sm font-semibold tracking-tight tabular-nums sm:text-base ${
             paid ? "text-ink-soft line-through" : "text-ink"
           }`}
         >
           {naira(due.amount)}
         </p>
         {paid ? (
-          <span className="w-[92px] text-right text-xs font-medium text-brand">
+          <span className="text-right text-xs font-medium text-brand sm:w-[92px]">
             Settled
           </span>
         ) : (
@@ -114,9 +131,10 @@ export function DueRow({
               onPay([due]);
             }}
             disabled={pending}
-            className="inline-flex h-9 w-[92px] items-center justify-center rounded-full bg-brand text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
+            aria-label={`Pay ${due.title}, ${naira(due.amount)}`}
+            className="inline-flex h-8 items-center justify-center rounded-full bg-brand px-4 text-xs font-semibold sm:h-9 sm:w-[92px] sm:px-0 text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
-            {pending ? "…" : "Pay now"}
+            {pending ? "…" : (<><span className="sm:hidden">Pay</span><span className="max-sm:hidden">Pay now</span></>)}
           </button>
         )}
       </div>
