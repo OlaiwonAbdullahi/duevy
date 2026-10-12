@@ -296,6 +296,8 @@ export default function PayoutPage() {
               )}
             </div>
           )}
+          {/* Desktop: balance | beneficiaries, history full width below.
+              Mobile: balance → history → beneficiaries. */}
           <div className="mt-4 grid gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[1.3fr_1fr]">
             <PayoutBalanceCard
               available={available}
@@ -305,23 +307,22 @@ export default function PayoutPage() {
               blockedReason={withdrawBlockedReason}
               onWithdraw={() => setWithdrawOpen(true)}
             />
-            <BeneficiariesCard
-              beneficiaries={beneficiaries}
-              canManage={isLead}
-              onAdd={() => setAddOpen(true)}
-              onRemove={handleRemoveBeneficiary}
-            />
+            <div className="grid max-lg:order-last">
+              <BeneficiariesCard
+                beneficiaries={beneficiaries}
+                canManage={isLead}
+                onAdd={() => setAddOpen(true)}
+                onRemove={handleRemoveBeneficiary}
+              />
+            </div>
+            <div className="min-w-0 lg:col-span-2">
+              <PayoutHistory payouts={payouts} />
+            </div>
           </div>
         </>
       )}
 
-      <div className="mt-5 sm:mt-6">
-        {loading ? (
-          <Skeleton className="h-64 rounded-3xl" />
-        ) : (
-          <PayoutHistory payouts={payouts} />
-        )}
-      </div>
+      {loading && <Skeleton className="mt-5 h-64 rounded-3xl sm:mt-6" />}
 
       {withdrawOpen && (
         <WithdrawModal

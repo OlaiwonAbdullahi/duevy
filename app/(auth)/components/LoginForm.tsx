@@ -41,6 +41,8 @@ export default function LoginForm() {
     const password = String(data.get("password") ?? "");
 
     setLoading(true);
+    // Stays locked once we're redirecting, so the fields don't come back mid-navigation.
+    let redirecting = false;
     try {
       const user = await login(email, password);
       if (!user.emailVerified) {
@@ -52,6 +54,7 @@ export default function LoginForm() {
       });
       clearPostAuthNext();
       // Rep applicants go through onboarding (KYC) first; it forwards them on once it's done.
+      redirecting = true;
       if (isRepApplicant(user)) {
         router.push(ONBOARDING_PATH);
         return;
@@ -69,7 +72,7 @@ export default function LoginForm() {
           : "Couldn't reach the server. Check your connection and try again.",
       );
     } finally {
-      setLoading(false);
+      if (!redirecting) setLoading(false);
     }
   }
 
@@ -99,35 +102,42 @@ export default function LoginForm() {
 
       {/* Form */}
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-        <AuthField
-          id="email"
-          label="Email address"
-          icon="mail"
-          type="email"
-          name="email"
-          autoComplete="email"
-          placeholder="you@school.edu.ng"
-          required
-        />
+        {/* A disabled fieldset locks every input while the request is in flight. */}
+        <fieldset
+          disabled={loading}
+          className="flex min-w-0 flex-col gap-5 transition-opacity duration-300 disabled:opacity-60"
+        >
+          <AuthField
+            id="email"
+            label="Email address"
+            icon="mail"
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="you@school.edu.ng"
+            required
+          />
 
-        <AuthField
-          id="password"
-          label="Password"
-          icon="lock"
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          required
-          labelAccessory={
-            <Link
-              href="/forgot-password"
-              className="text-[#0b6e4f] text-[13px] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
-            >
-              Forgot password?
-            </Link>
-          }
-        />
+          <AuthField
+            id="password"
+            label="Password"
+            icon="lock"
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            required
+            labelAccessory={
+              <Link
+                href="/forgot-password"
+                className="text-[#0b6e4f] text-[13px] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+              >
+                Forgot password?
+              </Link>
+            }
+          />
+        </fieldset>
+
 
         <button
           type="submit"

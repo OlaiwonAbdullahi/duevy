@@ -132,16 +132,23 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
         </p>
       ) : (
         <form className="flex flex-col gap-5 text-left" onSubmit={handleResend}>
-          <AuthField
-            id="email"
-            label="Email address"
-            icon="mail"
-            type="email"
-            name="email"
-            autoComplete="email"
-            placeholder="you@school.edu.ng"
-            required
-          />
+          {/* A disabled fieldset locks every input while the request is in flight. */}
+          <fieldset
+            disabled={resending}
+            className="flex min-w-0 flex-col gap-5 transition-opacity duration-300 disabled:opacity-60"
+          >
+            <AuthField
+              id="email"
+              label="Email address"
+              icon="mail"
+              type="email"
+              name="email"
+              autoComplete="email"
+              placeholder="you@school.edu.ng"
+              required
+            />
+          </fieldset>
+
 
           <button
             type="submit"

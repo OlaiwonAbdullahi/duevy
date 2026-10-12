@@ -31,7 +31,7 @@ export function PayoutBalanceCard({
   onWithdraw: () => void;
 }) {
   return (
-    <div className="doodle-card relative overflow-hidden rounded-[28px] p-5  sm:rounded-3xl sm:p-8">
+    <div className="doodle-card relative flex flex-col overflow-hidden rounded-[28px] p-5 sm:rounded-3xl sm:p-8">
       <div className="relative flex items-center gap-2 text-white/80">
         <HugeiconsIcon icon={Wallet01Icon} size={16} />
         <span className="text-xs font-medium">Available to withdraw</span>
@@ -45,7 +45,7 @@ export function PayoutBalanceCard({
         <Chip label="In progress" value={naira(inFlight)} />
       </div>
 
-      <div className="relative mt-5 flex gap-2.5 sm:mt-8 sm:flex-wrap sm:gap-3">
+      <div className="relative mt-5 flex gap-2.5 sm:mt-8 sm:flex-wrap sm:gap-3 lg:mt-auto lg:pt-8">
         {canWithdraw && (
           <button
             type="button"

@@ -115,29 +115,36 @@ export default function ResetPasswordForm({ token }: { token: string | null }) {
       </div>
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-        <AuthField
-          id="password"
-          label="New password"
-          icon="lock"
-          type="password"
-          name="password"
-          autoComplete="new-password"
-          placeholder="At least 8 characters"
-          minLength={8}
-          required
-        />
+        {/* A disabled fieldset locks every input while the request is in flight. */}
+        <fieldset
+          disabled={loading}
+          className="flex min-w-0 flex-col gap-5 transition-opacity duration-300 disabled:opacity-60"
+        >
+          <AuthField
+            id="password"
+            label="New password"
+            icon="lock"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+            minLength={8}
+            required
+          />
 
-        <AuthField
-          id="confirmPassword"
-          label="Confirm new password"
-          icon="lock"
-          type="password"
-          name="confirmPassword"
-          autoComplete="new-password"
-          placeholder="Re-enter your new password"
-          minLength={8}
-          required
-        />
+          <AuthField
+            id="confirmPassword"
+            label="Confirm new password"
+            icon="lock"
+            type="password"
+            name="confirmPassword"
+            autoComplete="new-password"
+            placeholder="Re-enter your new password"
+            minLength={8}
+            required
+          />
+        </fieldset>
+
 
         <button
           type="submit"
