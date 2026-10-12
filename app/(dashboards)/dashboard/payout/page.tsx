@@ -366,8 +366,9 @@ export default function PayoutPage() {
             <PinStatusBanner summary={summary} onAction={setPinMode} />
           )}
           {/* Desktop: balance | beneficiaries, history full width below.
-              Mobile: balance → history → beneficiaries. */}
-          <div className="mt-4 grid gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[1.3fr_1fr]">
+              Mobile: balance → history → beneficiaries. The minmax(0, …)
+              tracks stop long (truncated) text widening the page. */}
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
             <PayoutBalanceCard
               available={available}
               collected={fromKobo(summary?.collected ?? 0)}
@@ -376,7 +377,7 @@ export default function PayoutPage() {
               blockedReason={withdrawBlockedReason}
               onWithdraw={() => setWithdrawOpen(true)}
             />
-            <div className="grid max-lg:order-last">
+            <div className="grid min-w-0 grid-cols-1 max-lg:order-last">
               <BeneficiariesCard
                 beneficiaries={beneficiaries}
                 canManage={isLead}

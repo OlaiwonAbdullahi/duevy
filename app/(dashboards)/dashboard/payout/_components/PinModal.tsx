@@ -7,8 +7,7 @@ import { Modal } from "../../_components/Modal";
 import { BARE_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { SecurityCodeInput } from "./SecurityCodeInput";
 
 /** set: first code · change: knows the current one · reset: forgot it. */
 export type PinMode = "set" | "change" | "reset";
@@ -53,28 +52,7 @@ function PinField({
       <label htmlFor={id} className="block text-xs font-medium text-ink-soft">
         {label}
       </label>
-      <InputOTP
-        id={id}
-        maxLength={4}
-        pattern={REGEXP_ONLY_DIGITS}
-        inputMode="numeric"
-        autoComplete="off"
-        value={value}
-        onChange={onChange}
-        containerClassName="mt-1.5"
-      >
-        <InputOTPGroup className="gap-2.5">
-          {[0, 1, 2, 3].map((i) => (
-            <InputOTPSlot
-              key={i}
-              index={i}
-              masked
-              aria-invalid={invalid || undefined}
-              className="size-12 rounded-2xl! border border-cloud bg-canvas text-xl font-semibold text-ink data-[active=true]:border-brand data-[active=true]:ring-brand/20"
-            />
-          ))}
-        </InputOTPGroup>
-      </InputOTP>
+      <SecurityCodeInput id={id} value={value} onChange={onChange} invalid={invalid} className="mt-1.5" />
     </div>
   );
 }

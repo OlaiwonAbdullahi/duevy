@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
   Alert01Icon,
+  ArrowLeft01Icon,
   MoneySend01Icon,
 } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
@@ -18,6 +19,7 @@ import { naira } from "./data";
 import { BankLogo } from "./BankLogo";
 import { AccountFields, type VerifiedAccount } from "./AccountFields";
 import type { Beneficiary } from "./types";
+import { SecurityCodeInput } from "./SecurityCodeInput";
 
 /** Where the rep chose to send it. */
 export type WithdrawTarget =
@@ -71,6 +73,9 @@ export function WithdrawModal({
       : beneficiaries[0]?.id ?? NEW_ACCOUNT;
   const [newAccount, setNewAccount] = useState<VerifiedAccount | null>(null);
   const [saveAsBeneficiary, setSaveAsBeneficiary] = useState(false);
+  // "details" = amount + recipient; "code" = the security code, asked for
+  // only once the rep taps Withdraw.
+  const [step, setStep] = useState<"details" | "code">("details");
   // The withdrawal security code the lead rep set.
   const [pin, setPin] = useState("");
   const pinValid = /^\d{4}$/.test(pin);
@@ -84,6 +89,8 @@ export function WithdrawModal({
     choice === NEW_ACCOUNT
       ? newAccount && { account: newAccount, saveAsBeneficiary }
       : { beneficiaryId: choice };
+  const recipient =
+    choice === NEW_ACCOUNT ? newAccount : beneficiaries.find((b) => b.id === choice) ?? null;
 
   // The fee is deducted from the withdrawal; quote it so the rep sees what lands.
   const [latestQuote, setQuote] = useState<PayoutQuote | null>(null);
@@ -105,6 +112,12 @@ export function WithdrawModal({
     };
   }, [spaceId, parsed, valid]);
 
+  const goToCode = () => {
+    if (!valid || !target) return;
+    setPin("");
+    setStep("code");
+  };
+
   const confirm = async () => {
     if (!valid || !target || !pinValid) return;
     setSubmitting(true);
@@ -125,188 +138,234 @@ export function WithdrawModal({
 
   return (
     <Modal title="Withdraw funds" icon={MoneySend01Icon} onClose={onClose}>
-      <div className="rounded-2xl border border-cloud bg-paper p-4">
-        <p className="text-[11px] font-medium text-ink-soft">
-          Available to withdraw
-        </p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-          {naira(available)}
-        </p>
-      </div>
-
-      <div className="mt-4">
-        <label className="block text-xs font-medium text-ink-soft">Amount</label>
-        <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
-          <span className="text-sm font-semibold text-ink-soft">₦</span>
-          <Input
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) =>
-              setAmount(e.target.value.replace(/[^0-9]/g, ""))
-            }
-            placeholder="0"
-            className={cn(BARE_INPUT, "flex-1")}
-          />
-          <button
-            type="button"
-            onClick={() => setAmount(String(Math.floor(available)))}
-            className="shrink-0 rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand transition-colors hover:bg-brand hover:text-white cursor-pointer"
-          >
-            Max
-          </button>
-        </div>
-        {tooMuch && (
-          <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
-            <HugeiconsIcon icon={Alert01Icon} size={13} />
-            Amount is more than your available balance.
+      {/* Hidden, not unmounted, so Back keeps a typed-in account intact. */}
+      <div hidden={step !== "details"}>
+        <div className="rounded-2xl border border-cloud bg-paper p-4">
+          <p className="text-[11px] font-medium text-ink-soft">
+            Available to withdraw
           </p>
-        )}
-        {tooLittle && (
-          <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
-            <HugeiconsIcon icon={Alert01Icon} size={13} />
-            The minimum withdrawal is {naira(minPayout)}.
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+            {naira(available)}
           </p>
-        )}
-        {quote && valid && (
-          <dl className="mt-3 flex flex-col gap-1.5 rounded-2xl border border-cloud bg-paper/50 px-4 py-3 text-xs">
-            <div className="flex justify-between text-ink-soft">
-              <dt>Withdrawal fee</dt>
-              <dd className="tabular-nums">−{naira(fromKobo(quote.fee))}</dd>
-            </div>
-            <div className="flex justify-between font-semibold text-ink">
-              <dt>They&apos;ll receive</dt>
-              <dd className="tabular-nums">{naira(fromKobo(quote.net))}</dd>
-            </div>
-          </dl>
-        )}
-      </div>
-
-      <div className="mt-4">
-        <p className="text-xs font-medium text-ink-soft">Send to</p>
-        <div role="radiogroup" className="mt-1.5 flex flex-col gap-2">
-          {beneficiaries.length > 0 && (
-            <div className="flex max-h-56 flex-col gap-2 overflow-y-auto">
-              {beneficiaries.map((b) => {
-                const selected = b.id === choice;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setPicked(b.id)}
-                    className={optionClass(selected)}
-                  >
-                    <BankLogo name={b.bankName} code={b.bankCode} className="h-9 w-9 shrink-0 text-[11px]" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink">{b.accountName}</span>
-                      <span className="block truncate text-xs text-ink-soft">
-                        {b.label ? `${b.label} · ` : ""}
-                        {b.bankName} {b.accountNumber}
-                      </span>
-                    </span>
-                    <Radio selected={selected} />
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <button
-            type="button"
-            role="radio"
-            aria-checked={choice === NEW_ACCOUNT}
-            onClick={() => setPicked(NEW_ACCOUNT)}
-            className={optionClass(choice === NEW_ACCOUNT)}
-          >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cloud text-brand">
-              <HugeiconsIcon icon={Add01Icon} size={16} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-ink">Another account</span>
-              <span className="block text-xs text-ink-soft">Enter an account number for this withdrawal</span>
-            </span>
-            <Radio selected={choice === NEW_ACCOUNT} />
-          </button>
         </div>
 
-        {choice === NEW_ACCOUNT && (
-          <div className="mt-3 rounded-2xl border border-cloud p-4">
-            <AccountFields
-              lookup={(payload) => lookupBeneficiary(spaceId, payload)}
-              onChange={setNewAccount}
+        <div className="mt-4">
+          <label className="block text-xs font-medium text-ink-soft">Amount</label>
+          <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
+            <span className="text-sm font-semibold text-ink-soft">₦</span>
+            <Input
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) =>
+                setAmount(e.target.value.replace(/[^0-9]/g, ""))
+              }
+              placeholder="0"
+              className={cn(BARE_INPUT, "flex-1")}
             />
-            <label className="mt-4 flex cursor-pointer items-center gap-2 text-xs text-ink">
-              <input
-                type="checkbox"
-                checked={saveAsBeneficiary}
-                onChange={(e) => setSaveAsBeneficiary(e.target.checked)}
-                className="h-4 w-4 accent-[var(--color-brand)]"
-              />
-              Save as a beneficiary for next time
-            </label>
+            <button
+              type="button"
+              onClick={() => setAmount(String(Math.floor(available)))}
+              className="shrink-0 rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand transition-colors hover:bg-brand hover:text-white cursor-pointer"
+            >
+              Max
+            </button>
           </div>
-        )}
-      </div>
+          {tooMuch && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
+              <HugeiconsIcon icon={Alert01Icon} size={13} />
+              Amount is more than your available balance.
+            </p>
+          )}
+          {tooLittle && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
+              <HugeiconsIcon icon={Alert01Icon} size={13} />
+              The minimum withdrawal is {naira(minPayout)}.
+            </p>
+          )}
+          {quote && valid && (
+            <dl className="mt-3 flex flex-col gap-1.5 rounded-2xl border border-cloud bg-paper/50 px-4 py-3 text-xs">
+              <div className="flex justify-between text-ink-soft">
+                <dt>Withdrawal fee</dt>
+                <dd className="tabular-nums">−{naira(fromKobo(quote.fee))}</dd>
+              </div>
+              <div className="flex justify-between font-semibold text-ink">
+                <dt>They&apos;ll receive</dt>
+                <dd className="tabular-nums">{naira(fromKobo(quote.net))}</dd>
+              </div>
+            </dl>
+          )}
+        </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between">
-          <label htmlFor="withdrawal-pin" className="block text-xs font-medium text-ink-soft">
-            Security code
-          </label>
+        <div className="mt-4">
+          <p className="text-xs font-medium text-ink-soft">Send to</p>
+          <div role="radiogroup" className="mt-1.5 flex flex-col gap-2">
+            {beneficiaries.length > 0 && (
+              <div className="flex max-h-56 flex-col gap-2 overflow-y-auto">
+                {beneficiaries.map((b) => {
+                  const selected = b.id === choice;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setPicked(b.id)}
+                      className={optionClass(selected)}
+                    >
+                      <BankLogo name={b.bankName} code={b.bankCode} className="h-9 w-9 shrink-0 text-[11px]" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink">{b.accountName}</span>
+                        <span className="block truncate text-xs text-ink-soft">
+                          {b.label ? `${b.label} · ` : ""}
+                          {b.bankName} {b.accountNumber}
+                        </span>
+                      </span>
+                      <Radio selected={selected} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              type="button"
+              role="radio"
+              aria-checked={choice === NEW_ACCOUNT}
+              onClick={() => setPicked(NEW_ACCOUNT)}
+              className={optionClass(choice === NEW_ACCOUNT)}
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cloud text-brand">
+                <HugeiconsIcon icon={Add01Icon} size={16} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink">Another account</span>
+                <span className="block text-xs text-ink-soft">Enter an account number for this withdrawal</span>
+              </span>
+              <Radio selected={choice === NEW_ACCOUNT} />
+            </button>
+          </div>
+
+          {choice === NEW_ACCOUNT && (
+            <div className="mt-3 rounded-2xl border border-cloud p-4">
+              <AccountFields
+                lookup={(payload) => lookupBeneficiary(spaceId, payload)}
+                onChange={setNewAccount}
+              />
+              <label className="mt-4 flex cursor-pointer items-center gap-2 text-xs text-ink">
+                <input
+                  type="checkbox"
+                  checked={saveAsBeneficiary}
+                  onChange={(e) => setSaveAsBeneficiary(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--color-brand)]"
+                />
+                Save as a beneficiary for next time
+              </label>
+            </div>
+          )}
+        </div>
+
+        <p className="mt-3 text-xs leading-5 text-ink-soft">
+          Withdrawals usually arrive within minutes. If one fails, the full amount
+          goes back to your balance. A successful transfer can&apos;t be pulled back.
+        </p>
+
+        <div className="mt-6 flex gap-3">
           <button
             type="button"
-            onClick={onForgotPin}
-            className="text-xs font-semibold text-brand hover:underline cursor-pointer"
+            onClick={onClose}
+            className="h-12 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
-            Forgot code?
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!valid || !target}
+            onClick={goToCode}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            <HugeiconsIcon icon={MoneySend01Icon} size={16} />
+            Withdraw
           </button>
         </div>
-        <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
-          <Input
-            id="withdrawal-pin"
-            type="password"
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={4}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-            placeholder="••••"
-            className={cn(BARE_INPUT, "flex-1 tracking-[0.5em]")}
-          />
-        </div>
-        <p className="mt-1.5 text-xs text-ink-soft">
-          The 4-digit code you set for withdrawals. 5 wrong tries lock it for 30 minutes.
-        </p>
       </div>
 
-      <p className="mt-3 text-xs leading-5 text-ink-soft">
-        Withdrawals usually arrive within minutes. If one fails, the full amount
-        goes back to your balance. A successful transfer can&apos;t be pulled back.
-      </p>
+      {step === "code" && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void confirm();
+          }}
+        >
+          {/* What they're about to send, so the code confirms something concrete. */}
+          <dl className="flex flex-col gap-2 rounded-2xl border border-cloud bg-paper p-4 text-xs">
+            <div className="flex justify-between gap-3 text-ink-soft">
+              <dt>Amount</dt>
+              <dd className="font-semibold text-ink tabular-nums">{naira(parsed)}</dd>
+            </div>
+            {quote && (
+              <div className="flex justify-between gap-3 text-ink-soft">
+                <dt>They&apos;ll receive</dt>
+                <dd className="font-semibold text-ink tabular-nums">{naira(fromKobo(quote.net))}</dd>
+              </div>
+            )}
+            {recipient && (
+              <div className="flex justify-between gap-3 text-ink-soft">
+                <dt>To</dt>
+                <dd className="min-w-0 truncate text-right font-semibold text-ink">
+                  {recipient.accountName} · {recipient.bankName}
+                </dd>
+              </div>
+            )}
+          </dl>
 
-      <div className="mt-6 flex gap-3">
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="h-12 flex-1 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={!valid || !target || !pinValid || submitting}
-          onClick={confirm}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        >
-          {submitting ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-          ) : (
-            <HugeiconsIcon icon={MoneySend01Icon} size={16} />
-          )}
-          {submitting ? "Requesting…" : "Withdraw"}
-        </button>
-      </div>
+          <div className="mt-5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="withdrawal-pin" className="block text-xs font-medium text-ink-soft">
+                Security code
+              </label>
+              <button
+                type="button"
+                onClick={onForgotPin}
+                className="text-xs font-semibold text-brand hover:underline cursor-pointer"
+              >
+                Forgot code?
+              </button>
+            </div>
+            <SecurityCodeInput
+              id="withdrawal-pin"
+              value={pin}
+              onChange={setPin}
+              autoFocus
+              disabled={submitting}
+              className="mt-1.5"
+            />
+            <p className="mt-2 text-xs text-ink-soft">
+              The 4-digit code you set for withdrawals. 5 wrong tries lock it for 30 minutes.
+            </p>
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setStep("details")}
+              disabled={submitting}
+              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-cloud bg-canvas text-sm font-semibold text-ink transition-colors duration-300 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+              Back
+            </button>
+            <button
+              type="submit"
+              disabled={!pinValid || submitting}
+              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              {submitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {submitting ? "Requesting…" : "Confirm withdrawal"}
+            </button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }
