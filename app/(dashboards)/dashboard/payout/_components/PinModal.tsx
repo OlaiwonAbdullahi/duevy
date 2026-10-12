@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, SquareLock02Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
 import { BARE_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 /** set: first code · change: knows the current one · reset: forgot it. */
 export type PinMode = "set" | "change" | "reset";
@@ -32,37 +34,47 @@ const COPY: Record<PinMode, { title: string; intro: string; submit: string }> = 
 
 const WEAK = new Set(["0123", "1234", "2345", "3456", "4567", "5678", "6789", "9876", "8765", "7654", "6543", "5432", "4321", "3210"]);
 const isWeak = (pin: string) => /^(\d)\1{3}$/.test(pin) || WEAK.has(pin);
-const digits = (v: string) => v.replace(/[^0-9]/g, "").slice(0, 4);
 
 function PinField({
   id,
   label,
   value,
   onChange,
+  invalid = false,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  invalid?: boolean;
 }) {
   return (
     <div className="mt-4">
       <label htmlFor={id} className="block text-xs font-medium text-ink-soft">
         {label}
       </label>
-      <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
-        <Input
-          id={id}
-          type="password"
-          inputMode="numeric"
-          autoComplete="off"
-          maxLength={4}
-          value={value}
-          onChange={(e) => onChange(digits(e.target.value))}
-          placeholder="••••"
-          className={cn(BARE_INPUT, "flex-1 tracking-[0.5em]")}
-        />
-      </div>
+      <InputOTP
+        id={id}
+        maxLength={4}
+        pattern={REGEXP_ONLY_DIGITS}
+        inputMode="numeric"
+        autoComplete="off"
+        value={value}
+        onChange={onChange}
+        containerClassName="mt-1.5"
+      >
+        <InputOTPGroup className="gap-2.5">
+          {[0, 1, 2, 3].map((i) => (
+            <InputOTPSlot
+              key={i}
+              index={i}
+              masked
+              aria-invalid={invalid || undefined}
+              className="size-12 rounded-2xl! border border-cloud bg-canvas text-xl font-semibold text-ink data-[active=true]:border-brand data-[active=true]:ring-brand/20"
+            />
+          ))}
+        </InputOTPGroup>
+      </InputOTP>
     </div>
   );
 }
@@ -84,6 +96,7 @@ export function PinModal({
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const weak = pin.length === 4 && isWeak(pin);
@@ -125,14 +138,14 @@ export function PinModal({
             )}
           </>
         )}
-        <PinField id="new-pin" label="New code" value={pin} onChange={setPin} />
+        <PinField id="new-pin" label="New code" value={pin} onChange={setPin} invalid={weak} />
         {weak && (
           <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
             <HugeiconsIcon icon={Alert01Icon} size={13} />
             Too easy to guess — avoid 1111 or 1234-style codes.
           </p>
         )}
-        <PinField id="confirm-pin" label="Confirm new code" value={confirmPin} onChange={setConfirmPin} />
+        <PinField id="confirm-pin" label="Confirm new code" value={confirmPin} onChange={setConfirmPin} invalid={mismatch} />
         {mismatch && (
           <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
             <HugeiconsIcon icon={Alert01Icon} size={13} />
@@ -144,15 +157,23 @@ export function PinModal({
           <label htmlFor="pin-password" className="block text-xs font-medium text-ink-soft">
             Account password
           </label>
-          <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
+          <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas pl-4 pr-2 focus-within:border-brand">
             <Input
               id="pin-password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={cn(BARE_INPUT, "flex-1")}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-cloud hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            >
+              <HugeiconsIcon icon={showPassword ? ViewOffSlashIcon : ViewIcon} size={18} />
+            </button>
           </div>
         </div>
 
