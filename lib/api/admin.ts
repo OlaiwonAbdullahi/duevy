@@ -333,13 +333,13 @@ export type AdminSpace = {
   collectedAmount: number;
   assignedRepIds: string[];
   payoutsFrozen: boolean;
-  /** Whether the 4-digit withdrawal security code has been set. */
+  /** Whether the lead rep has set the 4-digit withdrawal security code. */
   withdrawalPinSet?: boolean;
   withdrawalPinSetAt?: string | null;
-  /** Locked after 5 wrong codes; setting a new code unlocks it. */
+  /** Locked for 30 minutes after 5 wrong codes. */
   withdrawalPinLocked?: boolean;
-  /** Set when the lead rep tapped "Forgot code?"; cleared once a new code is set. */
-  withdrawalPinResetRequestedAt?: string | null;
+  /** ISO time withdrawals reopen after the rep reset a forgotten code. */
+  withdrawalPinHoldUntil?: string | null;
 };
 
 export function listAdminSpaces(
@@ -369,15 +369,12 @@ export function assignRep(spaceId: string, payload: { userId: string; role: "lea
 }
 
 /**
- * Set or replace the space's 4-digit withdrawal security code (needs the
- * `payouts` permission). Share it with the lead rep yourself — it is stored
- * hashed and can never be read back. Also clears any lockout.
+ * Clear the space's withdrawal security code (needs the `payouts`
+ * permission), e.g. after an account compromise. Admins never set or see
+ * codes — the lead rep sets a new one themselves before withdrawing again.
  */
-export function setWithdrawalPin(spaceId: string, pin: string) {
-  return apiClient.put<{ withdrawalPinSet: true; withdrawalPinSetAt: string }>(
-    `/admin/spaces/${spaceId}/withdrawal-pin`,
-    { pin },
-  );
+export function clearWithdrawalPin(spaceId: string) {
+  return apiClient.delete<{ withdrawalPinSet: false }>(`/admin/spaces/${spaceId}/withdrawal-pin`);
 }
 
 export function archiveAdminSpace(spaceId: string, reason: string) {

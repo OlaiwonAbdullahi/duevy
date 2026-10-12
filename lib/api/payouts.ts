@@ -88,9 +88,9 @@ export type PayoutTarget = { beneficiaryId: string } | BeneficiaryInput;
 
 /**
  * Lead rep only. `amount` is the gross in kobo; the fee is deducted from it.
- * `pin` is the space's 4-digit withdrawal security code, set by a Duevy admin
+ * `pin` is the space's 4-digit withdrawal security code the lead rep set
  * (`403 INVALID_WITHDRAWAL_PIN`, `423 WITHDRAWAL_PIN_LOCKED` after 5 misses,
- * `403 WITHDRAWAL_PIN_NOT_SET`). Money-moving — an Idempotency-Key is attached
+ * `423 WITHDRAWAL_PIN_HOLD` for 24h after a reset, `403 WITHDRAWAL_PIN_NOT_SET`). Money-moving — an Idempotency-Key is attached
  * automatically.
  */
 export function requestPayout(
@@ -104,15 +104,29 @@ export function requestPayout(
 }
 
 /**
- * Lead rep forgot the withdrawal security code: alerts Duevy admins, who
- * confirm it's really the rep and set a new one. Repeats within an hour don't
- * alert again (`200` instead of `201`).
+ * Lead rep only. Sets the space's 4-digit withdrawal code (first time), or
+ * changes it (`currentPin` required once one exists). Always needs the
+ * account password (`403 INVALID_PASSWORD`, `409 PASSWORD_REQUIRED` for
+ * Google-only accounts, `422 WEAK_PIN`).
  */
-export function requestWithdrawalPinReset(spaceId: string) {
-  return apiClient.post<{ requested: true; requestedAt: string }>(
-    `/spaces/${spaceId}/payout/pin-reset-request`,
-  );
+export function setWithdrawalPin(spaceId: string, payload: { pin: string; password: string; currentPin?: string }) {
+  return apiClient.put<WithdrawalPinResult>(`/spaces/${spaceId}/payout/pin`, payload);
 }
+
+/**
+ * Lead rep forgot the code: set a new one with the account password alone.
+ * Withdrawals are then held for 24 hours and every rep is notified.
+ */
+export function resetWithdrawalPin(spaceId: string, payload: { pin: string; password: string }) {
+  return apiClient.post<WithdrawalPinResult>(`/spaces/${spaceId}/payout/pin/reset`, payload);
+}
+
+export type WithdrawalPinResult = {
+  withdrawalPinSet: true;
+  change: "set" | "changed" | "reset";
+  /** ISO time withdrawals reopen after a reset; null otherwise. */
+  withdrawalPinHoldUntil: string | null;
+};
 
 /** Most recent 100 withdrawals (the API's page-size ceiling). */
 export async function listPayouts(spaceId: string) {

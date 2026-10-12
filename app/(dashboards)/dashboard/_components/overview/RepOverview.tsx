@@ -112,12 +112,12 @@ export function RepOverview() {
         <OverviewBodySkeleton stats={4} />
       ) : (
         <>
-          {/* Phones: banking-app home — collected total on the hero card. */}
+          {/* Phones: banking-app home — lifetime total received from students on the hero card. */}
           <div className="mt-2 sm:hidden">
             <BalanceCard
               doodle
-              label="Collected"
-              value={nairaFromKobo(data?.stats.collected ?? 0)}
+              label="Total collected"
+              value={nairaFromKobo(data?.stats.totalCollected ?? data?.stats.collected ?? 0)}
               hint={`${collectionRate}% collection rate · ${data?.space.memberCount ?? 0} members`}
             >
               <div className="flex gap-2.5">

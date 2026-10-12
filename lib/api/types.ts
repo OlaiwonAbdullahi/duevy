@@ -254,7 +254,10 @@ export type RepOverview = {
   space: Space;
   joinCode: string;
   stats: {
+    /** Across active dues only. */
     collected: number;
+    /** Lifetime money received from students across every due (older APIs omit it). */
+    totalCollected?: number;
     outstanding: number;
     unpaidCount: number;
     collectionRate: number;
@@ -338,12 +341,12 @@ export type PayoutSummary = {
   kyc: KycState;
   /** How many beneficiaries the space can withdraw to. */
   beneficiaryCount: number;
-  /** Whether a Duevy admin has set the space's 4-digit withdrawal security code. */
+  /** Whether the lead rep has set the space's 4-digit withdrawal security code. */
   withdrawalPinSet?: boolean;
   /** ISO time withdrawals unlock after too many wrong codes; null when not locked. */
   withdrawalPinLockedUntil?: string | null;
-  /** When the lead rep last asked an admin for a new code; cleared once one is set. */
-  withdrawalPinResetRequestedAt?: string | null;
+  /** ISO time withdrawals reopen after a forgotten-code reset; null when not on hold. */
+  withdrawalPinHoldUntil?: string | null;
   minPayout: number;
   fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
 };

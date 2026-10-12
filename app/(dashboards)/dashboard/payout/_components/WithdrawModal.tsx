@@ -58,8 +58,8 @@ export function WithdrawModal({
   onClose: () => void;
   /** Receives the 4-digit withdrawal security code with the request. */
   onConfirm: (amount: number, target: WithdrawTarget, pin: string) => Promise<void>;
-  /** "Forgot code?" — asks a Duevy admin for a new one. */
-  onForgotPin: () => Promise<void>;
+  /** "Forgot code?" — switches to resetting it. */
+  onForgotPin: () => void;
 }) {
   const [amount, setAmount] = useState("");
   // A beneficiary id or NEW_ACCOUNT. Defaults to the newest beneficiary, or to
@@ -71,18 +71,9 @@ export function WithdrawModal({
       : beneficiaries[0]?.id ?? NEW_ACCOUNT;
   const [newAccount, setNewAccount] = useState<VerifiedAccount | null>(null);
   const [saveAsBeneficiary, setSaveAsBeneficiary] = useState(false);
-  // The space's withdrawal security code, set by a Duevy admin.
+  // The withdrawal security code the lead rep set.
   const [pin, setPin] = useState("");
   const pinValid = /^\d{4}$/.test(pin);
-  const [requestingReset, setRequestingReset] = useState(false);
-  const forgotPin = async () => {
-    setRequestingReset(true);
-    try {
-      await onForgotPin();
-    } finally {
-      setRequestingReset(false);
-    }
-  };
 
   const [submitting, setSubmitting] = useState(false);
   const parsed = Number(amount.replace(/[^0-9]/g, ""));
@@ -264,11 +255,10 @@ export function WithdrawModal({
           </label>
           <button
             type="button"
-            onClick={forgotPin}
-            disabled={requestingReset}
-            className="text-xs font-semibold text-brand hover:underline disabled:opacity-50 cursor-pointer"
+            onClick={onForgotPin}
+            className="text-xs font-semibold text-brand hover:underline cursor-pointer"
           >
-            {requestingReset ? "Sending…" : "Forgot code?"}
+            Forgot code?
           </button>
         </div>
         <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
@@ -285,7 +275,7 @@ export function WithdrawModal({
           />
         </div>
         <p className="mt-1.5 text-xs text-ink-soft">
-          The 4-digit code Duevy gave your space. 5 wrong tries lock withdrawals for 30 minutes.
+          The 4-digit code you set for withdrawals. 5 wrong tries lock it for 30 minutes.
         </p>
       </div>
 

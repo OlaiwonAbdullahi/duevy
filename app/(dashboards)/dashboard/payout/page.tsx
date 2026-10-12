@@ -19,14 +19,17 @@ import {
   addBeneficiary,
   removeBeneficiary,
   requestPayout,
-  requestWithdrawalPinReset,
+  setWithdrawalPin,
+  resetWithdrawalPin,
   listPayouts,
 } from "@/lib/api/payouts";
 import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
 import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
+import type { PinMode } from "./_components/PinModal";
 
 const WithdrawModal = dynamic(() => import("./_components/WithdrawModal").then((mod) => mod.WithdrawModal), { ssr: false });
+const PinModal = dynamic(() => import("./_components/PinModal").then((mod) => mod.PinModal), { ssr: false });
 const AddBeneficiaryModal = dynamic(() => import("./_components/AddBeneficiaryModal").then((mod) => mod.AddBeneficiaryModal), { ssr: false });
 
 /** API payout (kobo, ISO date) → history row. */
@@ -63,9 +66,19 @@ const PAYOUT_ERRORS: Record<string, string> = {
   INSUFFICIENT_BALANCE: "That's more than your available balance.",
   BELOW_MIN_PAYOUT: "That's below the minimum withdrawal.",
   PAYOUTS_FROZEN: "Withdrawals for this space are paused. Contact support.",
-  WITHDRAWAL_PIN_NOT_SET: "Your space doesn't have a withdrawal security code yet. Contact Duevy support to get one.",
-  WITHDRAWAL_PIN_LOCKED: "Too many wrong security codes. Withdrawals are locked for 30 minutes.",
+  WITHDRAWAL_PIN_NOT_SET: "Set a withdrawal security code first.",
+  WITHDRAWAL_PIN_LOCKED: "Too many wrong security codes. Try again in 30 minutes, or reset your code.",
+  WITHDRAWAL_PIN_HOLD: "Your code was reset recently. Withdrawals reopen 24 hours after a reset.",
   FORBIDDEN: "Only the department's lead rep can withdraw.",
+};
+
+/** Setting/changing/resetting the withdrawal code. */
+const PIN_ERRORS: Record<string, string> = {
+  INVALID_PASSWORD: "Your password is incorrect.",
+  PASSWORD_REQUIRED: "Your account has no password yet. Sign out, use \u201cForgot password\u201d to create one, then try again.",
+  WEAK_PIN: "Choose a less predictable code.",
+  INVALID_WITHDRAWAL_PIN: "Your current code is incorrect.",
+  WITHDRAWAL_PIN_LOCKED: "Too many wrong codes. Reset your code instead.",
 };
 
 const BENEFICIARY_ERRORS: Record<string, { title: string; description: string }> = {
@@ -87,6 +100,64 @@ const BENEFICIARY_ERRORS: Record<string, { title: string; description: string }>
   },
 };
 
+/** The lead rep's withdrawal-code state: set it, it's locked/on hold, or a quiet "change" link. */
+function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onAction: (mode: PinMode) => void }) {
+  const box =
+    "mt-4 flex flex-col gap-2 rounded-3xl border px-4 py-3.5 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4";
+  const link = "shrink-0 text-left text-[13px] font-semibold text-brand cursor-pointer hover:underline";
+
+  if (!summary.withdrawalPinSet) {
+    return (
+      <div className={`${box} border-amber-200 bg-amber-50`}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Set a withdrawal security code</p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            Choose a 4-digit code you&apos;ll enter every time you withdraw. Only you know it.
+          </p>
+        </div>
+        <button type="button" onClick={() => onAction("set")} className={link}>
+          Set code →
+        </button>
+      </div>
+    );
+  }
+  if (summary.withdrawalPinHoldUntil) {
+    return (
+      <div className={`${box} border-amber-200 bg-amber-50`}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Withdrawals paused after a code reset</p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            For your safety, withdrawals reopen {new Date(summary.withdrawalPinHoldUntil).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (summary.withdrawalPinLockedUntil) {
+    return (
+      <div className={`${box} border-amber-200 bg-amber-50`}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Withdrawals are locked</p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            Too many wrong security codes. Try again in 30 minutes, or reset your code.
+          </p>
+        </div>
+        <button type="button" onClick={() => onAction("reset")} className={link}>
+          Forgot code? Reset it →
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 flex items-center justify-end gap-3 text-xs sm:mt-6">
+      <span className="text-ink-soft">Withdrawal security code is set</span>
+      <button type="button" onClick={() => onAction("change")} className="font-semibold text-brand cursor-pointer hover:underline">
+        Change code
+      </button>
+    </div>
+  );
+}
+
 export default function PayoutPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
@@ -98,6 +169,7 @@ export default function PayoutPage() {
   const [summary, setSummary] = useState<PayoutSummary | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [pinMode, setPinMode] = useState<PinMode | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function refresh(id: string) {
@@ -174,20 +246,35 @@ export default function PayoutPage() {
     }
   };
 
-  const handleForgotPin = async () => {
-    if (!spaceId) return;
+  const handleSavePin = async (payload: { pin: string; password: string; currentPin?: string }) => {
+    if (!spaceId || !pinMode) return;
     try {
-      await requestWithdrawalPinReset(spaceId);
-      toast.success("Request sent to Duevy", {
-        description: "An admin will confirm it's you, then give you a new security code.",
-      });
+      const res =
+        pinMode === "reset"
+          ? await resetWithdrawalPin(spaceId, { pin: payload.pin, password: payload.password })
+          : await setWithdrawalPin(spaceId, payload);
+      setPinMode(null);
+      if (res.change === "reset") {
+        toast.success("Withdrawal code reset", {
+          description: "For your safety, withdrawals reopen in 24 hours. Your co-reps have been notified.",
+        });
+      } else {
+        toast.success(res.change === "set" ? "Withdrawal code saved" : "Withdrawal code changed", {
+          description: "You'll enter it every time you withdraw.",
+        });
+      }
       await refresh(spaceId).catch(() => {});
     } catch (err) {
-      toast.error("Couldn't send the request", {
-        description:
-          (err instanceof ApiError && PAYOUT_ERRORS[err.code]) || "Something went wrong. Please try again.",
+      toast.error("Couldn't save the code", {
+        description: (err instanceof ApiError && PIN_ERRORS[err.code]) || "Something went wrong. Please try again.",
       });
     }
+  };
+
+  /** "Forgot code?" from the withdraw form or the change dialog. */
+  const handleForgotPin = () => {
+    setWithdrawOpen(false);
+    setPinMode("reset");
   };
 
   const handleAddBeneficiary = async (next: BeneficiaryDraft) => {
@@ -229,10 +316,12 @@ export default function PayoutPage() {
     : !summary.kyc.canWithdraw
       ? "Withdrawals open once verification is complete."
       : summary.withdrawalPinSet === false
-        ? "Withdrawals need a security code. Contact Duevy support to get one."
-        : summary.withdrawalPinLockedUntil
-          ? "Too many wrong security codes. Try again in 30 minutes."
-          : summary.inFlight > 0
+        ? "Set a withdrawal security code first."
+        : summary.withdrawalPinHoldUntil
+          ? "Your code was reset. Withdrawals reopen 24 hours after a reset."
+          : summary.withdrawalPinLockedUntil
+            ? "Too many wrong security codes. Try again in 30 minutes."
+            : summary.inFlight > 0
             ? "A withdrawal is still in progress."
             : null;
 
@@ -273,28 +362,8 @@ export default function PayoutPage() {
               <span className="shrink-0 text-[13px] font-semibold text-brand">Go to verification →</span>
             </Link>
           )}
-          {isLead && summary?.withdrawalPinSet && (summary.withdrawalPinLockedUntil || summary.withdrawalPinResetRequestedAt) && (
-            <div className="mt-4 flex flex-col gap-2 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3.5 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink">
-                  {summary.withdrawalPinResetRequestedAt ? "New security code requested" : "Withdrawals are locked"}
-                </p>
-                <p className="mt-0.5 text-xs text-ink-soft">
-                  {summary.withdrawalPinResetRequestedAt
-                    ? "A Duevy admin will confirm it's you, then share a new code."
-                    : "Too many wrong security codes. Try again in 30 minutes, or ask for a new code."}
-                </p>
-              </div>
-              {!summary.withdrawalPinResetRequestedAt && (
-                <button
-                  type="button"
-                  onClick={handleForgotPin}
-                  className="shrink-0 text-left text-[13px] font-semibold text-brand cursor-pointer hover:underline"
-                >
-                  Forgot code? Request a new one →
-                </button>
-              )}
-            </div>
+          {isLead && summary?.kyc.canWithdraw && (
+            <PinStatusBanner summary={summary} onAction={setPinMode} />
           )}
           {/* Desktop: balance | beneficiaries, history full width below.
               Mobile: balance → history → beneficiaries. */}
@@ -333,6 +402,14 @@ export default function PayoutPage() {
           onClose={() => setWithdrawOpen(false)}
           onConfirm={handleWithdraw}
           onForgotPin={handleForgotPin}
+        />
+      )}
+      {pinMode && (
+        <PinModal
+          mode={pinMode}
+          onClose={() => setPinMode(null)}
+          onSubmit={handleSavePin}
+          onForgot={() => setPinMode("reset")}
         />
       )}
       {addOpen && (
