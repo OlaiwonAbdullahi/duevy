@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "../../dashboard/_components/StatCard";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -92,6 +93,7 @@ export default function AdminPollsPage() {
       <PageHeader
         title="Vote polls"
         description="Every award vote reps are running across the platform."
+        right={<RefreshButton onClick={() => void load()} loading={loading} />}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

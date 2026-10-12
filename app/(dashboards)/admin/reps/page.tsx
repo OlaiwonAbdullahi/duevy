@@ -7,6 +7,7 @@ import { UserGroup03Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -271,6 +272,17 @@ export default function AdminRepsPage() {
     }
   }
 
+  /** Reloads the open tab, skipping the short-lived caches above. */
+  const refresh = () => {
+    if (tab === "applications") {
+      queryClient.removeQueries({ queryKey: ["admin", "rep-applications"] });
+      void loadApplications();
+    } else {
+      queryClient.removeQueries({ queryKey: ["admin", "spaces", "frozen"] });
+      void load();
+    }
+  };
+
   // Loaded up front (not only on the tab) so the tab shows how many are waiting.
   useEffect(() => {
     loadApplications();
@@ -407,6 +419,9 @@ export default function AdminRepsPage() {
       <PageHeader
         title="Reps"
         description="Approve new reps, and manage every rep's spaces, float and collections."
+        right={
+          <RefreshButton onClick={refresh} loading={tab === "applications" ? appsLoading : loading} />
+        }
       />
 
       <Tabs

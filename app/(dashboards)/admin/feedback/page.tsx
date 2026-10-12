@@ -6,6 +6,7 @@ import { BubbleChatEditIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -65,13 +66,15 @@ export default function AdminFeedbackPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  // Bumped by Refresh to re-run the load below.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => clearTimeout(t);
   }, [search]);
 
-  const queryKey = JSON.stringify([debouncedSearch, statusFilter, categoryFilter]);
+  const queryKey = JSON.stringify([debouncedSearch, statusFilter, categoryFilter, reloadKey]);
   const loading = loadedKey !== queryKey;
 
   useEffect(() => {
@@ -125,6 +128,7 @@ export default function AdminFeedbackPage() {
             ? "Bug reports, ideas and comments sent from the app."
             : `Bug reports, ideas and comments sent from the app · ${unresolved} unresolved`
         }
+        right={<RefreshButton onClick={() => setReloadKey((k) => k + 1)} loading={loading} />}
       />
 
       <Toolbar>

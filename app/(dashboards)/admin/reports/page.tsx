@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Analytics01Icon, Download01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, Download01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BRAND_INPUT } from "../../dashboard/_components/form-styles";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -118,10 +119,7 @@ export default function AdminReportsPage() {
         description="Export financial and performance data as CSV or PDF."
         right={
           <div className="flex gap-2">
-            <Button variant="brand-outline" size="pill" onClick={load} disabled={loading}>
-              <HugeiconsIcon icon={RefreshIcon} size={14} />
-              Refresh
-            </Button>
+            <RefreshButton onClick={() => void load()} loading={loading} />
             <Button variant="brand" size="pill" onClick={() => setBuilderOpen(true)}>
               New report
             </Button>

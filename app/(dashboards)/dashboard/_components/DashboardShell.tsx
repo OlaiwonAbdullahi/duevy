@@ -4,7 +4,10 @@ import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon, MailAtSign01Icon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, MailAtSign01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { OverviewSkeleton, ShellSkeleton } from "./Skeleton";
@@ -30,6 +33,24 @@ const CommandPalette = dynamic(() => import("./CommandPalette").then((mod) => mo
  */
 function PendingRepBanner() {
   const pathname = usePathname();
+  const { refreshUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [checking, setChecking] = useState(false);
+
+  /** Re-reads the account and KYC state; once approved, the shell switches to rep mode. */
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      await Promise.all([
+        refreshUser(),
+        queryClient.invalidateQueries({ queryKey: ["kyc-status"] }),
+      ]);
+    } catch {
+      toast.error("Couldn't check your application. Please try again.");
+    } finally {
+      setChecking(false);
+    }
+  };
   // Shared with the onboarding gate below and the KYC page, so it's one request.
   const kyc = useKycStatus().data?.mine ?? null;
 
@@ -72,6 +93,15 @@ function PendingRepBanner() {
           Complete verification
         </Link>
       )}
+      <button
+        type="button"
+        onClick={checkStatus}
+        disabled={checking}
+        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-amber-500/40 px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-amber-500/15 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+      >
+        <HugeiconsIcon icon={RefreshIcon} size={14} className={cn(checking && "animate-spin")} />
+        {checking ? "Checking…" : "Check status"}
+      </button>
     </div>
   );
 }

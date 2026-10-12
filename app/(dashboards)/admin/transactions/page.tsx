@@ -14,6 +14,7 @@ import { BRAND_INPUT } from "../../dashboard/_components/form-styles";
 import { StatCard } from "../../dashboard/_components/StatCard";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -161,9 +162,12 @@ export default function AdminTransactionsPage() {
         title="Transactions"
         description="The money trail — dues payments, manual credits and refunds."
         right={
-          <Button variant="brand-outline" size="pill" onClick={() => setCreditOpen(true)}>
-            Credit a due manually
-          </Button>
+          <div className="flex gap-2">
+            <RefreshButton onClick={() => void load()} loading={loading} />
+            <Button variant="brand-outline" size="pill" onClick={() => setCreditOpen(true)}>
+              Credit a due manually
+            </Button>
+          </div>
         }
       />
 

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { BRAND_INPUT } from "../../dashboard/_components/form-styles";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -313,10 +314,13 @@ export default function AdminSpacesPage() {
         title="Spaces"
         description="Every collection hub — departments, faculties and associations."
         right={
-          <Button variant="brand" size="pill" onClick={() => setCreateOpen(true)}>
-            <HugeiconsIcon icon={Add01Icon} size={14} />
-            New space
-          </Button>
+          <div className="flex gap-2">
+            <RefreshButton onClick={() => void load()} loading={loading} />
+            <Button variant="brand" size="pill" onClick={() => setCreateOpen(true)}>
+              <HugeiconsIcon icon={Add01Icon} size={14} />
+              New space
+            </Button>
+          </div>
         }
       />
 

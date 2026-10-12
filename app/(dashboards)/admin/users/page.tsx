@@ -6,6 +6,7 @@ import { UserIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -119,6 +120,7 @@ export default function AdminUsersPage() {
       <PageHeader
         title="Users"
         description="Search and manage every account on the platform."
+        right={<RefreshButton onClick={() => void load()} loading={loading} />}
       />
 
       <Toolbar>

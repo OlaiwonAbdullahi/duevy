@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "../../dashboard/_components/StatCard";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -62,20 +63,28 @@ export default function AdminReferralsPage() {
   const [flags, setFlags] = useState<ReferralFlag[]>([]);
   const [flagsLoading, setFlagsLoading] = useState(true);
   const [busyFlagId, setBusyFlagId] = useState<string | null>(null);
+  // Bumped by Refresh to re-run both loads below.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     listReferralSummaries({ perPage: 100 })
       .then(({ data }) => setSummaries(data))
       .catch(() => toast.error("Couldn't load referrers."))
       .finally(() => setSummariesLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     listReferralFlags({ perPage: 100 })
       .then(({ data }) => setFlags(data))
       .catch(() => toast.error("Couldn't load fraud flags."))
       .finally(() => setFlagsLoading(false));
-  }, []);
+  }, [reloadKey]);
+
+  const refresh = () => {
+    setSummariesLoading(true);
+    setFlagsLoading(true);
+    setReloadKey((k) => k + 1);
+  };
 
   const invited = summaries.reduce((s, u) => s + u.invited, 0);
   const joined = summaries.reduce((s, u) => s + u.joined, 0);
@@ -113,6 +122,7 @@ export default function AdminReferralsPage() {
       <PageHeader
         title="Referrals"
         description="Growth funnel, reward payouts and the fraud flags on them."
+        right={<RefreshButton onClick={refresh} loading={summariesLoading || flagsLoading} />}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "../../dashboard/_components/StatCard";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { nairaFromKobo, formatPercent01 } from "../_components/format";
@@ -44,6 +45,8 @@ export default function AdminOverviewPage() {
   const [health, setHealth] = useState<AdminHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Bumped by Refresh to re-run the load below.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +75,7 @@ export default function AdminOverviewPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const attention = data?.attention ?? [];
 
@@ -81,11 +84,12 @@ export default function AdminOverviewPage() {
       <PageHeader
         title="Overview"
         description="Platform health at a glance — the numbers and issues that need an admin."
+        right={<RefreshButton onClick={() => setReloadKey((k) => k + 1)} loading={loading} />}
       />
 
       {error && !loading ? (
         <TableCard title="Couldn't load" subtitle="Something went wrong reaching the server.">
-          <p className="p-4 text-sm text-ink-soft">Refresh the page to try again.</p>
+          <p className="p-4 text-sm text-ink-soft">Tap Refresh to try again.</p>
         </TableCard>
       ) : loading ? (
         <div className="grid animate-pulse grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

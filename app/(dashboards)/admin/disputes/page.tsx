@@ -6,6 +6,7 @@ import { Megaphone01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
+import RefreshButton from "../_components/RefreshButton";
 import TableCard from "../_components/TableCard";
 import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
@@ -125,6 +126,7 @@ export default function AdminDisputesPage() {
       <PageHeader
         title="Disputes"
         description="Reported payment issues, ready to claim and settle."
+        right={<RefreshButton onClick={() => void load()} loading={loading} />}
       />
 
       <Toolbar>
