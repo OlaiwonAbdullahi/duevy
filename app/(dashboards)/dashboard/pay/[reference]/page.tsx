@@ -299,6 +299,34 @@ export default function PaymentPage() {
                 has been notified and will follow up.
               </p>
             )}
+            {/* What was paid for — the same lines as the receipt. */}
+            <div className="w-full">{breakdownCard}</div>
+            <dl className="flex w-full flex-col gap-1.5 text-xs">
+              {checkout?.receiptNumber && (
+                <div className="flex justify-between gap-3 text-ink-soft">
+                  <dt>Receipt no.</dt>
+                  <dd className="font-medium text-ink">{checkout.receiptNumber}</dd>
+                </div>
+              )}
+              <div className="flex justify-between gap-3 text-ink-soft">
+                <dt>Reference</dt>
+                <dd className="min-w-0 truncate font-medium text-ink">{reference}</dd>
+              </div>
+              {checkout?.paidAt && (
+                <div className="flex justify-between gap-3 text-ink-soft">
+                  <dt>Paid</dt>
+                  <dd className="font-medium text-ink">
+                    {new Date(checkout.paidAt).toLocaleString("en-NG", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </dd>
+                </div>
+              )}
+            </dl>
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
               {canDownload && (
                 <button
@@ -319,9 +347,6 @@ export default function PaymentPage() {
                 {backLabel}
               </button>
             </div>
-            {checkout?.receiptNumber && (
-              <p className="text-[11px] text-ink-soft">Receipt {checkout.receiptNumber}</p>
-            )}
           </div>
         ) : status === "expired" ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
