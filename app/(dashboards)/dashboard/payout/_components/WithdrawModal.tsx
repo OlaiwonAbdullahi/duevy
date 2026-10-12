@@ -47,6 +47,7 @@ export function WithdrawModal({
   beneficiaries,
   onClose,
   onConfirm,
+  onForgotPin,
 }: {
   spaceId: string;
   /** Naira. */
@@ -55,7 +56,10 @@ export function WithdrawModal({
   minPayout: number;
   beneficiaries: Beneficiary[];
   onClose: () => void;
-  onConfirm: (amount: number, target: WithdrawTarget) => Promise<void>;
+  /** Receives the 4-digit withdrawal security code with the request. */
+  onConfirm: (amount: number, target: WithdrawTarget, pin: string) => Promise<void>;
+  /** "Forgot code?" — asks a Duevy admin for a new one. */
+  onForgotPin: () => Promise<void>;
 }) {
   const [amount, setAmount] = useState("");
   // A beneficiary id or NEW_ACCOUNT. Defaults to the newest beneficiary, or to
@@ -67,6 +71,18 @@ export function WithdrawModal({
       : beneficiaries[0]?.id ?? NEW_ACCOUNT;
   const [newAccount, setNewAccount] = useState<VerifiedAccount | null>(null);
   const [saveAsBeneficiary, setSaveAsBeneficiary] = useState(false);
+  // The space's withdrawal security code, set by a Duevy admin.
+  const [pin, setPin] = useState("");
+  const pinValid = /^\d{4}$/.test(pin);
+  const [requestingReset, setRequestingReset] = useState(false);
+  const forgotPin = async () => {
+    setRequestingReset(true);
+    try {
+      await onForgotPin();
+    } finally {
+      setRequestingReset(false);
+    }
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const parsed = Number(amount.replace(/[^0-9]/g, ""));
@@ -99,11 +115,13 @@ export function WithdrawModal({
   }, [spaceId, parsed, valid]);
 
   const confirm = async () => {
-    if (!valid || !target) return;
+    if (!valid || !target || !pinValid) return;
     setSubmitting(true);
     try {
-      await onConfirm(parsed, target);
+      await onConfirm(parsed, target, pin);
     } finally {
+      // Never leave the code sitting in the field after an attempt.
+      setPin("");
       setSubmitting(false);
     }
   };
@@ -239,6 +257,38 @@ export function WithdrawModal({
         )}
       </div>
 
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <label htmlFor="withdrawal-pin" className="block text-xs font-medium text-ink-soft">
+            Security code
+          </label>
+          <button
+            type="button"
+            onClick={forgotPin}
+            disabled={requestingReset}
+            className="text-xs font-semibold text-brand hover:underline disabled:opacity-50 cursor-pointer"
+          >
+            {requestingReset ? "Sending…" : "Forgot code?"}
+          </button>
+        </div>
+        <div className="mt-1.5 flex items-center rounded-2xl border border-cloud bg-canvas px-4 focus-within:border-brand">
+          <Input
+            id="withdrawal-pin"
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={4}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+            placeholder="••••"
+            className={cn(BARE_INPUT, "flex-1 tracking-[0.5em]")}
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-ink-soft">
+          The 4-digit code Duevy gave your space. 5 wrong tries lock withdrawals for 30 minutes.
+        </p>
+      </div>
+
       <p className="mt-3 text-xs leading-5 text-ink-soft">
         Withdrawals usually arrive within minutes. If one fails, the full amount
         goes back to your balance. A successful transfer can&apos;t be pulled back.
@@ -255,7 +305,7 @@ export function WithdrawModal({
         </button>
         <button
           type="button"
-          disabled={!valid || !target || submitting}
+          disabled={!valid || !target || !pinValid || submitting}
           onClick={confirm}
           className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >

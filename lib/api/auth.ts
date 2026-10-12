@@ -25,7 +25,6 @@ export type RegisterRepPayload = BaseRegisterPayload & {
     kind: SpaceKind;
     school: string;
     faculty?: string;
-    coRepInvites?: string[];
   };
 };
 

@@ -12,7 +12,6 @@ export type RepDue = {
   dueDate: string;
   /** The due's `type`. */
   category: DueType;
-  allowGuests: boolean;
   status: RepDueStatus;
   /** Members who've settled it — drives the collection progress. */
   paidCount: number;
@@ -24,5 +23,5 @@ export type RepDue = {
 /** The editable slice a rep fills in when creating or editing a due. */
 export type DueDraft = Pick<
   RepDue,
-  "title" | "note" | "amount" | "dueDate" | "category" | "allowGuests"
+  "title" | "note" | "amount" | "dueDate" | "category"
 >;

@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
-import { verifyEmail } from "@/lib/api/auth";
+import { resendVerification, verifyEmail } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { readPostAuthNext } from "@/lib/auth/post-auth-next";
+import AuthField from "./AuthField";
 import { ArrowRightIcon, CheckIcon } from "../../components/icons";
 
 type State = "verifying" | "success" | "error";
@@ -15,6 +17,8 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
   const [state, setState] = useState<State>(token ? "verifying" : "error");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const ran = useRef(false);
+  const [resending, setResending] = useState(false);
+  const [resentTo, setResentTo] = useState<string | null>(null);
   // Carries `next` across the verify-email hop, which can happen in a
   // different tab/device than the one that started signup.
   const [persistedNext] = useState(() => readPostAuthNext());
@@ -42,6 +46,27 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
       }
     })();
   }, [token]);
+
+  // The token doesn't tell us whose link it was, so ask for the email.
+  async function handleResend(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const email = String(data.get("email") ?? "").trim();
+
+    setResending(true);
+    try {
+      await resendVerification(email);
+      setResentTo(email);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't resend the email. Please try again in a moment.",
+      );
+    } finally {
+      setResending(false);
+    }
+  }
 
   if (state === "verifying") {
     return (
@@ -96,19 +121,52 @@ export default function VerifyEmailStatus({ token }: { token: string | null }) {
       </h1>
       <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">
         {errorMessage ??
-          "This verification link is invalid or has expired. Request a new one from your account settings."}
+          "This verification link is invalid or has expired. Request a new one below."}
       </p>
 
-      <Link
-        href={continueHref}
-        className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
-      >
-        Back to sign in
-        <ArrowRightIcon
-          size={16}
-          className="transition-transform duration-500 group-hover:translate-x-1"
-        />
-      </Link>
+      {resentTo ? (
+        <p className="rounded-2xl border border-[#e6f2ec] bg-[#fbfaf7] p-5 text-[#7a847f] text-[14px] leading-relaxed">
+          If <span className="font-medium text-[#1b2520]">{resentTo}</span> has an
+          unverified account, we&apos;ve sent a new verification link. Check your
+          inbox (and spam folder).
+        </p>
+      ) : (
+        <form className="flex flex-col gap-5 text-left" onSubmit={handleResend}>
+          <AuthField
+            id="email"
+            label="Email address"
+            icon="mail"
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="you@school.edu.ng"
+            required
+          />
+
+          <button
+            type="submit"
+            disabled={resending}
+            className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+          >
+            {resending ? "Sending…" : "Resend verification email"}
+            {!resending && (
+              <ArrowRightIcon
+                size={16}
+                className="transition-transform duration-500 group-hover:translate-x-1"
+              />
+            )}
+          </button>
+        </form>
+      )}
+
+      <p className="mt-8 text-center text-[#7a847f] text-[14px]">
+        <Link
+          href={continueHref}
+          className="text-[#0b6e4f] font-semibold hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
+        >
+          Back to sign in
+        </Link>
+      </p>
     </div>
   );
 }

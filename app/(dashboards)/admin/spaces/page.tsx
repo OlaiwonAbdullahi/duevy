@@ -24,6 +24,7 @@ import {
   updateAdminSpace,
   assignRep,
   archiveAdminSpace,
+  setWithdrawalPin,
   type AdminSpace,
   type AdminSpaceInput,
 } from "@/lib/api/admin";
@@ -155,6 +156,7 @@ export default function AdminSpacesPage() {
   const [editForm, setEditForm] = useState<AdminSpaceInput>(EMPTY_FORM);
 
   const [assignUserId, setAssignUserId] = useState("");
+  const [pinInput, setPinInput] = useState("");
   const [assignRole, setAssignRole] = useState<"lead" | "co">(FEATURES.coReps ? "co" : "lead");
 
   useEffect(() => {
@@ -192,6 +194,7 @@ export default function AdminSpacesPage() {
     setSelectedId(space.id);
     setEditing(false);
     setAssignUserId("");
+    setPinInput("");
     setAssignRole(FEATURES.coReps ? "co" : "lead");
   }
 
@@ -259,6 +262,40 @@ export default function AdminSpacesPage() {
       setAssignUserId("");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't assign this rep.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSetPin(event: React.FormEvent<HTMLFormElement>, space: AdminSpace) {
+    event.preventDefault();
+    if (!/^\d{4}$/.test(pinInput)) return;
+    if (
+      space.withdrawalPinSet &&
+      !window.confirm(`Replace the withdrawal code for ${space.name}? The old code stops working immediately.`)
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await setWithdrawalPin(space.id, pinInput);
+      setSpaces((prev) =>
+        prev.map((s) =>
+          s.id === space.id
+            ? {
+                ...s,
+                withdrawalPinSet: true,
+                withdrawalPinSetAt: res.withdrawalPinSetAt,
+                withdrawalPinLocked: false,
+                withdrawalPinResetRequestedAt: null,
+              }
+            : s,
+        ),
+      );
+      toast.success("Withdrawal code saved. Share it with the lead rep securely.");
+      setPinInput("");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't save the withdrawal code.");
     } finally {
       setBusy(false);
     }
@@ -348,6 +385,16 @@ export default function AdminSpacesPage() {
                       {s.payoutsFrozen && (
                         <span className="ml-2 inline-block align-middle">
                           <StatusBadge tone="bad">Payouts frozen</StatusBadge>
+                        </span>
+                      )}
+                      {s.withdrawalPinResetRequestedAt && (
+                        <span className="ml-2 inline-block align-middle">
+                          <StatusBadge tone="warn">Code reset requested</StatusBadge>
+                        </span>
+                      )}
+                      {s.withdrawalPinSet === false && (
+                        <span className="ml-2 inline-block align-middle">
+                          <StatusBadge tone="warn">No withdrawal code</StatusBadge>
                         </span>
                       )}
                     </p>
@@ -485,6 +532,56 @@ export default function AdminSpacesPage() {
                   )}
                   <Button type="submit" variant="brand-outline" size="pill" disabled={busy}>
                     Assign
+                  </Button>
+                </form>
+              </div>
+
+              <div className="mt-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <p className="text-[11px] font-semibold text-ink-soft">Withdrawal security code</p>
+                  {selected.withdrawalPinResetRequestedAt && (
+                    <StatusBadge tone="warn">Reset requested</StatusBadge>
+                  )}
+                  {selected.withdrawalPinLocked ? (
+                    <StatusBadge tone="bad">Locked</StatusBadge>
+                  ) : selected.withdrawalPinSet ? (
+                    <StatusBadge tone="ok">Set</StatusBadge>
+                  ) : (
+                    <StatusBadge tone="warn">Not set</StatusBadge>
+                  )}
+                </div>
+                {selected.withdrawalPinResetRequestedAt && (
+                  <p className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-ink">
+                    The lead rep says they forgot the code. Confirm it&apos;s really them (call or meet them)
+                    before setting a new one.
+                  </p>
+                )}
+                <p className="text-xs text-ink-soft">
+                  The lead rep must enter this 4-digit code to withdraw. It is stored hashed and can&apos;t be
+                  shown again — share it with the rep directly. Saving a new code also clears a lockout.
+                </p>
+                <form
+                  onSubmit={(e) => handleSetPin(e, selected)}
+                  className="mt-3 flex flex-col gap-2 sm:flex-row"
+                >
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                    placeholder="4-digit code"
+                    aria-label="New withdrawal security code"
+                    className={BRAND_INPUT}
+                  />
+                  <Button
+                    type="submit"
+                    variant="brand-outline"
+                    size="pill"
+                    disabled={busy || !/^\d{4}$/.test(pinInput)}
+                  >
+                    {selected.withdrawalPinSet ? "Replace code" : "Set code"}
                   </Button>
                 </form>
               </div>

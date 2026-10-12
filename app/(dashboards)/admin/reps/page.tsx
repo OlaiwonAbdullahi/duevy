@@ -607,11 +607,6 @@ export default function AdminRepsPage() {
                   <ModalField label="Faculty">
                     {selected.application.requestedSpace.faculty || "—"}
                   </ModalField>
-                  <ModalField label="Co-rep invites">
-                    {selected.application.coRepInvites.length
-                      ? selected.application.coRepInvites.join(", ")
-                      : "None"}
-                  </ModalField>
                   <ModalField label="Referral code">
                     {selected.application.referralCode || "—"}
                   </ModalField>

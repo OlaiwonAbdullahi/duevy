@@ -88,16 +88,30 @@ export type PayoutTarget = { beneficiaryId: string } | BeneficiaryInput;
 
 /**
  * Lead rep only. `amount` is the gross in kobo; the fee is deducted from it.
- * Money-moving — an Idempotency-Key is attached automatically.
+ * `pin` is the space's 4-digit withdrawal security code, set by a Duevy admin
+ * (`403 INVALID_WITHDRAWAL_PIN`, `423 WITHDRAWAL_PIN_LOCKED` after 5 misses,
+ * `403 WITHDRAWAL_PIN_NOT_SET`). Money-moving — an Idempotency-Key is attached
+ * automatically.
  */
 export function requestPayout(
   spaceId: string,
-  payload: { amount: number; note?: string } & PayoutTarget,
+  payload: { amount: number; note?: string; pin: string } & PayoutTarget,
   idempotencyKey: string = crypto.randomUUID(),
 ) {
   return apiClient.post<Payout>(`/spaces/${spaceId}/payout/request`, payload, {
     idempotencyKey,
   });
+}
+
+/**
+ * Lead rep forgot the withdrawal security code: alerts Duevy admins, who
+ * confirm it's really the rep and set a new one. Repeats within an hour don't
+ * alert again (`200` instead of `201`).
+ */
+export function requestWithdrawalPinReset(spaceId: string) {
+  return apiClient.post<{ requested: true; requestedAt: string }>(
+    `/spaces/${spaceId}/payout/pin-reset-request`,
+  );
 }
 
 /** Most recent 100 withdrawals (the API's page-size ceiling). */

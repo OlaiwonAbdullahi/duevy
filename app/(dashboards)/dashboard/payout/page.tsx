@@ -19,6 +19,7 @@ import {
   addBeneficiary,
   removeBeneficiary,
   requestPayout,
+  requestWithdrawalPinReset,
   listPayouts,
 } from "@/lib/api/payouts";
 import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
@@ -62,6 +63,8 @@ const PAYOUT_ERRORS: Record<string, string> = {
   INSUFFICIENT_BALANCE: "That's more than your available balance.",
   BELOW_MIN_PAYOUT: "That's below the minimum withdrawal.",
   PAYOUTS_FROZEN: "Withdrawals for this space are paused. Contact support.",
+  WITHDRAWAL_PIN_NOT_SET: "Your space doesn't have a withdrawal security code yet. Contact Duevy support to get one.",
+  WITHDRAWAL_PIN_LOCKED: "Too many wrong security codes. Withdrawals are locked for 30 minutes.",
   FORBIDDEN: "Only the department's lead rep can withdraw.",
 };
 
@@ -115,7 +118,7 @@ export default function PayoutPage() {
       .finally(() => setLoading(false));
   }, [spaceId]);
 
-  const handleWithdraw = async (amount: number, target: WithdrawTarget) => {
+  const handleWithdraw = async (amount: number, target: WithdrawTarget, pin: string) => {
     if (!spaceId) return;
     let destination: { beneficiaryId: string } | { bankCode: string; accountNumber: string };
     if ("beneficiaryId" in target) {
@@ -138,7 +141,7 @@ export default function PayoutPage() {
       destination = { bankCode: target.account.bankCode, accountNumber: target.account.accountNumber };
     }
     try {
-      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100), ...destination });
+      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100), pin, ...destination });
       setWithdrawOpen(false);
       // A 201 can already carry a provider refusal; the balance is restored then.
       if (payout.status === "failed" || payout.status === "reversed") {
@@ -152,7 +155,35 @@ export default function PayoutPage() {
       }
       await refresh(spaceId);
     } catch (err) {
+      if (err instanceof ApiError && err.code === "INVALID_WITHDRAWAL_PIN") {
+        // The modal stays open so the rep can try again; the server says how many tries are left.
+        const left = err.details?.find((d) => d.field === "pin")?.issue.match(/(\d+) attempt/)?.[1];
+        toast.error("Wrong security code", {
+          description: left ? `${left} attempt${left === "1" ? "" : "s"} left before withdrawals lock.` : "Check the code and try again.",
+        });
+        return;
+      }
       toast.error("Couldn't request the withdrawal", {
+        description:
+          (err instanceof ApiError && PAYOUT_ERRORS[err.code]) || "Something went wrong. Please try again.",
+      });
+      if (err instanceof ApiError && err.code === "WITHDRAWAL_PIN_LOCKED") {
+        setWithdrawOpen(false);
+        await refresh(spaceId).catch(() => {});
+      }
+    }
+  };
+
+  const handleForgotPin = async () => {
+    if (!spaceId) return;
+    try {
+      await requestWithdrawalPinReset(spaceId);
+      toast.success("Request sent to Duevy", {
+        description: "An admin will confirm it's you, then give you a new security code.",
+      });
+      await refresh(spaceId).catch(() => {});
+    } catch (err) {
+      toast.error("Couldn't send the request", {
         description:
           (err instanceof ApiError && PAYOUT_ERRORS[err.code]) || "Something went wrong. Please try again.",
       });
@@ -197,9 +228,13 @@ export default function PayoutPage() {
     ? null
     : !summary.kyc.canWithdraw
       ? "Withdrawals open once verification is complete."
-      : summary.inFlight > 0
-        ? "A withdrawal is still in progress."
-        : null;
+      : summary.withdrawalPinSet === false
+        ? "Withdrawals need a security code. Contact Duevy support to get one."
+        : summary.withdrawalPinLockedUntil
+          ? "Too many wrong security codes. Try again in 30 minutes."
+          : summary.inFlight > 0
+            ? "A withdrawal is still in progress."
+            : null;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -238,6 +273,29 @@ export default function PayoutPage() {
               <span className="shrink-0 text-[13px] font-semibold text-brand">Go to verification →</span>
             </Link>
           )}
+          {isLead && summary?.withdrawalPinSet && (summary.withdrawalPinLockedUntil || summary.withdrawalPinResetRequestedAt) && (
+            <div className="mt-4 flex flex-col gap-2 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3.5 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">
+                  {summary.withdrawalPinResetRequestedAt ? "New security code requested" : "Withdrawals are locked"}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  {summary.withdrawalPinResetRequestedAt
+                    ? "A Duevy admin will confirm it's you, then share a new code."
+                    : "Too many wrong security codes. Try again in 30 minutes, or ask for a new code."}
+                </p>
+              </div>
+              {!summary.withdrawalPinResetRequestedAt && (
+                <button
+                  type="button"
+                  onClick={handleForgotPin}
+                  className="shrink-0 text-left text-[13px] font-semibold text-brand cursor-pointer hover:underline"
+                >
+                  Forgot code? Request a new one →
+                </button>
+              )}
+            </div>
+          )}
           <div className="mt-4 grid gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[1.3fr_1fr]">
             <PayoutBalanceCard
               available={available}
@@ -273,6 +331,7 @@ export default function PayoutPage() {
           beneficiaries={beneficiaries}
           onClose={() => setWithdrawOpen(false)}
           onConfirm={handleWithdraw}
+          onForgotPin={handleForgotPin}
         />
       )}
       {addOpen && (

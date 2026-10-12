@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { preconnect } from "react-dom";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { AuthProvider } from "@/lib/auth/auth-context";
 import { PwaRegister } from "./components/pwa/PwaRegister";
 import { PwaChrome } from "./components/pwa/PwaChrome";
 import { MotionProvider } from "./components/MotionProvider";
+import { API_BASE_URL } from "@/lib/api/config";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -108,6 +110,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Open the TLS connection to the API while the page is still loading, so the
+  // session bootstrap (/auth/refresh) doesn't pay DNS + TCP + TLS on top.
+  // Credentialed, to match the client's `credentials: "include"` fetches.
+  preconnect(new URL(API_BASE_URL).origin, { crossOrigin: "use-credentials" });
+
   return (
     <html
       lang="en"

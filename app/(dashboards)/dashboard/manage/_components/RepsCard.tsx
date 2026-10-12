@@ -4,20 +4,19 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/button";
+import { Cancel01Icon, Shield01Icon } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../../_components/EmptyState";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { Skeleton } from "../../_components/Skeleton";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { inviteRep, removeRep } from "@/lib/api/rep";
+import { removeRep } from "@/lib/api/rep";
 import { queryKeys, useSpaceReps } from "@/lib/api/queries";
 import type { SpaceRep as Rep } from "@/lib/api/types";
-import { InviteRepModal } from "./InviteRepModal";
 import { RepActivityPanel } from "./RepActivityPanel";
 
-/** Co-reps who help run collections. The lead rep can invite or remove them. */
+/** Co-reps who help run collections. The lead rep can remove them; adding
+ *  co-reps is switched off for now. */
 export function RepsCard() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
@@ -32,7 +31,6 @@ export function RepsCard() {
       typeof update === "function" ? update(list) : update,
     );
   };
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [activityRep, setActivityRep] = useState<Rep | null>(null);
 
   const remove = async (rep: Rep) => {
@@ -48,30 +46,11 @@ export function RepsCard() {
     }
   };
 
-  const invite = async (email: string) => {
-    if (!spaceId) return;
-    try {
-      const newRep = await inviteRep(spaceId, email);
-      setReps((list) => [...list, newRep]);
-      toast.success("Invite sent", { description: email });
-    } catch {
-      toast.error("Couldn't send the invite.");
-    }
-  };
-
   return (
     <SettingsCard
       icon={Shield01Icon}
       title="Reps & roles"
       description="People who can manage dues and collections for this department."
-      action={
-        isLead && (
-          <Button variant="brand" size="pill" onClick={() => setInviteOpen(true)}>
-            <HugeiconsIcon icon={Add01Icon} size={14} className="size-3.5" />
-            Invite
-          </Button>
-        )
-      }
     >
       {loading ? (
         <ul className="flex flex-col">
@@ -93,7 +72,7 @@ export function RepsCard() {
         <EmptyState
           icon={Shield01Icon}
           title="No reps yet"
-          description="Invite a co-rep to help you manage dues and collections."
+          description="Only the lead rep manages this department for now."
         />
       ) : (
         <ul className="flex flex-col">
@@ -140,10 +119,6 @@ export function RepsCard() {
             </li>
           ))}
         </ul>
-      )}
-
-      {inviteOpen && (
-        <InviteRepModal onClose={() => setInviteOpen(false)} onInvite={invite} />
       )}
 
       {activityRep && spaceId && (

@@ -199,8 +199,6 @@ export type RepDue = Omit<
   Due,
   "status" | "processingFee" | "payableAmount" | "paidAt" | "reference"
 > & {
-  /** Not returned by the current API; guest payers are refused at checkout. */
-  allowGuests?: boolean;
   status: RepDueStatus;
   paidCount: number;
   memberCount: number;
@@ -340,6 +338,12 @@ export type PayoutSummary = {
   kyc: KycState;
   /** How many beneficiaries the space can withdraw to. */
   beneficiaryCount: number;
+  /** Whether a Duevy admin has set the space's 4-digit withdrawal security code. */
+  withdrawalPinSet?: boolean;
+  /** ISO time withdrawals unlock after too many wrong codes; null when not locked. */
+  withdrawalPinLockedUntil?: string | null;
+  /** When the lead rep last asked an admin for a new code; cleared once one is set. */
+  withdrawalPinResetRequestedAt?: string | null;
   minPayout: number;
   fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
 };

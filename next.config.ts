@@ -16,10 +16,6 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "api.duevy.app",
       },
-      {
-        protocol: "https",
-        hostname: "duevy-be.onrender.com",
-      },
     ],
   },
 };

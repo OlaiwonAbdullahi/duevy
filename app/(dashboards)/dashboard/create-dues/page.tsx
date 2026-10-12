@@ -51,7 +51,6 @@ function adaptRepDue(api: ApiRepDue): RepDue {
     amount: api.amount / 100,
     dueDate: api.dueDate,
     category: normalizeDueType(api.type ?? api.category),
-    allowGuests: api.allowGuests ?? false,
     status: api.status as RepDueStatus,
     paidCount: api.paidCount,
     memberCount: api.memberCount,
@@ -67,7 +66,6 @@ function toApiDraft(draft: DueDraft): ApiDueDraft {
     amount: draft.amount * 100,
     dueDate: draft.dueDate,
     type: draft.category,
-    allowGuests: draft.allowGuests,
   };
 }
 

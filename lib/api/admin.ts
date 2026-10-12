@@ -102,7 +102,8 @@ export function deactivateUser(userId: string, reason: string) {
 
 export function reviewKyc(
   userId: string,
-  payload: { decision: "verified" | "rejected"; note?: string },
+  // Identity is Bachs's call — an admin can only revoke it, never mark verified.
+  payload: { decision: "rejected"; note?: string },
 ) {
   return apiClient.post<{ kycStatus: KycStatus }>(`/admin/users/${userId}/kyc/review`, payload);
 }
@@ -332,6 +333,13 @@ export type AdminSpace = {
   collectedAmount: number;
   assignedRepIds: string[];
   payoutsFrozen: boolean;
+  /** Whether the 4-digit withdrawal security code has been set. */
+  withdrawalPinSet?: boolean;
+  withdrawalPinSetAt?: string | null;
+  /** Locked after 5 wrong codes; setting a new code unlocks it. */
+  withdrawalPinLocked?: boolean;
+  /** Set when the lead rep tapped "Forgot code?"; cleared once a new code is set. */
+  withdrawalPinResetRequestedAt?: string | null;
 };
 
 export function listAdminSpaces(
@@ -358,6 +366,18 @@ export function updateAdminSpace(spaceId: string, payload: Partial<AdminSpaceInp
 
 export function assignRep(spaceId: string, payload: { userId: string; role: "lead" | "co" }) {
   return apiClient.post<void>(`/admin/spaces/${spaceId}/assign-rep`, payload);
+}
+
+/**
+ * Set or replace the space's 4-digit withdrawal security code (needs the
+ * `payouts` permission). Share it with the lead rep yourself — it is stored
+ * hashed and can never be read back. Also clears any lockout.
+ */
+export function setWithdrawalPin(spaceId: string, pin: string) {
+  return apiClient.put<{ withdrawalPinSet: true; withdrawalPinSetAt: string }>(
+    `/admin/spaces/${spaceId}/withdrawal-pin`,
+    { pin },
+  );
 }
 
 export function archiveAdminSpace(spaceId: string, reason: string) {

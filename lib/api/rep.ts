@@ -40,7 +40,6 @@ export type DueDraft = {
   amount: number;
   dueDate: string;
   type: DueType;
-  allowGuests?: boolean;
   publish?: boolean;
 };
 
@@ -142,10 +141,6 @@ export function regenerateJoinCode(spaceId: string) {
 
 export function listReps(spaceId: string) {
   return apiClient.get<SpaceRep[]>(`/spaces/${spaceId}/reps`);
-}
-
-export function inviteRep(spaceId: string, email: string) {
-  return apiClient.post<SpaceRep>(`/spaces/${spaceId}/reps/invite`, { email });
 }
 
 export function removeRep(spaceId: string, userId: string) {

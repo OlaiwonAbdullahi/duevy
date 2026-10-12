@@ -51,7 +51,6 @@ function Field({
 export function ProfileCard() {
   const { user, refreshUser } = useAuth();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,7 +61,6 @@ export function ProfileCard() {
   useEffect(() => {
     if (!user) return;
     setName(user.name);
-    setEmail(user.email);
     setPhone(user.phone ?? "");
     setDirty(false);
   }, [user]);
@@ -106,7 +104,8 @@ export function ProfileCard() {
     setSaving(true);
     try {
       // Only the editable contact fields; matric/level/role are server-controlled.
-      await updateProfile({ name, email, phone: phone || undefined });
+      // Email is fixed at sign-up and never sent.
+      await updateProfile({ name, phone: phone || undefined });
       await refreshUser();
       setDirty(false);
       toast.success("Profile updated");
@@ -207,12 +206,11 @@ export function ProfileCard() {
           <Field label="Full name" value={name} onChange={edit(setName)} />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <Field
-            label="Email"
-            type="email"
-            value={email}
-            onChange={edit(setEmail)}
-          />
+          {/* Fixed at sign-up — can't be changed. */}
+          <Label className="block text-xs font-medium text-ink-soft">Email</Label>
+          <div className="mt-1.5 flex h-11 items-center truncate rounded-2xl border border-cloud bg-paper px-4 text-sm text-ink-soft">
+            {user?.email ?? "—"}
+          </div>
         </div>
         <div className="col-span-2 sm:col-span-1">
           <Field label="Phone" value={phone} onChange={edit(setPhone)} />

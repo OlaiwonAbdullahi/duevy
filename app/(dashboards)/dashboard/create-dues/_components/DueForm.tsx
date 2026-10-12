@@ -116,8 +116,6 @@ export function DueForm({
   const [amountDigits, setAmountDigits] = useState(initial ? String(initial.amount) : "");
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
-  // Guest payers are refused at checkout, so the form no longer offers it.
-  const allowGuests = false;
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -147,7 +145,7 @@ export function DueForm({
     setConfirming(false);
     setSubmitting(true);
     try {
-      await onSave({ title: title.trim(), note: note.trim(), amount, dueDate, category, allowGuests });
+      await onSave({ title: title.trim(), note: note.trim(), amount, dueDate, category });
     } finally {
       setSubmitting(false);
     }
