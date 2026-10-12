@@ -262,7 +262,7 @@ export default function SignupFlow() {
                 type="text"
                 name="name"
                 autoComplete="name"
-                placeholder="e.g. Ada Okeke"
+                placeholder="Full name"
                 defaultValue={account.name}
                 required
               />
@@ -274,7 +274,7 @@ export default function SignupFlow() {
                 type="text"
                 name="matricNo"
                 autoComplete="off"
-                placeholder="e.g. CSC/2021/045"
+                placeholder="0000000"
                 defaultValue={account.matricNo}
                 required
               />
