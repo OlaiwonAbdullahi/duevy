@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useKycStatus } from "@/lib/api/queries";
-import { ONBOARDING_PATH, isRepApplicant, kycOutstanding } from "@/lib/auth/onboarding";
+import { ONBOARDING_PATH, isRepApplicant, kycOutstanding, skipOnboarding } from "@/lib/auth/onboarding";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckmarkCircle02Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
@@ -14,8 +14,9 @@ import { KycCard } from "@/app/(dashboards)/dashboard/kyc/_components/KycCard";
 
 /**
  * Where a rep applicant lands once their email is verified: verify NIN +
- * student ID and add a payout account before anything else. Not skippable — the dashboard sends them
- * back here until all three are submitted.
+ * student ID and add a payout account before anything else. "Skip for now"
+ * lets them look around the dashboard; they're brought back here on their next
+ * sign-in until all three are submitted (and reminded by email meanwhile).
  */
 export default function OnboardingPage() {
   const { user, status, logout } = useAuth();
@@ -52,6 +53,11 @@ export default function OnboardingPage() {
   const signOut = async () => {
     await logout();
     router.replace("/login");
+  };
+
+  const skip = () => {
+    skipOnboarding(user.id);
+    router.replace("/dashboard");
   };
 
   const steps = [
@@ -121,6 +127,19 @@ export default function OnboardingPage() {
         <div className="mt-5 sm:mt-8">
           {/* Applicants have no space yet, so this uses /me/kyc*. */}
           <KycCard isLead />
+        </div>
+
+        <div className="mt-5 text-center">
+          <button
+            type="button"
+            onClick={skip}
+            className="inline-flex h-10 items-center rounded-full px-4 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            Skip for now — take me to the dashboard
+          </button>
+          <p className="mt-1 text-[11px] text-ink-soft">
+            You can finish verification any time from the dashboard. Your department can&apos;t collect dues until you do.
+          </p>
         </div>
 
         <p className="mt-5 text-center text-[11px] leading-relaxed text-ink-soft">

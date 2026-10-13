@@ -13,6 +13,7 @@ import type { AuthSession, RegisterPayload } from "@/lib/api/auth";
 import { refreshAccessToken, setAccessToken } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { User } from "@/lib/api/types";
+import { clearOnboardingSkip } from "./onboarding";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -102,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, status]);
 
   const login = useCallback(async (email: string, password: string) => {
+    // A fresh sign-in always shows rep onboarding again, even if it was skipped.
+    clearOnboardingSkip();
     let session: AuthSession;
     try {
       session = await authApi.login({ email, password });
@@ -157,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
+      clearOnboardingSkip();
       // Never show the next account on this device the last one's cached data.
       // Loaded lazily so pages without the query cache don't ship it.
       void import("@/lib/api/query-client").then((m) => m.clearQueryCache());

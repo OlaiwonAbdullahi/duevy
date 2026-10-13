@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { OverviewSkeleton, ShellSkeleton } from "./Skeleton";
 import { useKycStatus } from "@/lib/api/queries";
-import { ONBOARDING_PATH, isRepApplicant, kycOutstanding } from "@/lib/auth/onboarding";
+import { ONBOARDING_PATH, isRepApplicant, kycOutstanding, onboardingSkipped } from "@/lib/auth/onboarding";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
 import { TourProvider } from "./DashboardTour";
@@ -182,8 +182,10 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   // Rep applicants finish onboarding (KYC) before they see the dashboard.
   const kycQuery = useKycStatus(undefined, { enabled: status === "authenticated" && applicant });
   const outstanding = kycQuery.data ? kycOutstanding(kycQuery.data.mine) : null;
+  // "Skip for now" on onboarding lets them in until their next sign-in.
+  const skipped = applicant && onboardingSkipped(user?.id);
   // Don't lock them out of the dashboard over a failed status check.
-  const onboarded = kycQuery.isError || outstanding === false;
+  const onboarded = skipped || kycQuery.isError || outstanding === false;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -195,8 +197,8 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   }, [status, user, router, pathname]);
 
   useEffect(() => {
-    if (applicant && outstanding) router.replace(ONBOARDING_PATH);
-  }, [applicant, outstanding, router]);
+    if (applicant && outstanding && !skipped) router.replace(ONBOARDING_PATH);
+  }, [applicant, outstanding, skipped, router]);
 
   if (status !== "authenticated" || !user || user.role === "admin" || (applicant && !onboarded)) {
     return (
