@@ -91,7 +91,7 @@ export const KIND_GLYPH: Record<SpaceKind, HugeIcon> = {
 
 /** Rolled-up dues position for a single space. */
 export type SpaceSummary = {
-  outstanding: number; // sum of unpaid + overdue amounts
+  outstanding: number; // face value of unpaid + overdue dues (service fee excluded)
   openCount: number; // number of unpaid/overdue dues
   overdueCount: number;
   paidCount: number;
@@ -105,7 +105,7 @@ export function summarizeSpace(spaceId: string, source: Due[]): SpaceSummary {
     (a, b) => +new Date(a.dueDate) - +new Date(b.dueDate),
   )[0];
   return {
-    outstanding: open.reduce((sum, d) => sum + d.amount, 0),
+    outstanding: open.reduce((sum, d) => sum + d.faceAmount, 0),
     openCount: open.length,
     overdueCount: dues.filter((d) => d.status === "overdue").length,
     paidCount: dues.filter((d) => d.status === "paid").length,
@@ -122,4 +122,15 @@ export function relativeDue(iso: string): { text: string; past: boolean } {
     return { text: `due in ${diff} day${diff === 1 ? "" : "s"}`, past: false };
   const n = Math.abs(diff);
   return { text: `${n} day${n === 1 ? "" : "s"} overdue`, past: true };
+}
+
+/**
+ * Service fee for one checkout covering `dues`, in naira. Mirrors the backend's
+ * `checkoutFee`: 2% of the basket's face value (rounded half-up to the kobo)
+ * plus ₦20, charged once per checkout rather than per due.
+ */
+export function basketFee(dues: Due[]): number {
+  const faceKobo = dues.reduce((sum, d) => sum + Math.round(d.faceAmount * 100), 0);
+  if (faceKobo === 0) return 0;
+  return (Math.floor((faceKobo * 2 * 2 + 100) / 200) + 2_000) / 100;
 }

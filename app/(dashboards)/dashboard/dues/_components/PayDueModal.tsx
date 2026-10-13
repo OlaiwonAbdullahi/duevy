@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, InvoiceIcon } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
 import type { Due, Space } from "./types";
-import { naira, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
+import { naira, basketFee, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
 
 export function PayDueModal({
   dues,
@@ -17,12 +17,11 @@ export function PayDueModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  // Face values only: the service fee (2% + ₦20) is charged once per basket,
-  // so for several dues it's less than the sum of each due's own fee — the
-  // exact figure comes back with the checkout on the next screen.
+  // The service fee (2% + ₦20) is charged once for the whole checkout, so
+  // several dues together cost less in fees than paying them one by one.
   const face = dues.reduce((sum, d) => sum + d.faceAmount, 0);
+  const fee = basketFee(dues);
   const multi = dues.length > 1;
-  const singleFee = !multi && dues[0].fee > 0 ? dues[0].fee : null;
 
   const title = multi ? `Pay ${dues.length} dues` : "Confirm payment";
 
@@ -69,35 +68,20 @@ export function PayDueModal({
         )}
 
         <div className="mt-3 flex flex-col gap-1.5 border-t border-cloud pt-3">
-          {singleFee !== null ? (
-            <>
-              <div className="flex items-center justify-between text-xs text-ink-soft">
-                <span>Service fee</span>
-                <span className="font-medium text-ink">{naira(singleFee)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-ink-soft">Total to transfer</span>
-                <span className="text-lg font-semibold tracking-tight text-ink">
-                  {naira(face + singleFee)}
-                </span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-ink-soft">
-                  {multi ? "Dues total" : "Due amount"}
-                </span>
-                <span className="text-lg font-semibold tracking-tight text-ink">
-                  {naira(face)}
-                </span>
-              </div>
-              <p className="text-[11px] leading-relaxed text-ink-soft">
-                Plus a service fee{multi ? ", charged once for all of these" : ""}.
-                You&apos;ll see the exact total on the next screen.
-              </p>
-            </>
-          )}
+          <div className="flex items-center justify-between text-xs text-ink-soft">
+            <span>{multi ? "Dues total" : "Due amount"}</span>
+            <span className="font-medium text-ink">{naira(face)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-ink-soft">
+            <span>Service fee{multi ? " (charged once)" : ""}</span>
+            <span className="font-medium text-ink">{naira(fee)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-ink-soft">Total to transfer</span>
+            <span className="text-lg font-semibold tracking-tight text-ink">
+              {naira(face + fee)}
+            </span>
+          </div>
         </div>
       </div>
 

@@ -93,9 +93,12 @@ export function InstallBanner() {
     setPromptEvent(null);
   };
 
-  const show = !hidden && (promptEvent !== null || iosHint);
+  const pathname = usePathname();
+  // The pitch deck is a full-screen presentation; keep it clear.
+  const show =
+    !hidden && (promptEvent !== null || iosHint) && !pathname.startsWith("/pitch");
   // The dashboard has a floating tab bar below lg; sit above it.
-  const aboveTabBar = usePathname().startsWith("/dashboard");
+  const aboveTabBar = pathname.startsWith("/dashboard");
 
   return (
     <AnimatePresence>

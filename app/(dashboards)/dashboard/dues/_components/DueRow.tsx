@@ -117,7 +117,7 @@ export function DueRow({
             paid ? "text-ink-soft line-through" : "text-ink"
           }`}
         >
-          {naira(due.amount)}
+          {naira(due.faceAmount)}
         </p>
         {paid ? (
           <span className="text-right text-xs font-medium text-brand sm:w-[92px]">
@@ -131,7 +131,7 @@ export function DueRow({
               onPay([due]);
             }}
             disabled={pending}
-            aria-label={`Pay ${due.title}, ${naira(due.amount)}`}
+            aria-label={`Pay ${due.title}, ${naira(due.faceAmount)}`}
             className="inline-flex h-8 items-center justify-center rounded-full bg-brand px-4 text-xs font-semibold sm:h-9 sm:w-[92px] sm:px-0 text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             {pending ? "…" : (<><span className="sm:hidden">Pay</span><span className="max-sm:hidden">Pay now</span></>)}
