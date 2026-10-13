@@ -20,9 +20,9 @@ type Tab = { label: string; href: string; icon: HugeIcon };
 
 const STUDENT_TABS: Tab[] = [
   { label: "Dues", href: "/dashboard/dues", icon: Invoice01Icon },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings01Icon },
-  { label: "Home", href: "/dashboard", icon: Home01Icon },
   { label: "Transactions", href: "/dashboard/transactions", icon: ReceiptDollarIcon },
+  { label: "Home", href: "/dashboard", icon: Home01Icon },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings01Icon },
 ];
 
 const REP_TABS: Tab[] = [
