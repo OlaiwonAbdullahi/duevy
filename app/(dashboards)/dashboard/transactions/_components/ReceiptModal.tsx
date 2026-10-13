@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -15,7 +16,12 @@ import { printReceipt, signedAmount } from "./receipt";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { transactionReceiptPath } from "@/lib/api/transactions";
+import { getPaymentStatus } from "@/lib/api/dues";
 import type { Transaction } from "./types";
+
+/** Exact naira with kobo, e.g. 512000 → "₦5,120.00", as on the PDF receipt. */
+const exactNaira = (kobo: number) =>
+  `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function ReceiptModal({
   txn,
@@ -26,6 +32,19 @@ export function ReceiptModal({
 }) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  // A completed due payment can cover several dues; load what it settled.
+  const isDuePayment = txn.type === "due" && txn.status === "completed";
+  const payment = useQuery({
+    queryKey: ["payment", txn.reference],
+    queryFn: () => getPaymentStatus(txn.reference),
+    enabled: isDuePayment,
+    staleTime: Infinity,
+    retry: false,
+  });
+  const items = payment.data?.items ?? [];
+  const breakdown = payment.data?.breakdown;
+  const receiptNumber = payment.data?.receiptNumber;
 
   // The official receipt is the server's PDF. A transaction without one (e.g.
   // still pending → 404) falls back to a printable summary of this row.
@@ -103,8 +122,42 @@ export function ReceiptModal({
         </div>
       </section>
 
+      {/* Every due this payment settled, with the fee — matches the PDF receipt. */}
+      {isDuePayment && payment.isPending && <div className="mt-3 h-28 animate-pulse rounded-2xl bg-paper" />}
+      {items.length > 0 && breakdown && (
+        <section className="mt-3 overflow-hidden rounded-2xl border border-cloud bg-canvas">
+          <div className="flex items-center justify-between bg-paper px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-ink-soft">
+            <span>{items.length > 1 ? `Dues paid (${items.length})` : "Due paid"}</span>
+            <span>Amount</span>
+          </div>
+          <ul className="divide-y divide-cloud px-4">
+            {items.map((item) => (
+              <li key={item.dueId} className="flex items-start justify-between gap-3 py-2.5 text-sm">
+                <span className="min-w-0 text-ink">{item.title}</span>
+                <span className="shrink-0 font-semibold text-ink tabular-nums">{exactNaira(item.amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="border-t border-cloud px-4 py-2.5 text-xs">
+            <div className="flex justify-between text-ink-soft">
+              <span>{items.length > 1 ? "Dues total" : "Due amount"}</span>
+              <span className="font-medium text-ink tabular-nums">{exactNaira(breakdown.face)}</span>
+            </div>
+            <div className="mt-1.5 flex justify-between text-ink-soft">
+              <span>Service fee</span>
+              <span className="font-medium text-ink tabular-nums">{exactNaira(breakdown.fee)}</span>
+            </div>
+          </div>
+          <div className="mx-2 mb-2 flex items-center justify-between rounded-xl bg-cloud/60 px-3 py-2.5">
+            <span className="text-sm font-semibold text-ink">Total paid</span>
+            <span className="text-base font-semibold text-brand tabular-nums">{exactNaira(breakdown.total)}</span>
+          </div>
+        </section>
+      )}
+
       {/* Details. */}
       <dl className="mt-3 rounded-2xl bg-paper px-4 py-1">
+        {receiptNumber && <Row label="Receipt no." value={receiptNumber} />}
         <Row label="Type" value={meta.label} />
         <Row label="Payment method" value={txn.method} />
         <Row label="Date" value={formatDateTime(txn.date)} />
