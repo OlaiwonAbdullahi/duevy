@@ -15,6 +15,8 @@ export type Payout = {
   reference: string;
   status: PayoutStatus;
   requestedById: string | null;
+  /** The due it drew on; null for a space-wide withdrawal. */
+  dueId: string | null;
   /** Masked destination, e.g. "GTBank •••• 4021". */
   account: string;
   /** Who it was sent to, as the bank holds the name. */
@@ -29,5 +31,6 @@ export type Payout = {
     settledAt: string | null;
     failedAt: string | null;
     reversedAt: string | null;
+    cancelledAt: string | null;
   };
 };

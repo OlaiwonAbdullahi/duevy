@@ -8,7 +8,9 @@ import type {
   Payout,
   PayoutQuote,
   PayoutSummary,
+  Signatory,
   SpaceKycStatus,
+  WithdrawalAuthMode,
 } from "./types";
 
 function toQuery(params: Record<string, string | number | undefined>) {
@@ -87,15 +89,20 @@ export function removeBeneficiary(spaceId: string, beneficiaryId: string) {
 export type PayoutTarget = { beneficiaryId: string } | BeneficiaryInput;
 
 /**
- * Lead rep only. `amount` is the gross in kobo; the fee is deducted from it.
- * `pin` is the space's 4-digit withdrawal security code the lead rep set
+ * `amount` is the gross in kobo; the fee is deducted from it. The lead may
+ * withdraw from the whole space or one due; a co-rep only from a due assigned
+ * to them (`dueId`, else `403 DUE_REQUIRED` / `DUE_NOT_ASSIGNED`).
+ *
+ * `pin` mode: `pin` is the space's 4-digit security code
  * (`403 INVALID_WITHDRAWAL_PIN`, `423 WITHDRAWAL_PIN_LOCKED` after 5 misses,
- * `423 WITHDRAWAL_PIN_HOLD` for 24h after a reset, `403 WITHDRAWAL_PIN_NOT_SET`). Money-moving — an Idempotency-Key is attached
+ * `403 WITHDRAWAL_PIN_NOT_SET`). `multisig` mode: no code; the payout comes
+ * back `awaiting_approval` with `approval`. `423 WITHDRAWAL_PIN_HOLD` for 24h
+ * after any security change. Money-moving — an Idempotency-Key is attached
  * automatically.
  */
 export function requestPayout(
   spaceId: string,
-  payload: { amount: number; note?: string; pin: string } & PayoutTarget,
+  payload: { amount: number; note?: string; pin?: string; dueId?: string } & PayoutTarget,
   idempotencyKey: string = crypto.randomUUID(),
 ) {
   return apiClient.post<Payout>(`/spaces/${spaceId}/payout/request`, payload, {
@@ -136,6 +143,63 @@ export async function listPayouts(spaceId: string) {
 
 export function getPayout(spaceId: string, payoutId: string) {
   return apiClient.get<Payout>(`/spaces/${spaceId}/payout/${payoutId}`);
+}
+
+export type WithdrawableDue = {
+  id: string;
+  title: string;
+  type: DueType;
+  status: string;
+  assignedRepId: string | null;
+  /** Kobo left of this due's collections. */
+  available: number;
+};
+
+/** Dues the caller can withdraw from: all of them for the lead, assigned ones for a co-rep. */
+export function listWithdrawableDues(spaceId: string) {
+  return apiClient.get<WithdrawableDue[]>(`/spaces/${spaceId}/payout/dues`);
+}
+
+// ---------------------------------------------------------------------------
+// Signing a multisig withdrawal: 2 of the 3 signatories approve it with a
+// 6-digit code Duevy emails them.
+// ---------------------------------------------------------------------------
+
+/** Email me a code for this withdrawal (10 minutes; `429 OTP_RECENTLY_SENT` within a minute). */
+export function sendApprovalOtp(spaceId: string, payoutId: string) {
+  return apiClient.post<{ sent: true; expiresAt: string }>(`/spaces/${spaceId}/payout/${payoutId}/otp`);
+}
+
+/** `403 INVALID_OTP`, `423 OTP_LOCKED`, `400 OTP_EXPIRED`, `409 ALREADY_SIGNED`. The second approval sends it. */
+export function approvePayout(spaceId: string, payoutId: string, otp: string) {
+  return apiClient.post<Payout>(`/spaces/${spaceId}/payout/${payoutId}/approve`, { otp });
+}
+
+/** A signatory rejects it, or its requester withdraws it. The balance is restored. */
+export function rejectPayout(spaceId: string, payoutId: string, reason?: string) {
+  return apiClient.post<Payout>(`/spaces/${spaceId}/payout/${payoutId}/reject`, reason ? { reason } : {});
+}
+
+/**
+ * Lead only. The two co-reps who sign with the lead. While approvals are on a
+ * change holds withdrawals for 24 hours (`withdrawalPinHoldUntil`).
+ */
+export function setSignatories(spaceId: string, payload: { userIds: string[]; password: string }) {
+  return apiClient.put<{ signatories: Signatory[]; signatoriesComplete: boolean; withdrawalPinHoldUntil: string | null }>(
+    `/spaces/${spaceId}/payout/signatories`,
+    payload,
+  );
+}
+
+/**
+ * Lead only. Turning `multisig` on needs 3 signatories (`409 SIGNATORIES_INCOMPLETE`);
+ * switching back to `pin` holds withdrawals for 24 hours.
+ */
+export function setWithdrawalSecurity(spaceId: string, payload: { mode: WithdrawalAuthMode; password: string }) {
+  return apiClient.put<{ withdrawalAuthMode: WithdrawalAuthMode; changed: boolean; withdrawalPinHoldUntil: string | null }>(
+    `/spaces/${spaceId}/payout/security`,
+    payload,
+  );
 }
 
 /** The fee and net for a withdrawal of `amount` kobo, shown before confirming. */

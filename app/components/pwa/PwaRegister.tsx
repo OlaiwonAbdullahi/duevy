@@ -9,8 +9,16 @@ import { useEffect } from "react";
  */
 export function PwaRegister() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production") {
+      // A worker left over from a local production build keeps serving its
+      // cached chunks under `next dev`, hiding new code — clear it out.
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+        if (regs.length) caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+      });
+      return;
+    }
 
     const register = () => {
       navigator.serviceWorker.register("/sw.js").catch(() => {

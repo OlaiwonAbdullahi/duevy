@@ -240,7 +240,18 @@ export type SpaceMember = {
 };
 
 export type RepRole = "lead" | "co";
-export type SpaceRep = { id: string; name: string; email: string; role: RepRole };
+export type SpaceRep = {
+  id: string;
+  name: string;
+  email: string;
+  role: RepRole;
+  /** Signs withdrawals in `multisig` mode. Always true for the lead. */
+  isSignatory?: boolean;
+  kycVerified?: boolean;
+  /** How many dues are assigned to this rep. */
+  assignedDues?: number;
+  addedAt?: string;
+};
 
 export type AuditEntry = {
   id: string;
@@ -299,7 +310,29 @@ export type LedgerEntry = {
 // ---- Payouts (§10) --------------------------------------------------------
 
 /** `pending → processing → success | failed | reversed`. Failed/reversed amounts go back to the balance. */
-export type PayoutStatus = "pending" | "processing" | "success" | "failed" | "reversed";
+export type PayoutStatus =
+  | "awaiting_approval"
+  | "pending"
+  | "processing"
+  | "success"
+  | "failed"
+  | "reversed"
+  | "cancelled";
+
+/** How a space's withdrawals are authorised: the lead's security code, or 2 of 3 signatories. */
+export type WithdrawalAuthMode = "pin" | "multisig";
+
+export type Signatory = { id: string; name: string; email: string; role: RepRole };
+
+/** Who has signed a multisig withdrawal. */
+export type PayoutApproval = {
+  required: number;
+  approvedCount: number;
+  signatoryIds: string[];
+  approvals: { userId: string; name: string; decision: "approved" | "rejected"; decidedAt: string }[];
+  /** Only on the request response: the requester (a signatory) was emailed their code. */
+  otpSentToRequester?: boolean;
+};
 
 export type Payout = {
   id: string;
@@ -316,9 +349,16 @@ export type Payout = {
   /** The beneficiary's name, as the bank holds it. Null on older withdrawals. */
   accountName?: string | null;
   beneficiaryId?: string | null;
+  /** The due it drew on; null for a space-wide withdrawal. */
+  dueId?: string | null;
   note?: string | null;
   requestedById: string | null;
   requestedAt: string;
+  /** awaiting_approval only: when it is cancelled if not yet approved. */
+  approvalExpiresAt?: string | null;
+  cancelledAt?: string | null;
+  /** On the request, approve and detail responses for withdrawals that need signatures. */
+  approval?: PayoutApproval | null;
   processingAt: string | null;
   settledAt: string | null;
   failedAt: string | null;
@@ -345,8 +385,15 @@ export type PayoutSummary = {
   withdrawalPinSet?: boolean;
   /** ISO time withdrawals unlock after too many wrong codes; null when not locked. */
   withdrawalPinLockedUntil?: string | null;
-  /** ISO time withdrawals reopen after a forgotten-code reset; null when not on hold. */
+  /** ISO time withdrawals reopen after a security change (code reset, signatory change, approvals off); null when not on hold. */
   withdrawalPinHoldUntil?: string | null;
+  withdrawalAuthMode?: WithdrawalAuthMode;
+  /** The lead first, then the nominated co-reps. */
+  signatories?: Signatory[];
+  /** 3 signatories, enough for `multisig`. */
+  signatoriesComplete?: boolean;
+  /** The withdrawal waiting for signatures, if any. */
+  awaitingApprovalPayoutId?: string | null;
   minPayout: number;
   fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
 };

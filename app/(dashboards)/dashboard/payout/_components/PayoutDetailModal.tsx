@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert01Icon,
   CheckmarkCircle02Icon,
   Clock01Icon,
+  Cancel01Icon,
   Copy01Icon,
+  SignatureIcon,
   Download04Icon,
   MoneySend01Icon,
   ArrowReloadHorizontalIcon,
@@ -20,15 +22,19 @@ import type { HugeIcon } from "../../_components/nav-config";
 import { BankLogo } from "./BankLogo";
 import { naira, PAYOUT_STATUS_META } from "./data";
 import { printPayoutReceipt } from "./payout-receipt";
+import { getPayout } from "@/lib/api/payouts";
+import type { PayoutApproval } from "@/lib/api/types";
 import type { Payout, PayoutStatus } from "./types";
 
 /** Status dot colour on the doodle header. */
 const STATUS_DOT: Record<PayoutStatus, string> = {
+  awaiting_approval: "bg-amber-300",
   pending: "bg-amber-300",
   processing: "bg-amber-300",
   success: "bg-emerald-300",
   failed: "bg-rose-300",
   reversed: "bg-white/70",
+  cancelled: "bg-white/70",
 };
 
 type Step = { label: string; at: string; icon: HugeIcon; tone: "brand" | "amber" | "danger" };
@@ -44,8 +50,24 @@ export function PayoutDetailModal({
   const repSpace = useRepSpace();
   const [copied, setCopied] = useState(false);
   const meta = PAYOUT_STATUS_META[payout.status];
-  const failed = payout.status === "failed" || payout.status === "reversed";
+  const failed = payout.status === "failed" || payout.status === "reversed" || payout.status === "cancelled";
   const t = payout.timeline;
+
+  // Who signed it — only withdrawals made under signatory approval have any.
+  const [approval, setApproval] = useState<PayoutApproval | null>(null);
+  const spaceId = repSpace?.id;
+  useEffect(() => {
+    if (!spaceId) return;
+    let cancelled = false;
+    getPayout(spaceId, payout.id)
+      .then((p) => {
+        if (!cancelled) setApproval(p.approval ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId, payout.id]);
 
   // `account` arrives masked as "<Bank name> •••• 1234".
   const [bankName, masked] = (() => {
@@ -67,6 +89,9 @@ export function PayoutDetailModal({
   // Only the steps that actually happened, in order.
   const steps: Step[] = [
     { label: "Requested", at: t.requestedAt, icon: MoneySend01Icon, tone: "brand" },
+    ...(approval?.approvals ?? [])
+      .filter((a) => a.decision === "approved")
+      .map((a) => ({ label: `Approved by ${a.name}`, at: a.decidedAt, icon: SignatureIcon, tone: "brand" }) as Step),
     ...(t.processingAt
       ? [{ label: "Processing", at: t.processingAt, icon: Clock01Icon, tone: "amber" } as Step]
       : []),
@@ -76,6 +101,9 @@ export function PayoutDetailModal({
     ...(t.failedAt ? [{ label: "Failed", at: t.failedAt, icon: Alert01Icon, tone: "danger" } as Step] : []),
     ...(t.reversedAt
       ? [{ label: "Reversed · balance restored", at: t.reversedAt, icon: ArrowReloadHorizontalIcon, tone: "danger" } as Step]
+      : []),
+    ...(t.cancelledAt
+      ? [{ label: "Cancelled · balance restored", at: t.cancelledAt, icon: Cancel01Icon, tone: "danger" } as Step]
       : []),
   ];
 
@@ -174,7 +202,7 @@ export function PayoutDetailModal({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">Timeline</p>
         <ol className="mt-3 flex flex-col">
           {steps.map((step, i) => (
-            <li key={step.label} className="relative flex gap-3 pb-4 last:pb-0">
+            <li key={`${step.label}-${i}`} className="relative flex gap-3 pb-4 last:pb-0">
               {i < steps.length - 1 && (
                 <span aria-hidden className="absolute left-[15px] top-8 h-[calc(100%-1.5rem)] w-px bg-cloud" />
               )}

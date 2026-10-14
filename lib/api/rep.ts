@@ -143,6 +143,11 @@ export function listReps(spaceId: string) {
   return apiClient.get<SpaceRep[]>(`/spaces/${spaceId}/reps`);
 }
 
+/** Lead only: a member of the space becomes a co-rep. `409 ALREADY_REP`, `409 USER_INACTIVE`. */
+export function addRep(spaceId: string, userId: string) {
+  return apiClient.post<SpaceRep>(`/spaces/${spaceId}/reps`, { userId });
+}
+
 export function removeRep(spaceId: string, userId: string) {
   return apiClient.delete<void>(`/spaces/${spaceId}/reps/${userId}`);
 }

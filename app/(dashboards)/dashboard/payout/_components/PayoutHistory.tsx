@@ -24,7 +24,7 @@ export function PayoutHistory({ payouts }: { payouts: Payout[] }) {
             Payout history
           </h2>
           <p className="mt-0.5 text-xs text-ink-soft max-sm:hidden">
-            Every withdrawal you&apos;ve requested and its status.
+            Every withdrawal requested for this department and its status.
           </p>
         </div>
         <span className="rounded-full bg-cloud px-2.5 py-1 text-[11px] font-semibold text-brand tabular-nums">
@@ -67,7 +67,7 @@ export function PayoutHistory({ payouts }: { payouts: Payout[] }) {
                       {naira(payout.net)} received after {naira(payout.fee)} fee
                     </p>
                   )}
-                  {payout.failureReason && (payout.status === "failed" || payout.status === "reversed") && (
+                  {payout.failureReason && (payout.status === "failed" || payout.status === "reversed" || payout.status === "cancelled") && (
                     <p className="truncate text-[11px] text-rose-600">{payout.failureReason}</p>
                   )}
                 </div>

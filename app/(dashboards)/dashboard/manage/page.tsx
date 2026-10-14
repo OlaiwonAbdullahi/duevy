@@ -3,6 +3,7 @@
 import { DepartmentProfileCard } from "./_components/DepartmentProfileCard";
 import { SpaceThemeCard } from "./_components/SpaceThemeCard";
 import { RepsCard } from "./_components/RepsCard";
+import { WithdrawalApprovalsCard } from "./_components/WithdrawalApprovalsCard";
 import { AuditTrailCard } from "./_components/AuditTrailCard";
 import { DangerZone } from "./_components/DangerZone";
 import { FEATURES } from "@/lib/features";
@@ -18,14 +19,15 @@ export default function ManageDeptPage() {
           Manage department
         </h1>
         <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
-          Edit your department&apos;s details.
+          Edit your department&apos;s details, team and withdrawal security.
         </p>
       </header>
 
       <div className="mt-4 flex flex-col gap-4 sm:mt-6 sm:gap-5">
         <DepartmentProfileCard />
         {FEATURES.themes && <SpaceThemeCard />}
-        {FEATURES.coReps && <RepsCard />}
+        <RepsCard />
+        <WithdrawalApprovalsCard />
         <AuditTrailCard />
         <DangerZone />
       </div>

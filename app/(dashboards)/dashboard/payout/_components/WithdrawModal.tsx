@@ -12,8 +12,8 @@ import { Modal } from "../../_components/Modal";
 import { BARE_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { getPayoutQuote, lookupBeneficiary } from "@/lib/api/payouts";
-import type { PayoutQuote } from "@/lib/api/types";
+import { getPayoutQuote, lookupBeneficiary, type WithdrawableDue } from "@/lib/api/payouts";
+import type { PayoutQuote, WithdrawalAuthMode } from "@/lib/api/types";
 import { fromKobo } from "../../_components/format";
 import { naira } from "./data";
 import { BankLogo } from "./BankLogo";
@@ -26,8 +26,13 @@ export type WithdrawTarget =
   | { beneficiaryId: string }
   | { account: VerifiedAccount; saveAsBeneficiary: boolean };
 
+/** How it's authorised, and which due it draws on (none = the whole balance). */
+export type WithdrawAuth = { pin?: string; dueId?: string };
+
 /** The "Send to" choice that means a one-off account typed in here. */
 const NEW_ACCOUNT = "new";
+/** The "Withdraw from" choice that means the whole department balance. */
+const WHOLE_SPACE = "space";
 
 function Radio({ selected }: { selected: boolean }) {
   return (
@@ -44,25 +49,46 @@ function Radio({ selected }: { selected: boolean }) {
 
 export function WithdrawModal({
   spaceId,
-  available,
+  available: spaceAvailable,
   minPayout,
   beneficiaries,
+  mode = "pin",
+  dues = [],
+  spaceWide = true,
   onClose,
   onConfirm,
   onForgotPin,
 }: {
   spaceId: string;
-  /** Naira. */
+  /** The department balance, in naira. */
   available: number;
   /** Naira. */
   minPayout: number;
   beneficiaries: Beneficiary[];
+  /** `pin`: ask for the security code. `multisig`: no code; signatories approve it afterwards. */
+  mode?: WithdrawalAuthMode;
+  /** Dues the rep can draw on, each with what's left of it (kobo). */
+  dues?: WithdrawableDue[];
+  /** The lead can draw on the whole balance; a co-rep only on their dues. */
+  spaceWide?: boolean;
   onClose: () => void;
-  /** Receives the 4-digit withdrawal security code with the request. */
-  onConfirm: (amount: number, target: WithdrawTarget, pin: string) => Promise<void>;
-  /** "Forgot code?" — switches to resetting it. */
-  onForgotPin: () => void;
+  onConfirm: (amount: number, target: WithdrawTarget, auth: WithdrawAuth) => Promise<void>;
+  /** "Forgot code?" — switches to resetting it. `pin` mode only. */
+  onForgotPin?: () => void;
 }) {
+  // Which balance it draws on: the whole department, or one due.
+  const [pickedSource, setSource] = useState<string | null>(null);
+  const source =
+    pickedSource && (pickedSource === WHOLE_SPACE ? spaceWide : dues.some((d) => d.id === pickedSource))
+      ? pickedSource
+      : spaceWide
+        ? WHOLE_SPACE
+        : dues[0]?.id ?? WHOLE_SPACE;
+  const sourceDue = dues.find((d) => d.id === source) ?? null;
+  // A due can't pay out more than it collected, nor more than the department holds.
+  const available = sourceDue ? Math.min(spaceAvailable, fromKobo(sourceDue.available)) : spaceAvailable;
+  const needsCode = mode === "pin";
+
   const [amount, setAmount] = useState("");
   // A beneficiary id or NEW_ACCOUNT. Defaults to the newest beneficiary, or to
   // a new account when there are none.
@@ -119,10 +145,10 @@ export function WithdrawModal({
   };
 
   const confirm = async () => {
-    if (!valid || !target || !pinValid) return;
+    if (!valid || !target || (needsCode && !pinValid)) return;
     setSubmitting(true);
     try {
-      await onConfirm(parsed, target, pin);
+      await onConfirm(parsed, target, { ...(needsCode ? { pin } : {}), ...(sourceDue ? { dueId: sourceDue.id } : {}) });
     } finally {
       // Never leave the code sitting in the field after an attempt.
       setPin("");
@@ -140,9 +166,29 @@ export function WithdrawModal({
     <Modal title="Withdraw funds" icon={MoneySend01Icon} onClose={onClose}>
       {/* Hidden, not unmounted, so Back keeps a typed-in account intact. */}
       <div hidden={step !== "details"}>
+        {(dues.length > 0 && (dues.length > 1 || spaceWide)) && (
+          <div className="mb-4">
+            <label htmlFor="withdraw-source" className="block text-xs font-medium text-ink-soft">
+              Withdraw from
+            </label>
+            <select
+              id="withdraw-source"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              className="mt-1.5 h-12 w-full cursor-pointer rounded-2xl border border-cloud bg-canvas px-4 text-sm text-ink focus:border-brand focus:outline-none"
+            >
+              {spaceWide && <option value={WHOLE_SPACE}>Whole department balance</option>}
+              {dues.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title} · {naira(fromKobo(d.available))} left
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="rounded-2xl border border-cloud bg-paper p-4">
           <p className="text-[11px] font-medium text-ink-soft">
-            Available to withdraw
+            Available to withdraw{sourceDue ? ` from “${sourceDue.title}”` : ""}
           </p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
             {naira(available)}
@@ -173,7 +219,7 @@ export function WithdrawModal({
           {tooMuch && (
             <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-600">
               <HugeiconsIcon icon={Alert01Icon} size={13} />
-              Amount is more than your available balance.
+              {sourceDue ? "Amount is more than what's left of this due." : "Amount is more than your available balance."}
             </p>
           )}
           {tooLittle && (
@@ -315,26 +361,41 @@ export function WithdrawModal({
                 </dd>
               </div>
             )}
+            {sourceDue && (
+              <div className="flex justify-between gap-3 text-ink-soft">
+                <dt>From</dt>
+                <dd className="min-w-0 truncate text-right font-semibold text-ink">{sourceDue.title}</dd>
+              </div>
+            )}
           </dl>
 
-          <div className="mt-5">
+          {!needsCode && (
+            <p className="mt-5 rounded-2xl border border-cloud bg-canvas px-4 py-3 text-xs leading-5 text-ink-soft">
+              2 of the department&apos;s 3 signatories must approve this with a code Duevy emails them before it&apos;s
+              sent. The amount is set aside until then, and returned if it&apos;s rejected or not approved within 24 hours.
+            </p>
+          )}
+
+          <div className="mt-5" hidden={!needsCode}>
             <div className="flex items-center justify-between">
               <label htmlFor="withdrawal-pin" className="block text-xs font-medium text-ink-soft">
                 Security code
               </label>
-              <button
-                type="button"
-                onClick={onForgotPin}
-                className="text-xs font-semibold text-brand hover:underline cursor-pointer"
-              >
-                Forgot code?
-              </button>
+              {onForgotPin && (
+                <button
+                  type="button"
+                  onClick={onForgotPin}
+                  className="text-xs font-semibold text-brand hover:underline cursor-pointer"
+                >
+                  Forgot code?
+                </button>
+              )}
             </div>
             <SecurityCodeInput
               id="withdrawal-pin"
               value={pin}
               onChange={setPin}
-              autoFocus
+              autoFocus={needsCode}
               disabled={submitting}
               className="mt-1.5"
             />
@@ -355,13 +416,13 @@ export function WithdrawModal({
             </button>
             <button
               type="submit"
-              disabled={!pinValid || submitting}
+              disabled={(needsCode && !pinValid) || submitting}
               className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               {submitting && (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
               )}
-              {submitting ? "Requesting…" : "Confirm withdrawal"}
+              {submitting ? "Requesting…" : needsCode ? "Confirm withdrawal" : "Request approval"}
             </button>
           </div>
         </form>

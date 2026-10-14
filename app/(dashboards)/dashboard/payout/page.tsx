@@ -8,7 +8,11 @@ import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
 import { BeneficiariesCard } from "./_components/BeneficiariesCard";
 import Link from "next/link";
 import { PayoutHistory } from "./_components/PayoutHistory";
-import type { WithdrawTarget } from "./_components/WithdrawModal";
+import type { WithdrawAuth, WithdrawTarget } from "./_components/WithdrawModal";
+import { PendingApprovalCard } from "./_components/PendingApprovalCard";
+import { ConfirmDialog } from "../_components/ConfirmDialog";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useSpaceReps } from "@/lib/api/queries";
 import { useRepSpace } from "../_components/use-rep-space";
 import { fromKobo } from "../_components/format";
 import { timeAgo } from "../_components/notifications-data";
@@ -22,6 +26,10 @@ import {
   setWithdrawalPin,
   resetWithdrawalPin,
   listPayouts,
+  listWithdrawableDues,
+  getPayout,
+  rejectPayout,
+  type WithdrawableDue,
 } from "@/lib/api/payouts";
 import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
 import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
@@ -30,6 +38,7 @@ import type { PinMode } from "./_components/PinModal";
 
 const WithdrawModal = dynamic(() => import("./_components/WithdrawModal").then((mod) => mod.WithdrawModal), { ssr: false });
 const PinModal = dynamic(() => import("./_components/PinModal").then((mod) => mod.PinModal), { ssr: false });
+const ApprovalModal = dynamic(() => import("./_components/ApprovalModal").then((mod) => mod.ApprovalModal), { ssr: false });
 const AddBeneficiaryModal = dynamic(() => import("./_components/AddBeneficiaryModal").then((mod) => mod.AddBeneficiaryModal), { ssr: false });
 
 /** API payout (kobo, ISO date) → history row. */
@@ -43,6 +52,7 @@ function adaptPayout(p: ApiPayout): Payout {
     reference: p.reference,
     status: p.status,
     requestedById: p.requestedById,
+    dueId: p.dueId ?? null,
     account: p.account,
     accountName: p.accountName ?? null,
     failureReason: p.failureReason,
@@ -53,6 +63,7 @@ function adaptPayout(p: ApiPayout): Payout {
       settledAt: p.settledAt,
       failedAt: p.failedAt,
       reversedAt: p.reversedAt,
+      cancelledAt: p.cancelledAt ?? null,
     },
   };
 }
@@ -68,9 +79,20 @@ const PAYOUT_ERRORS: Record<string, string> = {
   PAYOUTS_FROZEN: "Withdrawals for this space are paused. Contact support.",
   WITHDRAWAL_PIN_NOT_SET: "Set a withdrawal security code first.",
   WITHDRAWAL_PIN_LOCKED: "Too many wrong security codes. Try again in 30 minutes, or reset your code.",
-  WITHDRAWAL_PIN_HOLD: "Your code was reset recently. Withdrawals reopen 24 hours after a reset.",
-  FORBIDDEN: "Only the department's lead rep can withdraw.",
+  WITHDRAWAL_PIN_HOLD: "Withdrawal security changed recently. Withdrawals reopen 24 hours after the change.",
+  LEAD_KYC_NOT_VERIFIED: "Your lead rep needs to finish verification before anyone can withdraw.",
+  DUE_REQUIRED: "Choose one of the dues assigned to you to withdraw from.",
+  DUE_NOT_ASSIGNED: "You can only withdraw from dues assigned to you.",
+  SIGNATORIES_INCOMPLETE: "Withdrawals need 3 signatories. Your lead rep must nominate two co-reps.",
+  FORBIDDEN: "You don't have permission to withdraw from this department.",
 };
+
+const REJECT_ERRORS: Record<string, string> = {
+  NOT_AWAITING_APPROVAL: "This withdrawal is no longer waiting for approval.",
+  NOT_A_SIGNATORY: "Only signatories can reject withdrawals.",
+};
+
+const fmtWhen = (iso: string) => new Date(iso).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
 
 /** Setting/changing/resetting the withdrawal code. */
 const PIN_ERRORS: Record<string, string> = {
@@ -121,18 +143,6 @@ function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onActi
       </div>
     );
   }
-  if (summary.withdrawalPinHoldUntil) {
-    return (
-      <div className={`${box} border-amber-200 bg-amber-50`}>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">Withdrawals paused after a code reset</p>
-          <p className="mt-0.5 text-xs text-ink-soft">
-            For your safety, withdrawals reopen {new Date(summary.withdrawalPinHoldUntil).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}.
-          </p>
-        </div>
-      </div>
-    );
-  }
   if (summary.withdrawalPinLockedUntil) {
     return (
       <div className={`${box} border-amber-200 bg-amber-50`}>
@@ -158,11 +168,49 @@ function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onActi
   );
 }
 
+/** Security banners every rep sees: a hold after a security change, or approvals missing signatories. */
+function SecurityStatusBanner({ summary, isLead }: { summary: PayoutSummary; isLead: boolean }) {
+  const box =
+    "mt-4 flex flex-col gap-2 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3.5 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4";
+  if (summary.withdrawalPinHoldUntil) {
+    return (
+      <div className={box}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Withdrawals paused after a security change</p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            For your safety, withdrawals reopen {fmtWhen(summary.withdrawalPinHoldUntil)}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (summary.withdrawalAuthMode === "multisig" && !summary.signatoriesComplete) {
+    return (
+      <Link href="/dashboard/manage" className={`${box} transition-colors hover:bg-amber-100/60`}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Withdrawals need 3 signatories</p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            {isLead
+              ? "Nominate two co-reps as signatories to withdraw again."
+              : "Your lead rep needs to nominate two co-reps as signatories."}
+          </p>
+        </div>
+        {isLead && <span className="shrink-0 text-[13px] font-semibold text-brand">Manage signatories →</span>}
+      </Link>
+    );
+  }
+  return null;
+}
+
 export default function PayoutPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
-  // Withdrawals and beneficiaries are lead-only.
+  const { user } = useAuth();
+  const meId = user?.id;
+  // Beneficiaries and the security code are lead-only; a co-rep can withdraw
+  // from the dues assigned to them.
   const isLead = repSpace?.membership !== "co";
+  const { data: reps = [] } = useSpaceReps(spaceId);
 
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -171,16 +219,24 @@ export default function PayoutPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [pinMode, setPinMode] = useState<PinMode | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dues, setDues] = useState<WithdrawableDue[]>([]);
+  // The withdrawal waiting for signatures, with who has signed.
+  const [pending, setPending] = useState<ApiPayout | null>(null);
+  const [approving, setApproving] = useState<{ payout: ApiPayout; codeSent: boolean } | null>(null);
+  const [rejecting, setRejecting] = useState(false);
 
   async function refresh(id: string) {
-    const [nextSummary, list, history] = await Promise.all([
+    const [nextSummary, list, history, withdrawable] = await Promise.all([
       getPayoutSummary(id),
       listBeneficiaries(id),
       listPayouts(id),
+      listWithdrawableDues(id).catch(() => [] as WithdrawableDue[]),
     ]);
     setSummary(nextSummary);
     setBeneficiaries(list);
     setPayouts(history.map(adaptPayout));
+    setDues(withdrawable);
+    setPending(nextSummary.awaitingApprovalPayoutId ? await getPayout(id, nextSummary.awaitingApprovalPayoutId) : null);
   }
 
   useEffect(() => {
@@ -190,7 +246,7 @@ export default function PayoutPage() {
       .finally(() => setLoading(false));
   }, [spaceId]);
 
-  const handleWithdraw = async (amount: number, target: WithdrawTarget, pin: string) => {
+  const handleWithdraw = async (amount: number, target: WithdrawTarget, auth: WithdrawAuth) => {
     if (!spaceId) return;
     let destination: { beneficiaryId: string } | { bankCode: string; accountNumber: string };
     if ("beneficiaryId" in target) {
@@ -213,8 +269,21 @@ export default function PayoutPage() {
       destination = { bankCode: target.account.bankCode, accountNumber: target.account.accountNumber };
     }
     try {
-      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100), pin, ...destination });
+      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100), ...auth, ...destination });
       setWithdrawOpen(false);
+      if (payout.status === "awaiting_approval") {
+        // A signatory requester was emailed their code: let them sign straight away.
+        if (payout.approval?.otpSentToRequester) {
+          setApproving({ payout, codeSent: true });
+          toast.success("Withdrawal sent for approval", { description: "Enter the code we emailed you to add your approval." });
+        } else {
+          toast.success("Withdrawal sent for approval", {
+            description: "2 signatories must approve it before it's sent. They've been notified.",
+          });
+        }
+        await refresh(spaceId);
+        return;
+      }
       // A 201 can already carry a provider refusal; the balance is restored then.
       if (payout.status === "failed" || payout.status === "reversed") {
         toast.error("The withdrawal didn't go through", {
@@ -271,6 +340,36 @@ export default function PayoutPage() {
     }
   };
 
+  const handleApproved = async (payout: ApiPayout) => {
+    setApproving(null);
+    if (payout.status === "awaiting_approval") {
+      toast.success("Approval added", { description: "One more signatory needs to approve it." });
+    } else if (payout.status === "failed") {
+      toast.error("The withdrawal didn't go through", {
+        description: payout.failureReason ?? "The balance has been restored. Please try again later.",
+      });
+    } else {
+      toast.success("Withdrawal approved", { description: "It's on its way to the bank." });
+    }
+    if (spaceId) await refresh(spaceId).catch(() => {});
+  };
+
+  const handleReject = async () => {
+    setRejecting(false);
+    if (!spaceId || !pending) return;
+    try {
+      await rejectPayout(spaceId, pending.id);
+      toast.success(pending.requestedById === meId ? "Withdrawal request cancelled" : "Withdrawal rejected", {
+        description: "The amount is back in the balance.",
+      });
+    } catch (err) {
+      toast.error("Couldn't cancel the withdrawal", {
+        description: (err instanceof ApiError && REJECT_ERRORS[err.code]) || "Something went wrong. Please try again.",
+      });
+    }
+    await refresh(spaceId).catch(() => {});
+  };
+
   /** "Forgot code?" from the withdraw form or the change dialog. */
   const handleForgotPin = () => {
     setWithdrawOpen(false);
@@ -311,19 +410,29 @@ export default function PayoutPage() {
   };
 
   const available = fromKobo(summary?.available ?? 0);
+  const mode = summary?.withdrawalAuthMode ?? "pin";
+  // A co-rep withdraws only from the dues the lead assigned them.
+  const canWithdraw = isLead || dues.length > 0;
   const withdrawBlockedReason = !summary
     ? null
     : !summary.kyc.canWithdraw
       ? "Withdrawals open once verification is complete."
-      : summary.withdrawalPinSet === false
-        ? "Set a withdrawal security code first."
-        : summary.withdrawalPinHoldUntil
-          ? "Your code was reset. Withdrawals reopen 24 hours after a reset."
-          : summary.withdrawalPinLockedUntil
-            ? "Too many wrong security codes. Try again in 30 minutes."
-            : summary.inFlight > 0
-            ? "A withdrawal is still in progress."
-            : null;
+      : summary.withdrawalPinHoldUntil
+        ? `Withdrawals are paused after a security change until ${fmtWhen(summary.withdrawalPinHoldUntil)}.`
+        : mode === "multisig" && !summary.signatoriesComplete
+          ? "Withdrawals need 3 signatories."
+          : mode === "pin" && summary.withdrawalPinSet === false
+            ? isLead
+              ? "Set a withdrawal security code first."
+              : "Your lead rep needs to set a withdrawal security code."
+            : mode === "pin" && summary.withdrawalPinLockedUntil
+              ? "Too many wrong security codes. Try again in 30 minutes."
+              : summary.awaitingApprovalPayoutId
+                ? "A withdrawal is waiting for approval."
+                : summary.inFlight > 0
+                  ? "A withdrawal is still in progress."
+                  : null;
+  const nameOf = (id: string | null) => reps.find((r) => r.id === id)?.name ?? null;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -362,8 +471,20 @@ export default function PayoutPage() {
               <span className="shrink-0 text-[13px] font-semibold text-brand">Go to verification →</span>
             </Link>
           )}
-          {isLead && summary?.kyc.canWithdraw && (
+          {summary && <SecurityStatusBanner summary={summary} isLead={isLead} />}
+          {isLead && summary?.kyc.canWithdraw && mode === "pin" && !summary.withdrawalPinHoldUntil && (
             <PinStatusBanner summary={summary} onAction={setPinMode} />
+          )}
+          {pending && summary && (
+            <PendingApprovalCard
+              payout={pending}
+              signatories={summary.signatories ?? []}
+              requesterName={nameOf(pending.requestedById)}
+              dueTitle={dues.find((d) => d.id === pending.dueId)?.title ?? null}
+              meId={meId}
+              onApprove={() => setApproving({ payout: pending, codeSent: false })}
+              onReject={() => setRejecting(true)}
+            />
           )}
           {/* Desktop: balance | beneficiaries, history full width below.
               Mobile: balance → history → beneficiaries. The minmax(0, …)
@@ -373,7 +494,7 @@ export default function PayoutPage() {
               available={available}
               collected={fromKobo(summary?.collected ?? 0)}
               inFlight={fromKobo(summary?.inFlight ?? 0)}
-              canWithdraw={isLead}
+              canWithdraw={canWithdraw}
               blockedReason={withdrawBlockedReason}
               onWithdraw={() => setWithdrawOpen(true)}
             />
@@ -400,9 +521,21 @@ export default function PayoutPage() {
           available={available}
           minPayout={fromKobo(summary?.minPayout ?? 0)}
           beneficiaries={beneficiaries}
+          mode={mode}
+          dues={dues.filter((d) => d.available > 0)}
+          spaceWide={isLead}
           onClose={() => setWithdrawOpen(false)}
           onConfirm={handleWithdraw}
-          onForgotPin={handleForgotPin}
+          onForgotPin={isLead && mode === "pin" ? handleForgotPin : undefined}
+        />
+      )}
+      {approving && spaceId && (
+        <ApprovalModal
+          spaceId={spaceId}
+          payout={approving.payout}
+          codeSent={approving.codeSent}
+          onClose={() => setApproving(null)}
+          onApproved={handleApproved}
         />
       )}
       {pinMode && (
@@ -413,6 +546,15 @@ export default function PayoutPage() {
           onForgot={() => setPinMode("reset")}
         />
       )}
+      <ConfirmDialog
+        open={rejecting}
+        title={pending?.requestedById === meId ? "Cancel this withdrawal?" : "Reject this withdrawal?"}
+        description="It won't be sent, and the full amount goes back to the balance."
+        confirmLabel={pending?.requestedById === meId ? "Cancel withdrawal" : "Reject"}
+        cancelLabel="Keep it"
+        onConfirm={handleReject}
+        onClose={() => setRejecting(false)}
+      />
       {addOpen && (
         <AddBeneficiaryModal
           spaceId={spaceId ?? ""}
