@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 import Image from "next/image";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "You're offline",
-};
+export const metadata: Metadata = { title: "You're offline", robots: PRIVATE_ROBOTS };
 
 /** Shown by the service worker when a navigation fails with no cached copy. */
 export default function OfflinePage() {

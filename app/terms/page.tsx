@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import LegalPage, { type LegalSection } from "../components/LegalPage";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms of Service",
-  description: "The terms that govern your use of Duevy.",
-};
+  description: "The terms that govern using Duevy to pay and collect campus dues, including fees and withdrawals.",
+  path: "/terms",
+});
 
 const sections: LegalSection[] = [
   {

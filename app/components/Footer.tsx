@@ -11,7 +11,7 @@ const columns = [
   },
   {
     title: "Company",
-    links: [{ label: "Contact", href: "mailto:useduevy@gmail.com" }],
+    links: [{ label: "Contact", href: "mailto:support@duevy.app" }],
   },
   {
     title: "Legal",

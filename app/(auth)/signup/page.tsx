@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import SignupFlow from "../components/SignupFlow";
 
-export const metadata: Metadata = {
-  title: "Create account",
+export const metadata: Metadata = pageMetadata({
+  title: "Create your account",
   description:
-    "Create a Duevy account to collect dues, run approved payouts, and track every kobo.",
-};
+    "Join Duevy free. Students pay dues by bank transfer and keep every receipt; course reps collect dues and see who has paid.",
+  path: "/signup",
+});
 
 export default function SignupPage() {
   return <SignupFlow />;

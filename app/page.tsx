@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Personas from "./components/Personas";
@@ -9,38 +10,16 @@ import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 import Reveal from "./components/Reveal";
 import SmoothScroll from "./components/SmoothScroll";
+import { StructuredData } from "./components/StructuredData";
+import { pageMetadata } from "@/lib/seo";
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "Duevy",
-  url: "https://duevy.app",
-  description:
-    "A simple way for Nigerian campus reps to collect dues and levies transparently — every student sees where their money went.",
-  applicationCategory: "FinanceApplication",
-  operatingSystem: "Web",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "NGN",
-  },
-  author: {
-    "@type": "Organization",
-    name: "Duevy",
-    url: "https://duevy.app",
-    email: "useduevy@gmail.com",
-    sameAs: ["https://x.com/duevyapp", "https://instagram.com/duevyapp"],
-  },
-};
+export const metadata: Metadata = pageMetadata({ path: "/" });
 
 export default function Page() {
   return (
     <>
       <SmoothScroll />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <StructuredData />
       <main className="min-h-screen bg-[#fbfaf7]">
         <Navbar />
         <Reveal>

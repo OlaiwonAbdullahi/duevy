@@ -11,6 +11,13 @@ import { PwaRegister } from "./components/pwa/PwaRegister";
 import { PwaChrome } from "./components/pwa/PwaChrome";
 import { MotionProvider } from "./components/MotionProvider";
 import { API_BASE_URL } from "@/lib/api/config";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  OG_IMAGE,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -18,54 +25,45 @@ const manrope = Manrope({
   weight: ["400", "500", "600", "700"],
 });
 
-const BASE_URL = "https://duevy.app";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Duevy — Collect dues. Track every kobo. No wahala.",
+    default: DEFAULT_TITLE,
     template: "%s | Duevy",
   },
-  description:
-    "Duevy gives Nigerian campus reps a simple way to collect dues, levies, and payments — while every student sees exactly where their money went.",
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
   keywords: [
     "campus dues collection Nigeria",
     "student dues payment",
     "departmental levies",
-    "Nigerian university fintech",
     "course rep payments",
     "class rep payments app",
+    "pay dues by bank transfer",
+    "Nigerian university",
     "duevy",
   ],
-  authors: [{ name: "Duevy", url: BASE_URL }],
-  creator: "Duevy",
-  publisher: "Duevy",
-  category: "fintech",
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "finance",
+  // No `url` or canonical here: each public page sets its own via
+  // `pageMetadata`, so nothing inherits the homepage's address by accident.
   openGraph: {
     type: "website",
-    url: BASE_URL,
-    siteName: "Duevy",
-    title: "Duevy — Collect dues. Track every kobo. No wahala.",
-    description:
-      "A simple way for campus reps to collect dues and levies — with full transparency for every student.",
-    images: [
-      {
-        url: "/ogimage.png",
-        width: 1352,
-        height: 648,
-        alt: "Duevy — Campus dues, made transparent.",
-      },
-    ],
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [OG_IMAGE],
     locale: "en_NG",
   },
   twitter: {
     card: "summary_large_image",
     site: "@duevyapp",
     creator: "@duevyapp",
-    title: "Duevy — Collect dues. Track every kobo. No wahala.",
-    description:
-      "A simple way for campus reps to collect dues and levies — with full transparency for every student.",
-    images: ["/ogimage.png"],
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [OG_IMAGE.url],
   },
   robots: {
     index: true,
@@ -75,6 +73,7 @@ export const metadata: Metadata = {
       follow: true,
       "max-image-preview": "large",
       "max-snippet": -1,
+      "max-video-preview": -1,
     },
   },
   icons: {
@@ -85,15 +84,12 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/icons/apple-touch-icon.png",
   },
-
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Duevy",
+    title: SITE_NAME,
   },
-  alternates: {
-    canonical: BASE_URL,
-  },
+  formatDetection: { telephone: false, email: false, address: false },
   verification: {
     google: "WEy1-91z9uLiwxT_n-bqejxqRgkrICkh4amNML1P4E4",
   },
@@ -121,7 +117,7 @@ export default function RootLayout({
 
   return (
     <html
-      lang="en"
+      lang="en-NG"
       className={cn("h-full antialiased", manrope.variable)}
       suppressHydrationWarning // Prevents secondary hydration attribute variations
     >

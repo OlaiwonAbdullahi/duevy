@@ -74,10 +74,10 @@ export default function LegalPage({
           <p className="mt-14 pt-8 border-t border-[#e6f2ec] text-[#7a847f] text-sm leading-relaxed">
             Questions? Reach us at{" "}
             <a
-              href="mailto:useduevy@gmail.com"
+              href="mailto:support@duevy.app"
               className="text-[#0b6e4f] font-medium hover:text-[#08583f] transition-colors duration-300 cursor-pointer"
             >
-              useduevy@gmail.com
+              support@duevy.app
             </a>
             .
           </p>
