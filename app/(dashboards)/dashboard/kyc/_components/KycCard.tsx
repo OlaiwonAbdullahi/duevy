@@ -34,6 +34,13 @@ import type { KycState } from "@/lib/api/types";
 import { useApplyKycState, useKycStatus } from "@/lib/api/queries";
 import { AccountFields, type VerifiedAccount } from "../../payout/_components/AccountFields";
 import { BankLogo } from "../../payout/_components/BankLogo";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ACCEPTED_DOCUMENTS = "image/jpeg,image/png,image/webp,application/pdf";
 
@@ -547,18 +554,22 @@ function KycForm({
         </div>
         <div>
           <label className="text-xs font-medium text-ink">Gender</label>
-          <select
+          <Select
             value={gender}
-            onChange={(e) => setGender(e.target.value as "male" | "female")}
+            onValueChange={(v) => setGender(v as "male" | "female")}
             disabled={submitting}
-            className={cn(BRAND_INPUT, "mt-1.5 w-full")}
           >
-            <option value="" disabled>
-              Select
-            </option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-          </select>
+            <SelectTrigger
+              aria-label="Gender"
+              className="mt-1.5 h-11 rounded-2xl text-sm font-normal sm:w-full"
+            >
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="male">Male</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

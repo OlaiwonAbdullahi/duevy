@@ -11,6 +11,13 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useSpace, useSpaceReps } from "@/lib/api/queries";
 import { BRAND_INPUT } from "../../_components/form-styles";
@@ -310,19 +317,26 @@ export function DueForm({
 
               {!editing && isLead && coReps.length > 0 && (
                 <Field label="Assign to">
-                  <select
-                    value={assignedRepId}
-                    onChange={(e) => setAssignedRepId(e.target.value)}
-                    aria-label="Assign to"
-                    className="h-12 w-full cursor-pointer rounded-2xl border border-cloud bg-canvas px-4 text-sm text-ink outline-none transition-colors focus:border-brand"
+                  {/* Radix Select can't hold an empty value, so "me" stands in for unassigned. */}
+                  <Select
+                    value={assignedRepId || "me"}
+                    onValueChange={(v) => setAssignedRepId(v === "me" ? "" : v)}
                   >
-                    <option value="">Me (lead rep)</option>
-                    {coReps.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} (co-rep)
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      aria-label="Assign to"
+                      className="h-12 rounded-2xl text-sm font-normal sm:w-full"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="me">Me (lead rep)</SelectItem>
+                      {coReps.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name} (co-rep)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="mt-1.5 text-xs text-ink-soft">
                     {assignedRepId
                       ? "They'll be able to withdraw what this due collects. You can still withdraw it too."

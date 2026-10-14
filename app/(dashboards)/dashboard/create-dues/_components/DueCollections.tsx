@@ -34,6 +34,13 @@ import type {
   SpaceRep,
 } from "@/lib/api/types";
 import type { RepDue } from "./types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function adaptStudent(api: ApiCollectionStudent): CollectionStudent {
   return {
@@ -277,20 +284,26 @@ export function DueCollections({
         {isLead && coReps.length > 0 ? (
           <>
             <span>Assigned to</span>
-            <select
+            <Select
               value={due.assignedRepId ?? ""}
-              onChange={(e) => reassign(e.target.value)}
+              onValueChange={reassign}
               disabled={reassigning}
-              className="rounded-full border border-cloud bg-canvas px-3 py-1 text-xs font-semibold text-ink outline-none focus:border-brand disabled:opacity-60"
             >
-              {!assignedRep && <option value="">Unassigned</option>}
-              {selectableReps.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                  {r.role === "lead" ? " (you)" : ""}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                aria-label="Assigned to"
+                className="h-8 w-auto gap-1.5 py-1 pr-2.5 pl-3 text-xs font-semibold"
+              >
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectableReps.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                    {r.role === "lead" ? " (you)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </>
         ) : (
           <span>

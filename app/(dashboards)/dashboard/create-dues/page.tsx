@@ -79,9 +79,11 @@ export default function CreateDuesPage() {
 
   const [dues, setDues] = useState<RepDue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<"list" | "form" | "collections">("list");
+  const [mode, setMode] = useState<"list" | "form">("list");
   const [editing, setEditing] = useState<RepDue | null>(null);
-  const [viewingDue, setViewingDue] = useState<RepDue | null>(null);
+  // The open due lives in the URL (`?due=<id>`) so collections can be linked
+  // to, survive a refresh, and close with the browser's back button.
+  const viewingDue = dueParam ? (dues.find((d) => d.id === dueParam) ?? null) : null;
   const [toDelete, setToDelete] = useState<RepDue | null>(null);
   const [toClose, setToClose] = useState<RepDue | null>(null);
 
@@ -103,16 +105,6 @@ export default function CreateDuesPage() {
       cancelled = true;
     };
   }, [spaceId]);
-
-  // Deep-link from the dashboard's "Active dues" list straight into collections.
-  useEffect(() => {
-    if (!dueParam || loading) return;
-    const due = dues.find((d) => d.id === dueParam);
-    if (due) {
-      setViewingDue(due);
-      setMode("collections");
-    }
-  }, [dueParam, dues, loading]);
 
   const totals = useMemo(() => {
     const active = dues.filter((d) => d.status === "active");
@@ -139,8 +131,10 @@ export default function CreateDuesPage() {
     setMode("form");
   };
   const openCollections = (due: RepDue) => {
-    setViewingDue(due);
-    setMode("collections");
+    router.push(`/dashboard/create-dues?due=${encodeURIComponent(due.id)}`, { scroll: false });
+  };
+  const closeCollections = () => {
+    router.push("/dashboard/create-dues", { scroll: false });
   };
 
   const save = async (draft: DueDraft) => {
@@ -257,7 +251,7 @@ export default function CreateDuesPage() {
               onSave={save}
             />
           </m.div>
-        ) : mode === "collections" && viewingDue && spaceId ? (
+        ) : viewingDue && spaceId ? (
           <m.div
             key="collections"
             initial={{ opacity: 0, x: 16 }}
@@ -268,7 +262,7 @@ export default function CreateDuesPage() {
             <DueCollections
               spaceId={spaceId}
               due={viewingDue}
-              onBack={() => setMode("list")}
+              onBack={closeCollections}
             />
           </m.div>
         ) : (

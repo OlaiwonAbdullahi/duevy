@@ -215,7 +215,7 @@ function buildIndex(
     icon: Invoice01Icon,
     label: due.title,
     sublabel: `₦${(due.amount / 100).toLocaleString("en-NG")}`,
-    href: "/dashboard/create-dues",
+    href: `/dashboard/create-dues?due=${encodeURIComponent(due.id)}`,
     keywords: `${due.title} ${due.category}`.toLowerCase(),
   }));
 

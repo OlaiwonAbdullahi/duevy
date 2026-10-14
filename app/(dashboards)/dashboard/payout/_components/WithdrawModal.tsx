@@ -20,6 +20,13 @@ import { BankLogo } from "./BankLogo";
 import { AccountFields, type VerifiedAccount } from "./AccountFields";
 import type { Beneficiary } from "./types";
 import { SecurityCodeInput } from "./SecurityCodeInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /** Where the rep chose to send it. */
 export type WithdrawTarget =
@@ -169,21 +176,32 @@ export function WithdrawModal({
         {(dues.length > 0 && (dues.length > 1 || spaceWide)) && (
           <div className="mb-4">
             <label htmlFor="withdraw-source" className="block text-xs font-medium text-ink-soft">
-              Withdraw from
+              Take money from
             </label>
-            <select
-              id="withdraw-source"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              className="mt-1.5 h-12 w-full cursor-pointer rounded-2xl border border-cloud bg-canvas px-4 text-sm text-ink focus:border-brand focus:outline-none"
-            >
-              {spaceWide && <option value={WHOLE_SPACE}>Whole department balance</option>}
-              {dues.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.title} · {naira(fromKobo(d.available))} left
-                </option>
-              ))}
-            </select>
+            <Select value={source} onValueChange={setSource}>
+              <SelectTrigger
+                id="withdraw-source"
+                className="mt-1.5 h-12 rounded-2xl text-sm font-normal sm:w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {spaceWide && (
+                  <SelectItem value={WHOLE_SPACE}>
+                    All dues · {naira(spaceAvailable)} available
+                  </SelectItem>
+                )}
+                {dues.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.title} · {naira(fromKobo(d.available))} available
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-ink-soft">
+              Each due has its own balance: what students paid for it, minus what&apos;s
+              already been withdrawn from it.
+            </p>
           </div>
         )}
         <div className="rounded-2xl border border-cloud bg-paper p-4">
