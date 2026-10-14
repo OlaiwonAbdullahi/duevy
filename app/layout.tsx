@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { preconnect } from "react-dom";
 import { Manrope } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
@@ -137,6 +138,13 @@ export default function RootLayout({
           <Toaster position="top-center" richColors />
           <PwaRegister />
         </ThemeProvider>
+        {/* Sabilytics web analytics */}
+        <Script
+          src="https://www.sabilytics.com/script.js"
+          data-site="wo9uj1iedb40"
+          data-domain="duevy.app"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
