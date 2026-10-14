@@ -66,6 +66,7 @@ function toApiDraft(draft: DueDraft): ApiDueDraft {
     amount: draft.amount * 100,
     dueDate: draft.dueDate,
     type: draft.category,
+    ...(draft.assignedRepId ? { assignedRepId: draft.assignedRepId } : {}),
   };
 }
 

@@ -16,6 +16,10 @@ import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { updateSpaceProfile } from "@/lib/api/rep";
 import { ApiError } from "@/lib/api/errors";
+import type { SpaceKind } from "@/lib/api/types";
+import { SpaceEmblem } from "../../dues/_components/SpaceEmblem";
+import { KIND_GLYPH, SPACE_KIND_LABEL } from "../../dues/_components/data";
+import { hueFor } from "../../dues/_components/adapt";
 
 function Field({
   label,
@@ -58,6 +62,7 @@ export function DepartmentProfileCard() {
   const [faculty, setFaculty] = useState("");
   const [memberCount, setMemberCount] = useState(0);
   const [about, setAbout] = useState("");
+  const [kind, setKind] = useState<SpaceKind>(repSpace?.kind ?? "department");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +78,7 @@ export function DepartmentProfileCard() {
         setFaculty(space.faculty ?? "");
         setAbout(space.about ?? "");
         setMemberCount(space.memberCount);
+        setKind(space.kind);
         setDirty(false);
       })
       .catch(() => {});
@@ -106,7 +112,10 @@ export function DepartmentProfileCard() {
     }
   };
 
-  const initials = acronym.slice(0, 3).toUpperCase();
+  // The logo follows the acronym as it's typed, so reps see the result before saving.
+  const emblem = spaceId
+    ? { id: spaceId, short: acronym || repSpace?.short || "", hue: hueFor({ id: spaceId, hue: repSpace?.hue }) }
+    : null;
 
   return (
     <>
@@ -115,9 +124,11 @@ export function DepartmentProfileCard() {
       <div className="doodle-card h-24" />
       <div className="px-4 pb-4">
         <div className="-mt-9 flex items-end justify-between gap-3">
-          <span className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-3xl bg-brand text-xl font-semibold text-white shadow-[0_10px_24px_-12px_var(--p-primary)] ring-4 ring-canvas">
-            {initials || "—"}
-          </span>
+          {emblem ? (
+            <SpaceEmblem space={emblem} glyph={KIND_GLYPH[kind]} size={76} className="ring-4 ring-canvas" />
+          ) : (
+            <span className="h-[76px] w-[76px] shrink-0 rounded-3xl bg-cloud ring-4 ring-canvas" />
+          )}
           <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
             <HugeiconsIcon icon={UserMultipleIcon} size={13} />
             {memberCount.toLocaleString("en-NG")} members
@@ -147,13 +158,17 @@ export function DepartmentProfileCard() {
     >
       {/* Identity strip (phones get the cover above instead) */}
       <div className="hidden items-center gap-4 border-b border-cloud pb-5 sm:flex">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-semibold text-white">
-          {initials}
-        </span>
+        {emblem ? (
+          <SpaceEmblem space={emblem} glyph={KIND_GLYPH[kind]} size={64} />
+        ) : (
+          <span className="h-16 w-16 shrink-0 rounded-[20px] bg-cloud" />
+        )}
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{name}</p>
           <p className="truncate text-xs text-ink-soft">
-            {faculty} · {memberCount} members
+            {[SPACE_KIND_LABEL[kind], faculty, `${memberCount.toLocaleString("en-NG")} members`]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
       </div>

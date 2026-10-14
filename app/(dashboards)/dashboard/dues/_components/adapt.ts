@@ -16,7 +16,7 @@ export function normalizeDueType(value: string | null | undefined): DueType {
 const HUES: EmblemHue[] = ["emerald", "indigo", "amber", "rose", "slate"];
 
 /** Stable emblem hue when the API doesn't supply one (keyed off the id). */
-function hueFor(space: { hue?: EmblemHue; id: string }): EmblemHue {
+export function hueFor(space: { hue?: EmblemHue; id: string }): EmblemHue {
   if (space.hue && HUES.includes(space.hue)) return space.hue;
   let sum = 0;
   for (const ch of space.id) sum += ch.charCodeAt(0);

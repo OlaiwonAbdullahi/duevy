@@ -16,7 +16,7 @@ export type RepDue = {
   /** Members who've settled it — drives the collection progress. */
   paidCount: number;
   memberCount: number;
-  /** The rep this due's payout access is scoped to — auto-set to the creator. */
+  /** The rep who can withdraw this due's collections — the creator, or a co-rep the lead picks. */
   assignedRepId: string | null;
 };
 
@@ -24,4 +24,7 @@ export type RepDue = {
 export type DueDraft = Pick<
   RepDue,
   "title" | "note" | "amount" | "dueDate" | "category"
->;
+> & {
+  /** New dues only: the co-rep who can withdraw its collections. Omitted = the creator. */
+  assignedRepId?: string;
+};

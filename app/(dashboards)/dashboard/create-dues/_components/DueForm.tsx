@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useSpace } from "@/lib/api/queries";
+import { useSpace, useSpaceReps } from "@/lib/api/queries";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { ConfirmDialog } from "../../_components/ConfirmDialog";
 import { useRepSpace } from "../../_components/use-rep-space";
@@ -116,6 +116,10 @@ export function DueForm({
   const [amountDigits, setAmountDigits] = useState(initial ? String(initial.amount) : "");
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
+  // The lead can hand a new due to a co-rep, who can then withdraw its collections.
+  const isLead = repSpace?.membership !== "co";
+  const coReps = (useSpaceReps(!editing && isLead ? repSpace?.id : undefined).data ?? []).filter((r) => r.role === "co");
+  const [assignedRepId, setAssignedRepId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -135,7 +139,8 @@ export function DueForm({
     category !== (initial?.category ?? "departmental_due") ||
     amountDigits !== (initial ? String(initial.amount) : "") ||
     dueDate !== (initial?.dueDate ?? "") ||
-    note !== (initial?.note ?? "");
+    note !== (initial?.note ?? "") ||
+    assignedRepId !== "";
 
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 9);
   const formatDigits = (d: string) => (d ? Number(d).toLocaleString("en-NG") : "");
@@ -145,7 +150,14 @@ export function DueForm({
     setConfirming(false);
     setSubmitting(true);
     try {
-      await onSave({ title: title.trim(), note: note.trim(), amount, dueDate, category });
+      await onSave({
+        title: title.trim(),
+        note: note.trim(),
+        amount,
+        dueDate,
+        category,
+        ...(assignedRepId ? { assignedRepId } : {}),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -295,6 +307,29 @@ export function DueForm({
                   className="min-h-[88px] w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand placeholder:text-ink-soft"
                 />
               </Field>
+
+              {!editing && isLead && coReps.length > 0 && (
+                <Field label="Assign to">
+                  <select
+                    value={assignedRepId}
+                    onChange={(e) => setAssignedRepId(e.target.value)}
+                    aria-label="Assign to"
+                    className="h-12 w-full cursor-pointer rounded-2xl border border-cloud bg-canvas px-4 text-sm text-ink outline-none transition-colors focus:border-brand"
+                  >
+                    <option value="">Me (lead rep)</option>
+                    {coReps.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} (co-rep)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs text-ink-soft">
+                    {assignedRepId
+                      ? "They'll be able to withdraw what this due collects. You can still withdraw it too."
+                      : "Assign it to a co-rep to let them withdraw what it collects."}
+                  </p>
+                </Field>
+              )}
             </div>
           </Section>
         </div>

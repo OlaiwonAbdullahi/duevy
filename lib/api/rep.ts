@@ -41,6 +41,8 @@ export type DueDraft = {
   dueDate: string;
   type: DueType;
   publish?: boolean;
+  /** Create only, lead only: a co-rep to assign it to (defaults to the creator). */
+  assignedRepId?: string;
 };
 
 export function createDue(spaceId: string, payload: DueDraft) {
