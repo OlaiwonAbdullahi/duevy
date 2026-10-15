@@ -1,6 +1,7 @@
 import { apiClient, type Page } from "./client";
 import type {
   AuditEntry,
+  CollectionGuest,
   CollectionStudent,
   CollectionTotals,
   DueType,
@@ -43,6 +44,8 @@ export type DueDraft = {
   publish?: boolean;
   /** Create only, lead only: a co-rep to assign it to (defaults to the creator). */
   assignedRepId?: string;
+  /** Let people outside the space pay it from its public link. */
+  allowGuests?: boolean;
 };
 
 export function createDue(spaceId: string, payload: DueDraft) {
@@ -73,6 +76,8 @@ export function reassignDue(spaceId: string, dueId: string, userId: string) {
 export type CollectionsResponse = {
   totals: CollectionTotals;
   students: CollectionStudent[];
+  /** Guest payers — the same on every page, so read them from the first. */
+  guests?: CollectionGuest[];
 };
 
 /** Per-student payment roster for a due (one page; `meta.total` has the full count). */
@@ -98,7 +103,7 @@ export async function getAllCollections(spaceId: string, dueId: string): Promise
     remainingPages(first.meta?.totalPages).map((page) => getCollections(spaceId, dueId, { page })),
   );
   const students = [first, ...rest].flatMap((p) => p.data.students);
-  return { totals: first.data.totals, students };
+  return { totals: first.data.totals, students, guests: first.data.guests ?? [] };
 }
 
 /** Nudge unpaid members. Omit `userIds` to remind all unpaid. */

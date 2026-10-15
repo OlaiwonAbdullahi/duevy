@@ -29,6 +29,7 @@ import type { DueDraft, RepDue } from "./types";
 import { CategoryPicker } from "./CategoryPicker";
 import { DatePicker } from "./DatePicker";
 import { DuePreview } from "./DuePreview";
+import { Toggle } from "../../settings/_components/Toggle";
 
 /** One-tap amounts reps reach for most. */
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -127,6 +128,7 @@ export function DueForm({
   const isLead = repSpace?.membership !== "co";
   const coReps = (useSpaceReps(!editing && isLead ? repSpace?.id : undefined).data ?? []).filter((r) => r.role === "co");
   const [assignedRepId, setAssignedRepId] = useState("");
+  const [allowGuests, setAllowGuests] = useState(initial?.allowGuests ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -147,6 +149,7 @@ export function DueForm({
     amountDigits !== (initial ? String(initial.amount) : "") ||
     dueDate !== (initial?.dueDate ?? "") ||
     note !== (initial?.note ?? "") ||
+    allowGuests !== (initial?.allowGuests ?? false) ||
     assignedRepId !== "";
 
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 9);
@@ -163,6 +166,7 @@ export function DueForm({
         amount,
         dueDate,
         category,
+        allowGuests,
         ...(assignedRepId ? { assignedRepId } : {}),
       });
     } finally {
@@ -314,6 +318,17 @@ export function DueForm({
                   className="min-h-[88px] w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand placeholder:text-ink-soft"
                 />
               </Field>
+
+              <div className="flex items-start justify-between gap-4 rounded-2xl border border-cloud bg-paper/40 p-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink">Let guests pay</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+                    People outside {spaceName} can pay from a link you share — no Duevy account
+                    needed. Useful for dinners, events and open sales.
+                  </p>
+                </div>
+                <Toggle checked={allowGuests} onChange={setAllowGuests} label="Let guests pay" />
+              </div>
 
               {!editing && isLead && coReps.length > 0 && (
                 <Field label="Assign to">

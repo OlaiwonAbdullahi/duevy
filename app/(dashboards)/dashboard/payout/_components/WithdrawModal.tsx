@@ -250,8 +250,22 @@ export function WithdrawModal({
             <dl className="mt-3 flex flex-col gap-1.5 rounded-2xl border border-cloud bg-paper/50 px-4 py-3 text-xs">
               <div className="flex justify-between text-ink-soft">
                 <dt>Withdrawal fee</dt>
-                <dd className="tabular-nums">−{naira(fromKobo(quote.fee))}</dd>
+                <dd className="tabular-nums">
+                  {/* A partner discount is already netted out of `fee`; show what it was. */}
+                  {(quote.discount ?? 0) > 0 && quote.feeBeforeDiscount != null && (
+                    <span className="mr-1.5 line-through opacity-60">
+                      {naira(fromKobo(quote.feeBeforeDiscount))}
+                    </span>
+                  )}
+                  −{naira(fromKobo(quote.fee))}
+                </dd>
               </div>
+              {(quote.discount ?? 0) > 0 && (
+                <div className="flex justify-between text-brand">
+                  <dt>Partner discount (−{quote.discountPercent ?? 0}%)</dt>
+                  <dd className="tabular-nums">{naira(fromKobo(quote.discount ?? 0))} saved</dd>
+                </div>
+              )}
               <div className="flex justify-between font-semibold text-ink">
                 <dt>They&apos;ll receive</dt>
                 <dd className="tabular-nums">{naira(fromKobo(quote.net))}</dd>

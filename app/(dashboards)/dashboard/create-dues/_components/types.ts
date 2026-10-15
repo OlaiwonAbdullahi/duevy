@@ -18,12 +18,16 @@ export type RepDue = {
   memberCount: number;
   /** The rep who can withdraw this due's collections — the creator, or a co-rep the lead picks. */
   assignedRepId: string | null;
+  /** Anyone with the public pay link can pay it, no account needed. */
+  allowGuests: boolean;
+  /** Guests who've paid it (not part of `paidCount`). */
+  guestPaidCount: number;
 };
 
 /** The editable slice a rep fills in when creating or editing a due. */
 export type DueDraft = Pick<
   RepDue,
-  "title" | "note" | "amount" | "dueDate" | "category"
+  "title" | "note" | "amount" | "dueDate" | "category" | "allowGuests"
 > & {
   /** New dues only: the co-rep who can withdraw its collections. Omitted = the creator. */
   assignedRepId?: string;

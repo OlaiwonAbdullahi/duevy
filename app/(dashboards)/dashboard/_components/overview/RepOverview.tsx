@@ -22,9 +22,10 @@ import {
   ReceiptDollarIcon,
   MoneyAdd01Icon,
   ArrowReloadHorizontalIcon,
+  DiscountTag01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { useRepOverview, useSpaceLedger } from "@/lib/api/queries";
+import { useRepOverview, useSpaceLedger, useSpacePartner } from "@/lib/api/queries";
 import type { LedgerEntryType, RepOverview as RepOverviewData } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { EmptyState } from "../EmptyState";
@@ -80,14 +81,27 @@ export function RepOverview() {
   const ledger = useSpaceLedger(spaceId);
   const recentLedger = (ledger.data ?? []).slice(0, 6);
   const collectionRate = Math.round((data?.stats.collectionRate ?? 0) * 100);
+  // No-op while the partners flag is off (the hook stays disabled).
+  const { data: spacePartner } = useSpacePartner(spaceId);
 
   return (
     <div className="mx-auto max-w-6xl">
       {/* Phones go straight to the hero card; the top bar already greets. */}
       <div className="hidden flex-col gap-1 sm:flex">
-        <span className="inline-flex w-fit items-center rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
-          Rep dashboard
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex w-fit items-center rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
+            Rep dashboard
+          </span>
+          {spacePartner?.active && (
+            <Link
+              href="/dashboard/manage"
+              className="inline-flex w-fit items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/15"
+            >
+              <HugeiconsIcon icon={DiscountTag01Icon} size={12} />
+              {spacePartner.partner.short} partner · {spacePartner.discountPercent}% off withdrawal fees
+            </Link>
+          )}
+        </div>
         <h1 className="mt-2 text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           {spaceName}
         </h1>

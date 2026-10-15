@@ -5,6 +5,8 @@ import { getKycStatus, listBanks, listSpaceLedger } from "./payouts";
 import { getSpace } from "./spaces";
 import { getRepOverview, listReps } from "./rep";
 import { getStudentOverview } from "./me";
+import { getSpacePartner } from "./partners";
+import { FEATURES } from "@/lib/features";
 import type { KycState, SpaceKycStatus } from "./types";
 
 /**
@@ -19,6 +21,9 @@ export const queryKeys = {
   spaceReps: (spaceId: string) => ["space", spaceId, "reps"] as const,
   repOverview: (spaceId: string) => ["space", spaceId, "overview"] as const,
   spaceLedger: (spaceId: string) => ["space", spaceId, "ledger"] as const,
+  spacePartner: (spaceId: string) => ["space", spaceId, "partner"] as const,
+  /** Same key the payout/manage pages already read the summary under. */
+  payoutSummary: (spaceId: string) => ["space", spaceId, "payout-summary"] as const,
   studentOverview: ["me", "overview"] as const,
   banks: ["banks"] as const,
 };
@@ -83,6 +88,16 @@ export function useSpaceLedger(spaceId: string | undefined) {
     queryKey: queryKeys.spaceLedger(spaceId ?? ""),
     queryFn: () => listSpaceLedger(spaceId!),
     enabled: !!spaceId,
+  });
+}
+
+/** The space's applied partner (null when none). Off entirely while the feature is gated. */
+export function useSpacePartner(spaceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.spacePartner(spaceId ?? ""),
+    // `?? null`: react-query rejects `undefined`, should the API ever send an empty body.
+    queryFn: async () => (await getSpacePartner(spaceId!)) ?? null,
+    enabled: !!spaceId && FEATURES.partners,
   });
 }
 

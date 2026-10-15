@@ -55,6 +55,8 @@ function adaptRepDue(api: ApiRepDue): RepDue {
     paidCount: api.paidCount,
     memberCount: api.memberCount,
     assignedRepId: api.assignedRepId,
+    allowGuests: api.allowGuests ?? false,
+    guestPaidCount: api.guestPaidCount ?? 0,
   };
 }
 
@@ -66,6 +68,7 @@ function toApiDraft(draft: DueDraft): ApiDueDraft {
     amount: draft.amount * 100,
     dueDate: draft.dueDate,
     type: draft.category,
+    allowGuests: draft.allowGuests,
     ...(draft.assignedRepId ? { assignedRepId: draft.assignedRepId } : {}),
   };
 }

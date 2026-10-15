@@ -19,6 +19,8 @@ export type RegisterStudentPayload = BaseRegisterPayload & {
 export type RegisterRepPayload = BaseRegisterPayload & {
   role: "rep";
   referralCode?: string;
+  /** Partner code (max 20); redeemed for the space when the application is approved. */
+  partnerCode?: string;
   space: {
     name: string;
     short: string;

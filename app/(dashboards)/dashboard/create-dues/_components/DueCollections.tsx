@@ -23,6 +23,8 @@ import { ApiError } from "@/lib/api/errors";
 import { CollectionSummary } from "../../collections/_components/CollectionSummary";
 import { CollectionTable } from "../../collections/_components/CollectionTable";
 import { downloadCollectionCsv } from "../../collections/_components/csv";
+import type { CollectionGuest } from "@/lib/api/types";
+import { GuestPayCard } from "./GuestPayCard";
 import type {
   CollectionStudent,
   CollectionTotals,
@@ -88,6 +90,7 @@ export function DueCollections({
 
   const [due, setDue] = useState(initialDue);
   const [students, setStudents] = useState<CollectionStudent[]>([]);
+  const [guests, setGuests] = useState<CollectionGuest[]>([]);
   const [totals, setTotals] = useState<CollectionTotals>(EMPTY_TOTALS);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -131,6 +134,7 @@ export function DueCollections({
         const data = await getAllCollections(spaceId, due.id);
         if (cancelled) return;
         setStudents((data.students ?? []).map(adaptStudent));
+        setGuests(data.guests ?? []);
         setTotals(data.totals ? adaptTotals(data.totals) : EMPTY_TOTALS);
       } catch (err) {
         if (cancelled) return;
@@ -362,6 +366,7 @@ export function DueCollections({
           <div className="mt-6 hidden sm:block">
             <CollectionSummary totals={totals} trackedCount={students.length} />
           </div>
+          {(due.allowGuests || guests.length > 0) && <GuestPayCard due={due} guests={guests} />}
           <CollectionTable
             due={due}
             students={filteredStudents}

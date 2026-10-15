@@ -15,6 +15,7 @@ import {
   Megaphone01Icon,
   BubbleChatEditIcon,
   AiChat01Icon,
+  DiscountTag01Icon,
 } from "@hugeicons/core-free-icons";
 import { FEATURES } from "@/lib/features";
 
@@ -138,6 +139,9 @@ export const ADMIN_LINKS: NavLink[] = [
     : []),
   ...(FEATURES.polls
     ? [{ label: "Polls", href: "/admin/polls", icon: CheckmarkSquare01Icon }]
+    : []),
+  ...(FEATURES.partners
+    ? [{ label: "Partners", href: "/admin/partners", icon: DiscountTag01Icon }]
     : []),
   { label: "Disputes", href: "/admin/disputes", icon: Megaphone01Icon },
   { label: "Feedback", href: "/admin/feedback", icon: BubbleChatEditIcon },

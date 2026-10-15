@@ -11,6 +11,7 @@ import {
   Building03Icon,
   UserMultipleIcon,
   StudentCardIcon,
+  DiscountTag01Icon,
 } from "@hugeicons/core-free-icons";
 
 // Icons are resolved by name inside this Client Component so that
@@ -22,6 +23,7 @@ const ICONS = {
   building: Building03Icon,
   users: UserMultipleIcon,
   matric: StudentCardIcon,
+  tag: DiscountTag01Icon,
 } as const;
 
 export type AuthFieldIcon = keyof typeof ICONS;

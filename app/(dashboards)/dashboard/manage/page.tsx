@@ -2,6 +2,7 @@
 
 import { DepartmentProfileCard } from "./_components/DepartmentProfileCard";
 import { SpaceThemeCard } from "./_components/SpaceThemeCard";
+import { PartnerCard } from "./_components/PartnerCard";
 import { RepsCard } from "./_components/RepsCard";
 import { WithdrawalApprovalsCard } from "./_components/WithdrawalApprovalsCard";
 import { AuditTrailCard } from "./_components/AuditTrailCard";
@@ -25,6 +26,7 @@ export default function ManageDeptPage() {
 
       <div className="mt-4 flex flex-col gap-4 sm:mt-6 sm:gap-5">
         <DepartmentProfileCard />
+        {FEATURES.partners && <PartnerCard />}
         {FEATURES.themes && <SpaceThemeCard />}
         <RepsCard />
         <WithdrawalApprovalsCard />

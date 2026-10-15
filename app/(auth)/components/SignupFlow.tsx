@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -11,7 +11,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import { savePostAuthNext } from "@/lib/auth/post-auth-next";
+import {
+  clearSignupPartner,
+  readSignupPartner,
+  saveSignupPartner,
+} from "@/lib/auth/signup-partner";
 import { ApiError } from "@/lib/api/errors";
+import { PARTNER_ERRORS, normalizePartnerCode } from "@/lib/api/partners";
+import { FEATURES } from "@/lib/features";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
@@ -44,9 +51,12 @@ const EMPTY_SPACE: SpaceDetails = {
   kind: "department",
   school: "",
   faculty: "",
+  partnerCode: "",
 };
 
 /** Only ever follow an internal path — never let `next` redirect off-site. */
+const noopSubscribe = () => () => {};
+
 function safeNext(raw: string | null): string | null {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
   return raw;
@@ -66,10 +76,24 @@ export default function SignupFlow() {
   // A join link implies the visitor is joining as a member, not registering
   // as a rep — skip the role picker entirely and go straight to account details.
   const joinFlow = next?.startsWith("/join/") ?? false;
-  const [role, setRole] = useState<SignupRole>("student");
+  // A partner's signup link (`?partner=NACOS`) is for reps — read it once, like `next`.
+  const [partnerParam] = useState(() =>
+    typeof window === "undefined" || !FEATURES.partners
+      ? null
+      : normalizePartnerCode(new URLSearchParams(window.location.search).get("partner") ?? "") ||
+        null,
+  );
+  // Until the user picks, a partner link defaults to rep. That default only
+  // applies once hydrated, so the server-rendered role picker matches the first
+  // client render.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const [pickedRole, setRole] = useState<SignupRole | null>(null);
+  const role: SignupRole = pickedRole ?? (hydrated && partnerParam && !joinFlow ? "rep" : "student");
 
   useEffect(() => {
     if (next) savePostAuthNext(next);
+    // Same idea for a partner link: keep the code if signup is finished later.
+    if (partnerParam) saveSignupPartner(partnerParam);
     // Only needs to run once, on mount, to cover the case where the user
     // verifies their email in a different tab/device than the one that
     // started signup (the `next` query param alone can't survive that hop).
@@ -85,7 +109,17 @@ export default function SignupFlow() {
     password: "",
     acceptedTerms: false,
   });
-  const [space, setSpace] = useState<SpaceDetails>(EMPTY_SPACE);
+  // The space step isn't on screen at first paint, so reading storage here can't
+  // cause a hydration mismatch.
+  const [space, setSpace] = useState<SpaceDetails>(() => ({
+    ...EMPTY_SPACE,
+    partnerCode:
+      typeof window === "undefined" || !FEATURES.partners
+        ? ""
+        : (partnerParam ?? readSignupPartner() ?? ""),
+  }));
+  // A server-side rejection of the partner code, shown on that field.
+  const [partnerError, setPartnerError] = useState<string | null>(null);
 
   const steps = joinFlow ? (["account"] as StepId[]) : STEPS[role];
   const currentId = steps[stepIndex];
@@ -139,6 +173,7 @@ export default function SignupFlow() {
   async function handleSpaceSubmit(data: SpaceDetails) {
     if (submitting) return;
     setSpace(data);
+    setPartnerError(null);
     setSubmitting(true);
     try {
       await register({
@@ -155,9 +190,18 @@ export default function SignupFlow() {
           school: data.school,
           faculty: data.faculty || undefined,
         },
+        ...(FEATURES.partners && data.partnerCode ? { partnerCode: data.partnerCode } : {}),
       });
+      clearSignupPartner();
       setSubmittedEmail(account.email);
     } catch (err) {
+      // A bad partner code is fixable on this step — flag the field and stay here.
+      if (err instanceof ApiError && err.code in PARTNER_ERRORS) {
+        const message = PARTNER_ERRORS[err.code];
+        setPartnerError(message);
+        toast.error(message);
+        return;
+      }
       toast.error(
         err instanceof ApiError
           ? err.message
@@ -362,6 +406,8 @@ export default function SignupFlow() {
           defaultValues={space}
           submitLabel={submitting ? "Finishing setup…" : "Finish setup"}
           submitting={submitting}
+          partnerError={partnerError}
+          onPartnerCodeChange={() => setPartnerError(null)}
           onBack={goBack}
           onSubmit={handleSpaceSubmit}
         />

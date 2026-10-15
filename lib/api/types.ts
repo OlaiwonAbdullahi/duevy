@@ -204,6 +204,10 @@ export type RepDue = Omit<
   memberCount: number;
   /** The rep this due's payout access is scoped to — auto-set to the creator. */
   assignedRepId: string | null;
+  /** Open to guests: anyone with the public pay link can pay it, no account. */
+  allowGuests?: boolean;
+  /** Payments from guests — not counted in `paidCount`, which is members only. */
+  guestPaidCount?: number;
   publishedAt: string | null;
   closedAt: string | null;
   createdAt: string;
@@ -217,6 +221,18 @@ export type CollectionTotals = {
   net: number;
   expected: number;
   rate: number;
+  /** Guests who paid through the public link (not in `paid` / `unpaid`). */
+  guestPaid?: number;
+};
+
+/** Someone outside the space who paid a guest-enabled due. */
+export type CollectionGuest = {
+  id: string;
+  name: string;
+  email: string;
+  matricNo: string | null;
+  paidAt: string;
+  reference: string;
 };
 
 export type CollectionStudent = {
@@ -364,6 +380,8 @@ export type Payout = {
   failedAt: string | null;
   reversedAt: string | null;
   failureReason: string | null;
+  /** Partner discount taken off `fee` (kobo); 0 when none. Absent on older payloads. */
+  feeDiscount?: number;
 };
 
 export type WithdrawalFeeTier = { thresholdKobo: number; feeKobo: number };
@@ -395,15 +413,58 @@ export type PayoutSummary = {
   /** The withdrawal waiting for signatures, if any. */
   awaitingApprovalPayoutId?: string | null;
   minPayout: number;
+  /** Tier fees already have any partner discount applied. */
   fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
+  /** The space's active partner discount, when one is applied. */
+  partner?: SpacePartner | null;
 };
 
 export type PayoutQuote = {
   amount: number;
+  /** Already net of any partner discount. */
   fee: number;
   net: number;
   minPayout: number;
   belowMinimum: boolean;
+  /** The fee before the partner discount (kobo). Optional until every API serves it. */
+  feeBeforeDiscount?: number;
+  /** Partner discount taken off the fee (kobo); 0 when none. */
+  discount?: number;
+  discountPercent?: number;
+};
+
+// ---------------------------------------------------------------------------
+// Partners (partner codes that discount a space's withdrawal fees)
+// ---------------------------------------------------------------------------
+
+/** What a partner code unlocks — returned by the public lookup. */
+export type PartnerPreview = {
+  /** Uppercase. */
+  code: string;
+  name: string;
+  short: string;
+  logoUrl: string | null;
+  /** 1..100 */
+  withdrawalFeeDiscountPercent: number;
+  /** How long the discount lasts after redemption; null = permanent. */
+  durationDays: number | null;
+};
+
+export type PartnerRedemptionSource = "signup" | "settings" | "admin";
+
+/** A partner applied to a space (a redemption). Revoked ones are never returned. */
+export type SpacePartner = {
+  /** Redemption id. */
+  id: string;
+  partner: PartnerPreview;
+  source: PartnerRedemptionSource;
+  /** Snapshot taken at redemption — later partner edits don't change it. */
+  discountPercent: number;
+  /** ISO; null = permanent. */
+  endsAt: string | null;
+  /** False once `endsAt` has passed. */
+  active: boolean;
+  createdAt: string;
 };
 
 /** A bank account the space can withdraw to (the rep's own, a lecturer's, …). */

@@ -13,6 +13,9 @@ import {
 import universities from "nigerian-universities";
 import AuthField from "./AuthField";
 import SchoolCombobox from "./SchoolCombobox";
+import { FEATURES } from "@/lib/features";
+import { describePartnerPerk, normalizePartnerCode } from "@/lib/api/partners";
+import { usePartnerLookup } from "@/lib/api/use-partner-lookup";
 
 export type SpaceKind = "department" | "association" | "faculty" | "club";
 
@@ -22,6 +25,8 @@ export type SpaceDetails = {
   kind: SpaceKind;
   school: string;
   faculty: string;
+  /** Optional partner code (uppercase); empty when none. */
+  partnerCode: string;
 };
 
 const KINDS: {
@@ -70,6 +75,8 @@ export default function SpaceDetailsStep({
   defaultValues,
   submitLabel,
   submitting = false,
+  partnerError = null,
+  onPartnerCodeChange,
   onBack,
   onSubmit,
 }: {
@@ -77,6 +84,9 @@ export default function SpaceDetailsStep({
   submitLabel: string;
   /** While true the fields and buttons are locked and the submit shows a spinner. */
   submitting?: boolean;
+  /** The server rejected the partner code — shown under that field. */
+  partnerError?: string | null;
+  onPartnerCodeChange?: () => void;
   onBack: () => void;
   onSubmit: (data: SpaceDetails) => void;
 }) {
@@ -88,6 +98,8 @@ export default function SpaceDetailsStep({
   );
   const [school, setSchool] = useState(defaultValues.school);
   const [schoolError, setSchoolError] = useState(false);
+  const [partnerCode, setPartnerCode] = useState(defaultValues.partnerCode);
+  const lookup = usePartnerLookup(FEATURES.partners ? partnerCode : "");
 
   // Alphabetical, de-duplicated list of Nigerian universities.
   const schools = useMemo(
@@ -112,6 +124,7 @@ export default function SpaceDetailsStep({
       kind,
       school,
       faculty: String(data.get("faculty") ?? "").trim(),
+      partnerCode: FEATURES.partners ? partnerCode : "",
     });
   }
 
@@ -236,6 +249,33 @@ export default function SpaceDetailsStep({
           placeholder="e.g. Faculty of Science"
           defaultValue={defaultValues.faculty}
         />
+
+        {FEATURES.partners && (
+          <div className="flex flex-col gap-2">
+            <AuthField
+              id="partnerCode"
+              name="partnerCode"
+              label="Partner code (optional)"
+              icon="tag"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="e.g. NACOS"
+              maxLength={20}
+              value={partnerCode}
+              aria-invalid={!!partnerError || lookup.status === "error"}
+              onChange={(event) => {
+                setPartnerCode(normalizePartnerCode(event.target.value));
+                onPartnerCodeChange?.();
+              }}
+            />
+            <PartnerCodeStatus
+              lookup={lookup}
+              serverError={partnerError}
+            />
+          </div>
+        )}
       </fieldset>
 
       <div className="mt-1 flex items-center gap-3">
@@ -267,4 +307,38 @@ export default function SpaceDetailsStep({
       </div>
     </form>
   );
+}
+
+/** Live preview (or why the code can't be used) under the partner code field. */
+function PartnerCodeStatus({
+  lookup,
+  serverError,
+}: {
+  lookup: ReturnType<typeof usePartnerLookup>;
+  serverError: string | null;
+}) {
+  if (serverError) {
+    return <p className="text-[#e11d48] text-[12px] leading-snug">{serverError}</p>;
+  }
+  switch (lookup.status) {
+    case "idle":
+      return (
+        <p className="text-[#7a847f] text-[12px] leading-snug">
+          From a partner like your SUG or NACOS? Their code discounts your withdrawal fees.
+        </p>
+      );
+    case "loading":
+      return <p className="text-[#7a847f] text-[12px] leading-snug">Checking code…</p>;
+    case "error":
+      return <p className="text-[#e11d48] text-[12px] leading-snug">{lookup.error}</p>;
+    case "found": {
+      const { short, withdrawalFeeDiscountPercent, durationDays } = lookup.preview;
+      return (
+        <p className="flex items-center gap-1.5 text-[#0b6e4f] text-[12px] font-medium leading-snug">
+          <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={2.5} />
+          {short} · {describePartnerPerk(withdrawalFeeDiscountPercent, durationDays)}
+        </p>
+      );
+    }
+  }
 }

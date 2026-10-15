@@ -7,6 +7,7 @@ import type {
   DisputeStatus,
   KycState,
   KycStatus,
+  PartnerRedemptionSource,
   Poll,
   StudentIdStatus,
   SpaceKind,
@@ -379,6 +380,91 @@ export function clearWithdrawalPin(spaceId: string) {
 
 export function archiveAdminSpace(spaceId: string, reason: string) {
   return apiClient.post<void>(`/admin/spaces/${spaceId}/archive`, { reason });
+}
+
+// ---------------------------------------------------------------------------
+// Partners (permission `payouts`)
+// ---------------------------------------------------------------------------
+
+export type AdminPartner = {
+  id: string;
+  name: string;
+  short: string;
+  code: string;
+  logoUrl: string | null;
+  withdrawalFeeDiscountPercent: number;
+  /** Discount lifetime after redemption; null = permanent. */
+  durationDays: number | null;
+  /** null = unlimited. */
+  maxRedemptions: number | null;
+  /** The code can't be redeemed after this; null = never expires. */
+  expiresAt: string | null;
+  isActive: boolean;
+  /** Non-revoked redemptions. */
+  redemptionCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminPartnerInput = {
+  name: string;
+  short: string;
+  code: string;
+  logoUrl?: string | null;
+  withdrawalFeeDiscountPercent: number;
+  durationDays?: number | null;
+  maxRedemptions?: number | null;
+  expiresAt?: string | null;
+  isActive?: boolean;
+};
+
+export type AdminPartnerRedemption = {
+  id: string;
+  space: { id: string; name: string; short: string | null };
+  redeemedBy: { id: string; name: string; email: string };
+  source: PartnerRedemptionSource;
+  discountPercent: number;
+  endsAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+};
+
+export function listAdminPartners(
+  query: {
+    q?: string;
+    status?: "all" | "active" | "inactive";
+    page?: number;
+    perPage?: number;
+  } = {},
+): Promise<Page<AdminPartner[]>> {
+  return apiClient.getPage<AdminPartner[]>(`/admin/partners${toQuery(query)}`);
+}
+
+/** 409 `PARTNER_CODE_TAKEN` when the code is already used. */
+export function createAdminPartner(payload: AdminPartnerInput) {
+  return apiClient.post<AdminPartner>("/admin/partners", payload);
+}
+
+export function updateAdminPartner(partnerId: string, payload: Partial<AdminPartnerInput>) {
+  return apiClient.patch<AdminPartner>(`/admin/partners/${partnerId}`, payload);
+}
+
+/** JPEG/PNG/WebP, ≤2MB. Returns a plain URL to put in `logoUrl`. */
+export function uploadPartnerLogo(file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return apiClient.post<{ logoUrl: string }>("/admin/partners/logo", form);
+}
+
+export function listPartnerRedemptions(partnerId: string) {
+  return apiClient.get<AdminPartnerRedemption[]>(`/admin/partners/${partnerId}/redemptions`);
+}
+
+/** The space goes back to full withdrawal fees from its next withdrawal. */
+export function revokePartnerRedemption(redemptionId: string) {
+  return apiClient.post<AdminPartnerRedemption>(
+    `/admin/partner-redemptions/${redemptionId}/revoke`,
+  );
 }
 
 // ---------------------------------------------------------------------------
