@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
-import { getPublicMetrics, METRICS_REVALIDATE, type MetricsMonth } from "@/lib/api/metrics";
+import { getPublicMetrics, type MetricsMonth } from "@/lib/api/metrics";
 import Footer from "../components/Footer";
 import { ArrowRightIcon } from "../components/icons";
 
-export const revalidate = METRICS_REVALIDATE;
+// Must be a literal — Next reads segment config statically. Keep in sync with METRICS_REVALIDATE.
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Traction & Metrics",
