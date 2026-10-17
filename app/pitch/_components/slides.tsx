@@ -5,15 +5,16 @@ import Image from "next/image";
 import { m } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Agreement01Icon,
   AlertCircleIcon,
   AuditIcon,
   BankIcon,
   Building03Icon,
   CheckListIcon,
-  Clock01Icon,
   FileExportIcon,
   Globe02Icon,
   Invoice01Icon,
+  Link01Icon,
   Mail01Icon,
   Mortarboard01Icon,
   MoneyBag01Icon,
@@ -22,9 +23,11 @@ import {
   PercentIcon,
   PinCodeIcon,
   SecurityCheckIcon,
+  SecurityLockIcon,
   SmartPhone01Icon,
   UserCheck01Icon,
   UserGroupIcon,
+  UserMultiple02Icon,
   UniversityIcon,
   WhatsappIcon,
 } from "@hugeicons/core-free-icons";
@@ -372,7 +375,7 @@ export const slides: Slide[] = [
             {
               icon: UserCheck01Icon,
               title: "Verified reps, controlled payouts",
-              body: "Reps pass identity checks before collecting. Withdrawals need the lead rep's PIN, and every action hits the audit trail.",
+              body: "Reps pass identity checks before collecting. Withdrawals need a security code — or sign-off from 2 of 3 reps — and every action hits the audit trail.",
             },
           ].map((c) => (
             <Item key={c.title}>
@@ -405,9 +408,9 @@ export const slides: Slide[] = [
           {[
             { title: "Rep gets verified", body: "Applies for their department, passes ID checks, and Duevy approves the space." },
             { title: "Create dues", body: "Set the amount and deadline for each due — “200L CSC dues, ₦2,000.”" },
-            { title: "Share the link", body: "Drop the join link or code in the class WhatsApp. Students sign up and join." },
+            { title: "Share the link", body: "Drop the join link or code in the class WhatsApp. Students join — or pay as a guest, no account needed." },
             { title: "Students pay", body: "Bank transfer, confirmed automatically, PDF receipt straight away." },
-            { title: "Track & withdraw", body: "See who's paid, remind the rest, withdraw to a bank account with a PIN." },
+            { title: "Track & withdraw", body: "See who's paid, remind the rest, withdraw to a bank account once it's approved." },
           ].map((s, i) => (
             <Item key={s.title}>
               <div className="h-full rounded-3xl bg-white border border-[#e6f2ec] p-6">
@@ -492,8 +495,11 @@ export const slides: Slide[] = [
             { icon: CheckListIcon, title: "Dues & collections", body: "Create dues, see paid vs. unpaid per due, search and filter members." },
             { icon: Notification03Icon, title: "Reminders & notifications", body: "Nudge everyone who hasn't paid; in-app, email and push alerts." },
             { icon: BankIcon, title: "Bank-transfer checkout", body: "One-time account numbers, confirmed automatically." },
+            { icon: Link01Icon, title: "Guest checkout", body: "Open a due to a public link — anyone pays with a name and email, receipt included." },
             { icon: Invoice01Icon, title: "Receipts & history", body: "PDF receipt for every payment and a full transaction ledger." },
-            { icon: PinCodeIcon, title: "PIN-protected payouts", body: "Lead-rep withdrawals, saved beneficiaries, fee quoted upfront." },
+            { icon: PinCodeIcon, title: "Protected payouts", body: "Security-code withdrawals, saved beneficiaries, fee quoted upfront." },
+            { icon: SecurityLockIcon, title: "Signatory approval", body: "Optional 2-of-3 sign-off: the lead plus two co-reps approve each withdrawal." },
+            { icon: UserMultiple02Icon, title: "Co-reps", body: "Add co-reps to share the load, and hand a due to a co-rep to run." },
             { icon: FileExportIcon, title: "Payout breakdown & export", body: "Collected, fees and net per due; CSV export of collections." },
             { icon: AuditIcon, title: "Audit trail", body: "Every action in a space is logged for handover." },
             { icon: UserGroupIcon, title: "Circle", body: "Member list, join codes you can regenerate, remove members." },
@@ -672,27 +678,27 @@ export const slides: Slide[] = [
             {
               icon: UserCheck01Icon,
               title: "Verified before collecting",
-              body: "NIN check plus a student-ID review by Duevy. Unverified spaces can't take payments.",
+              body: "NIN check plus a student-ID review in Duevy's admin console, which also handles disputes and refunds. Unverified spaces can't take payments.",
             },
             {
               icon: PinCodeIcon,
-              title: "Withdrawals with guardrails",
-              body: "Lead rep only, behind a PIN that locks after failed attempts. Fee shown before confirming.",
+              title: "No single point of trust",
+              body: "Withdrawals sit behind a security code — or need 2 of 3 reps to sign off. No one rep can move the money alone.",
             },
             {
               icon: WhatsappIcon,
               title: "WhatsApp-native distribution",
-              body: "A join link dropped in the class group is the whole onboarding.",
+              body: "A link dropped in the class group is the whole onboarding — guests can pay without even signing up.",
+            },
+            {
+              icon: Agreement01Icon,
+              title: "Partner channels",
+              body: "SUGs and associations like NACOS get a partner code that cuts withdrawal fees for every rep who signs up with it.",
             },
             {
               icon: Mortarboard01Icon,
               title: "Any school, any group",
               body: "Reps at any Nigerian university can apply — departments, faculties, associations and clubs.",
-            },
-            {
-              icon: Clock01Icon,
-              title: "Operations built in",
-              body: "An admin console for rep approval, disputes, refunds and reports from day one.",
             },
           ].map((c) => (
             <Item key={c.title}>

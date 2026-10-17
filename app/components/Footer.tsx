@@ -11,7 +11,10 @@ const columns = [
   },
   {
     title: "Company",
-    links: [{ label: "Contact", href: "mailto:support@duevy.app" }],
+    links: [
+      { label: "Metrics", href: "/metrics" },
+      { label: "Contact", href: "mailto:support@duevy.app" },
+    ],
   },
   {
     title: "Legal",

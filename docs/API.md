@@ -369,6 +369,16 @@ Body: `{ "code": "NACOS" }`. `201`: `SpacePartner`. A space has at most one part
 
 ---
 
+## Public metrics
+
+### `GET /public/metrics` (public)
+
+Aggregate-only traction figures for the `/metrics` page. No auth. Should be cached server-side (the page refetches at most hourly) and must never include anything that identifies a user or space.
+
+`200`: `{ students, reps, spaces, campuses, volume, payments, payouts, monthly: [{ month: "YYYY-MM", volume, payments }], updatedAt }`. `students` and `reps` are active accounts (reps = approved). `volume` is lifetime money students paid (kobo); `payments` is paid checkouts; `payouts` is completed withdrawals. `monthly` is oldest first, up to the last 12 months.
+
+---
+
 ## Admin
 
 `role = admin` is required. Each route also checks the permission named in its row; a super admin has every permission.
