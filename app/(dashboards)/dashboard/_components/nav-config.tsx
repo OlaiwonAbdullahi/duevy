@@ -140,9 +140,7 @@ export const ADMIN_LINKS: NavLink[] = [
   ...(FEATURES.polls
     ? [{ label: "Polls", href: "/admin/polls", icon: CheckmarkSquare01Icon }]
     : []),
-  ...(FEATURES.partners
-    ? [{ label: "Partners", href: "/admin/partners", icon: DiscountTag01Icon }]
-    : []),
+  { label: "Partners", href: "/admin/partners", icon: DiscountTag01Icon },
   { label: "Disputes", href: "/admin/disputes", icon: Megaphone01Icon },
   { label: "Feedback", href: "/admin/feedback", icon: BubbleChatEditIcon },
   { label: "Reports", href: "/admin/reports", icon: Analytics01Icon },

@@ -330,7 +330,7 @@ Withdrawal status moves `pending → processing → success | failed | reversed`
 
 ## Partners
 
-Partners (SUG, NACOS, …) each have a code. A rep who signs up with a code, or whose lead rep applies one later, gets a percentage off the space's withdrawal fees. Behind `FEATURE_PARTNERS`; every route below `404`s when it is off.
+Partners (SUG, NACOS, …) each have a code. A rep who signs up with a code, or whose lead rep applies one later, gets a percentage off the space's withdrawal fees.
 
 `PartnerPreview = { code, name, short, logoUrl, withdrawalFeeDiscountPercent, durationDays }`. `durationDays` is `null` for a discount with no end date.
 

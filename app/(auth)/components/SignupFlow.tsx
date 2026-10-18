@@ -18,7 +18,6 @@ import {
 } from "@/lib/auth/signup-partner";
 import { ApiError } from "@/lib/api/errors";
 import { PARTNER_ERRORS, normalizePartnerCode } from "@/lib/api/partners";
-import { FEATURES } from "@/lib/features";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
@@ -78,7 +77,7 @@ export default function SignupFlow() {
   const joinFlow = next?.startsWith("/join/") ?? false;
   // A partner's signup link (`?partner=NACOS`) is for reps — read it once, like `next`.
   const [partnerParam] = useState(() =>
-    typeof window === "undefined" || !FEATURES.partners
+    typeof window === "undefined"
       ? null
       : normalizePartnerCode(new URLSearchParams(window.location.search).get("partner") ?? "") ||
         null,
@@ -114,7 +113,7 @@ export default function SignupFlow() {
   const [space, setSpace] = useState<SpaceDetails>(() => ({
     ...EMPTY_SPACE,
     partnerCode:
-      typeof window === "undefined" || !FEATURES.partners
+      typeof window === "undefined"
         ? ""
         : (partnerParam ?? readSignupPartner() ?? ""),
   }));
@@ -190,7 +189,7 @@ export default function SignupFlow() {
           school: data.school,
           faculty: data.faculty || undefined,
         },
-        ...(FEATURES.partners && data.partnerCode ? { partnerCode: data.partnerCode } : {}),
+        ...(data.partnerCode ? { partnerCode: data.partnerCode } : {}),
       });
       clearSignupPartner();
       setSubmittedEmail(account.email);

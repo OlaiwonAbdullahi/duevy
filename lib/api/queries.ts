@@ -6,7 +6,6 @@ import { getSpace } from "./spaces";
 import { getRepOverview, listReps } from "./rep";
 import { getStudentOverview } from "./me";
 import { getSpacePartner } from "./partners";
-import { FEATURES } from "@/lib/features";
 import type { KycState, SpaceKycStatus } from "./types";
 
 /**
@@ -91,13 +90,13 @@ export function useSpaceLedger(spaceId: string | undefined) {
   });
 }
 
-/** The space's applied partner (null when none). Off entirely while the feature is gated. */
+/** The space's applied partner (null when none). */
 export function useSpacePartner(spaceId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.spacePartner(spaceId ?? ""),
     // `?? null`: react-query rejects `undefined`, should the API ever send an empty body.
     queryFn: async () => (await getSpacePartner(spaceId!)) ?? null,
-    enabled: !!spaceId && FEATURES.partners,
+    enabled: !!spaceId,
   });
 }
 
