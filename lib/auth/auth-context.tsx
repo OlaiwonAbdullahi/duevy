@@ -10,7 +10,7 @@ import {
 } from "react";
 import * as authApi from "@/lib/api/auth";
 import type { AuthSession, RegisterPayload } from "@/lib/api/auth";
-import { refreshAccessToken, setAccessToken } from "@/lib/api/client";
+import { refreshSession, setAccessToken } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { User } from "@/lib/api/types";
 import { clearOnboardingSkip } from "./onboarding";
@@ -78,8 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        await refreshAccessToken();
-        const me = await authApi.getMe();
+        // The refresh response carries the user; fall back to /auth/me for older APIs.
+        const session = await refreshSession();
+        const me = session.user ?? (await authApi.getMe());
         if (cancelled) return;
         setUser(me);
         setStatus("authenticated");

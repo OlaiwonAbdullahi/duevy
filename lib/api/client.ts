@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { ApiError, NetworkError } from "./errors";
-import type { ApiMeta, ApiResponse } from "./types";
+import type { ApiMeta, ApiResponse, User } from "./types";
 
 /** A list response plus its pagination envelope (`meta`). */
 export type Page<T> = { data: T; meta?: ApiMeta };
@@ -30,22 +30,25 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   idempotencyKey?: string;
 };
 
-let refreshPromise: Promise<string> | null = null;
+/** What `/auth/refresh` returns. `user` (the `/auth/me` shape) is omitted by older APIs. */
+export type RefreshedSession = { accessToken: string; user?: User };
+
+let refreshPromise: Promise<RefreshedSession> | null = null;
 
 /**
  * Rotates the refresh cookie and stores the new access token. Dedupes concurrent
  * callers (both the 401-retry path below and `AuthProvider`'s startup bootstrap
  * can call this at the same time).
  */
-export async function refreshAccessToken(): Promise<string> {
+export async function refreshSession(): Promise<RefreshedSession> {
   if (!refreshPromise) {
-    refreshPromise = rawRequest<{ accessToken: string }>("/auth/refresh", {
+    refreshPromise = rawRequest<RefreshedSession>("/auth/refresh", {
       method: "POST",
       auth: false,
     })
-      .then(({ accessToken: token }) => {
-        setAccessToken(token);
-        return token;
+      .then((session) => {
+        setAccessToken(session.accessToken);
+        return session;
       })
       .catch((err) => {
         setAccessToken(null);
@@ -56,6 +59,10 @@ export async function refreshAccessToken(): Promise<string> {
       });
   }
   return refreshPromise;
+}
+
+export async function refreshAccessToken(): Promise<string> {
+  return (await refreshSession()).accessToken;
 }
 
 async function rawRequestFull<T>(path: string, options: RequestOptions = {}): Promise<Page<T>> {
