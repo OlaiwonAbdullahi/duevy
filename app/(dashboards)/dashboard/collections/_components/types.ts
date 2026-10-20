@@ -9,6 +9,8 @@ export type CollectionStudent = {
   email: string;
   status: PaymentStatus;
   paidAt?: string;
+  /** Raw ISO payment time, for exports. */
+  paidOn?: string;
   reference?: string;
 };
 

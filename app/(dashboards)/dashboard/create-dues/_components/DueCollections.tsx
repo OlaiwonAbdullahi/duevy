@@ -22,7 +22,10 @@ import { useSpaceReps } from "@/lib/api/queries";
 import { ApiError } from "@/lib/api/errors";
 import { CollectionSummary } from "../../collections/_components/CollectionSummary";
 import { CollectionTable } from "../../collections/_components/CollectionTable";
-import { downloadCollectionCsv } from "../../collections/_components/csv";
+import {
+  downloadCollectionPdf,
+  type CollectionExportScope,
+} from "../../collections/_components/pdf";
 import type { CollectionGuest } from "@/lib/api/types";
 import { GuestPayCard } from "./GuestPayCard";
 import type {
@@ -43,6 +46,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+const EXPORT_OPTIONS: {
+  scope: CollectionExportScope;
+  label: string;
+  hint: string;
+}[] = [
+  { scope: "paid", label: "Paid", hint: "Students who have paid" },
+  { scope: "unpaid", label: "Yet to pay", hint: "Students still owing" },
+  { scope: "all", label: "Everyone", hint: "The full roster" },
+];
 
 function adaptStudent(api: ApiCollectionStudent): CollectionStudent {
   return {
@@ -53,6 +71,7 @@ function adaptStudent(api: ApiCollectionStudent): CollectionStudent {
     email: api.email,
     status: api.status,
     paidAt: api.paidAt ? timeAgo(api.paidAt) : undefined,
+    paidOn: api.paidAt ?? undefined,
     reference: api.reference ?? undefined,
   };
 }
@@ -98,6 +117,8 @@ export function DueCollections({
   const [sendingReminders, setSendingReminders] = useState(false);
   const reps: SpaceRep[] = useSpaceReps(spaceId).data ?? [];
   const [reassigning, setReassigning] = useState(false);
+  const [exportOpen, setExportOpen] = useState<"mobile" | "desktop" | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const assignedRep = reps.find((r) => r.id === due.assignedRepId);
   const coReps = reps.filter((r) => r.role === "co");
@@ -130,7 +151,7 @@ export function DueCollections({
       setLoading(true);
       try {
         // The roster is paginated server-side; load every page so the tab
-        // counts, search and CSV cover the whole class.
+        // counts, search and PDF export cover the whole class.
         const data = await getAllCollections(spaceId, due.id);
         if (cancelled) return;
         setStudents((data.students ?? []).map(adaptStudent));
@@ -182,15 +203,72 @@ export function DueCollections({
     [filter, queryMatched],
   );
 
-  const handleDownload = () => {
-    const safeTitle = due.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    downloadCollectionCsv(`${safeTitle}-${filter}.csv`, filteredStudents);
-    toast.success("List downloaded", {
-      description: `${filteredStudents.length} student${
-        filteredStudents.length === 1 ? "" : "s"
-      } exported.`,
-    });
+  // Exports cover the whole roster for the chosen status, not just the
+  // rows the current tab/search happens to show.
+  const paidTotal = students.filter((s) => s.status === "paid").length;
+  const exportCounts = {
+    all: students.length,
+    paid: paidTotal,
+    unpaid: students.length - paidTotal,
   };
+
+  const handleExport = async (scope: CollectionExportScope) => {
+    const rows =
+      scope === "all" ? students : students.filter((s) => s.status === scope);
+    if (rows.length === 0) {
+      toast.info("Nothing to export", {
+        description:
+          scope === "paid" ? "No one has paid yet." : "Everyone has paid.",
+      });
+      return;
+    }
+    setExportOpen(null);
+    setExporting(true);
+    try {
+      const safeTitle = due.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      await downloadCollectionPdf({
+        filename: `${safeTitle}-${scope === "unpaid" ? "yet-to-pay" : scope}.pdf`,
+        dueTitle: due.title,
+        spaceName: repSpace?.name,
+        amount: due.amount,
+        dueDate: due.dueDate,
+        scope,
+        rows,
+      });
+      toast.success("PDF downloaded", {
+        description: `${rows.length} student${rows.length === 1 ? "" : "s"} exported.`,
+      });
+    } catch {
+      toast.error("Couldn't generate the PDF.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportMenu = (
+    <PopoverContent align="end" className="w-60 p-1.5">
+      <p className="px-2.5 pt-1.5 pb-1 text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
+        Export as PDF
+      </p>
+      {EXPORT_OPTIONS.map((o) => (
+        <button
+          key={o.scope}
+          type="button"
+          onClick={() => handleExport(o.scope)}
+          disabled={exportCounts[o.scope] === 0}
+          className="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-paper disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-ink">{o.label}</span>
+            <span className="block text-xs text-ink-soft">{o.hint}</span>
+          </span>
+          <span className="shrink-0 rounded-full bg-cloud px-2 py-0.5 text-xs font-semibold text-ink">
+            {exportCounts[o.scope]}
+          </span>
+        </button>
+      ))}
+    </PopoverContent>
+  );
 
   const handleReminders = async () => {
     if (totals.unpaid === 0) {
@@ -238,15 +316,26 @@ export function DueCollections({
             </p>
           </div>
           {/* Phones: export sits in the header; the other actions are on the card. */}
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={filteredStudents.length === 0}
-            aria-label="Export list as CSV"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-cloud text-ink transition-colors active:bg-paper disabled:opacity-40 cursor-pointer sm:hidden"
+          <Popover
+            open={exportOpen === "mobile"}
+            onOpenChange={(o) => setExportOpen(o ? "mobile" : null)}
           >
-            <HugeiconsIcon icon={Download04Icon} size={17} />
-          </button>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                disabled={students.length === 0 || exporting}
+                aria-label="Export list as PDF"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-cloud text-ink transition-colors active:bg-paper disabled:opacity-40 cursor-pointer sm:hidden"
+              >
+                {exporting ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink/20 border-t-ink" />
+                ) : (
+                  <HugeiconsIcon icon={Download04Icon} size={17} />
+                )}
+              </button>
+            </PopoverTrigger>
+            {exportMenu}
+          </Popover>
         </div>
         <div className="hidden flex-wrap items-center gap-2 sm:flex">
           {/* Withdrawals are space-wide and lead-only; no per-due payouts. */}
@@ -271,15 +360,26 @@ export function DueCollections({
             )}
             {sendingReminders ? "Sending…" : "Remind unpaid"}
           </Button>
-          <Button
-            variant="brand-outline"
-            size="pill"
-            onClick={handleDownload}
-            disabled={filteredStudents.length === 0}
+          <Popover
+            open={exportOpen === "desktop"}
+            onOpenChange={(o) => setExportOpen(o ? "desktop" : null)}
           >
-            <HugeiconsIcon icon={Download04Icon} size={15} />
-            Export
-          </Button>
+            <PopoverTrigger asChild>
+              <Button
+                variant="brand-outline"
+                size="pill"
+                disabled={students.length === 0 || exporting}
+              >
+                {exporting ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+                ) : (
+                  <HugeiconsIcon icon={Download04Icon} size={15} />
+                )}
+                {exporting ? "Exporting…" : "Export PDF"}
+              </Button>
+            </PopoverTrigger>
+            {exportMenu}
+          </Popover>
         </div>
       </header>
 
