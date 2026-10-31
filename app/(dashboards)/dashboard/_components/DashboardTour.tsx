@@ -13,6 +13,7 @@ import {
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { isDemoMode } from "@/lib/demo/mode";
 import { cn } from "@/lib/utils";
 
 /**
@@ -126,8 +127,10 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // First visit only: give the dashboard a beat to settle, then run.
+  // First visit only: give the dashboard a beat to settle, then run. Never
+  // during a demo, where it'd interrupt the walkthrough (Settings replays it).
   useEffect(() => {
+    if (isDemoMode()) return;
     try {
       if (localStorage.getItem(TOUR_DONE_KEY)) return;
     } catch {

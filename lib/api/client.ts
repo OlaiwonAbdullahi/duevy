@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/lib/demo/mode";
 import { API_BASE_URL } from "./config";
 import { ApiError, NetworkError } from "./errors";
 import type { ApiMeta, ApiResponse, User } from "./types";
@@ -67,6 +68,12 @@ export async function refreshAccessToken(): Promise<string> {
 
 async function rawRequestFull<T>(path: string, options: RequestOptions = {}): Promise<Page<T>> {
   const { auth = true, retryOn401 = true, idempotencyKey, headers, body, ...init } = options;
+
+  // Demo mode answers from sample data; nothing reaches the backend.
+  if (isDemoMode()) {
+    const { demoRequest } = await import("@/lib/demo/handler");
+    return demoRequest<T>(init.method ?? "GET", path, body);
+  }
 
   const finalHeaders = new Headers(headers);
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
@@ -140,6 +147,11 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
 
 /** GET a binary file (report export, receipt PDF, …) with the bearer token attached. */
 async function fetchBlob(path: string, retryOn401 = true): Promise<Blob> {
+  if (isDemoMode()) {
+    const { demoBlob } = await import("@/lib/demo/handler");
+    return demoBlob(path);
+  }
+
   const headers = new Headers();
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 

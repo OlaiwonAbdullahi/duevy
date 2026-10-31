@@ -13,6 +13,7 @@ import type { AuthSession, RegisterPayload } from "@/lib/api/auth";
 import { refreshSession, setAccessToken } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { User } from "@/lib/api/types";
+import { exitDemo, isDemoMode } from "@/lib/demo/mode";
 import { clearOnboardingSkip } from "./onboarding";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -97,8 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Keep the middleware's role hint in sync with the real session.
+  // Keep the middleware's role hint in sync with the real session. The demo
+  // account isn't one, so it never touches the hint.
   useEffect(() => {
+    if (isDemoMode()) return;
     if (user) writeRoleCookie(user.role);
     else if (status === "unauthenticated") writeRoleCookie(null);
   }, [user, status]);
@@ -155,8 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // Signing out of the demo just leaves it; there's no real session to revoke.
+    const demo = isDemoMode();
+    if (demo) exitDemo();
     try {
-      await authApi.logout();
+      if (!demo) await authApi.logout();
     } finally {
       setAccessToken(null);
       setUser(null);

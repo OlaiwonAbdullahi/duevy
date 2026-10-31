@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon, MailAtSign01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, MailAtSign01Icon, PlayCircleIcon, RefreshIcon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { OverviewSkeleton, ShellSkeleton } from "./Skeleton";
 import { useKycStatus } from "@/lib/api/queries";
 import { ONBOARDING_PATH, isRepApplicant, kycOutstanding, onboardingSkipped } from "@/lib/auth/onboarding";
+import { exitDemo, isDemoMode } from "@/lib/demo/mode";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
 import { TourProvider } from "./DashboardTour";
@@ -124,6 +125,46 @@ function VerifyEmailBanner() {
   );
 }
 
+/** Shown across the dashboard in demo mode (`/demo`), with the way back out. */
+function DemoBanner() {
+  const leave = (href: string) => {
+    exitDemo();
+    // A full load drops the demo session and its cached data.
+    window.location.assign(href);
+  };
+
+  return (
+    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-brand/25 bg-brand/10 p-4 sm:flex-row sm:items-center">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
+        <HugeiconsIcon icon={PlayCircleIcon} size={18} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-ink">You&apos;re exploring a demo</p>
+        <p className="mt-0.5 hidden text-xs text-ink-soft sm:block">
+          Everything here is sample data. Try things out — no real money moves and nothing is saved
+          after you leave.
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <button
+          type="button"
+          onClick={() => leave("/")}
+          className="inline-flex h-9 items-center justify-center rounded-full border border-brand/30 px-4 text-xs font-semibold text-ink transition-colors duration-300 hover:bg-brand/15 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        >
+          Exit demo
+        </button>
+        <button
+          type="button"
+          onClick={() => leave("/signup")}
+          className="inline-flex h-9 items-center justify-center rounded-full bg-brand px-4 text-xs font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        >
+          Get started
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ShellInner({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { role, isRep, isPendingRep } = useRole();
@@ -152,6 +193,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         <Topbar onSearch={() => setSearchOpen(true)} />
         {/* Bottom padding clears the mobile tab bar (and the home indicator). */}
         <main className="flex-1 p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(7rem+env(safe-area-inset-bottom))] lg:p-8">
+          {isDemoMode() && <DemoBanner />}
           {isPendingRep && <PendingRepBanner />}
           {!isPendingRep && user && !user.emailVerified && <VerifyEmailBanner />}
           {featureBlocked ? (
