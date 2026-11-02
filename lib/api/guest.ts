@@ -1,7 +1,7 @@
 import { apiClient } from "./client";
 import { API_BASE_URL } from "./config";
 import type { Checkout } from "./dues";
-import type { DueType, EmblemHue, SpaceKind } from "./types";
+import type { DueType, EmblemHue, GuestField, SpaceKind } from "./types";
 
 /**
  * Guest pay: dues a rep opened to guests can be paid from a public link with a
@@ -21,6 +21,8 @@ export type GuestDue = {
   total: number;
   /** False until the rep finishes verification — the space can't collect yet. */
   canCollect: boolean;
+  /** The rep's extra questions. `null` = the original form (optional matric number). */
+  fields: GuestField[] | null;
   space: { id: string; name: string; short: string; kind: SpaceKind; hue: EmblemHue };
 };
 
@@ -31,7 +33,13 @@ export type GuestCheckout = Checkout & {
 
 export type GuestCheckoutStatus = Checkout & { receiptNumber: string | null };
 
-export type GuestPayer = { name: string; email: string; matricNo?: string };
+export type GuestPayer = {
+  name: string;
+  email: string;
+  matricNo?: string;
+  /** Answers to the due's `fields`, keyed by field id. */
+  answers?: Record<string, string>;
+};
 
 /** `404` when the link isn't open (members-only, closed, or unknown). */
 export function getGuestDue(dueId: string) {
@@ -40,7 +48,8 @@ export function getGuestDue(dueId: string) {
 
 /**
  * Open (or reuse) a guest checkout.
- * Errors: `409 EMAIL_HAS_ACCOUNT` (sign in instead), `409 DUE_ALREADY_PAID`,
+ * Errors: `400 VALIDATION_ERROR` (an answer is missing or invalid; `details[].field`
+ * is `answers.<fieldId>`), `409 EMAIL_HAS_ACCOUNT` (sign in instead), `409 DUE_ALREADY_PAID`,
  * `409 SPACE_NOT_VERIFIED`, `404` when the link closed meanwhile.
  */
 export function startGuestCheckout(dueId: string, payer: GuestPayer) {

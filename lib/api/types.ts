@@ -206,6 +206,8 @@ export type RepDue = Omit<
   assignedRepId: string | null;
   /** Open to guests: anyone with the public pay link can pay it, no account. */
   allowGuests?: boolean;
+  /** Extra questions on the guest pay link. `null` = the original form (optional matric no). */
+  guestFields?: GuestField[] | null;
   /** Payments from guests — not counted in `paidCount`, which is members only. */
   guestPaidCount?: number;
   publishedAt: string | null;
@@ -225,6 +227,21 @@ export type CollectionTotals = {
   guestPaid?: number;
 };
 
+export type GuestFieldType = "text" | "textarea" | "number" | "email" | "phone" | "select";
+
+/** A question a rep adds to a due's guest pay form, on top of name and email. */
+export type GuestField = {
+  id: string;
+  label: string;
+  type: GuestFieldType;
+  required: boolean;
+  /** `select` only: the choices. */
+  options?: string[];
+};
+
+/** A guest's answer, with the field's label as it was when they answered. */
+export type GuestAnswer = { fieldId: string; label: string; value: string };
+
 /** Someone outside the space who paid a guest-enabled due. */
 export type CollectionGuest = {
   id: string;
@@ -233,6 +250,8 @@ export type CollectionGuest = {
   matricNo: string | null;
   paidAt: string;
   reference: string;
+  /** Answers to the due's guest questions (older payments: none). */
+  answers?: GuestAnswer[];
 };
 
 export type CollectionStudent = {

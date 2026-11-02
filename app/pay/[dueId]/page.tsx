@@ -17,8 +17,16 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
+import type { GuestField } from "@/lib/api/types";
 import {
   getGuestCheckout,
   getGuestDue,
@@ -49,7 +57,8 @@ function formatCountdown(ms: number) {
 
 /**
  * Public pay page for a guest-enabled due: `/pay/<dueId>`. A guest enters a
- * name and email and pays by bank transfer — no account. Once a checkout is
+ * name, email and answers to any questions the rep added, then pays by bank
+ * transfer — no account. Once a checkout is
  * open its reference and token ride in the URL (`?ref=&t=`), so a refresh, or
  * coming back from a hosted checkout, lands on the same payment.
  */
@@ -85,6 +94,8 @@ function PayForm({ dueId }: { dueId: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [matricNo, setMatricNo] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<{ message: string; signIn?: boolean } | null>(null);
 
@@ -114,18 +125,28 @@ function PayForm({ dueId }: { dueId: string }) {
     );
   }
 
-  const valid = name.trim().length >= 2 && EMAIL_RE.test(email.trim());
+  const fields = due.fields;
+  const valid =
+    name.trim().length >= 2 &&
+    EMAIL_RE.test(email.trim()) &&
+    (fields ?? []).every((f) => !f.required || answers[f.id]?.trim());
+
+  const answer = (id: string, value: string) => {
+    setAnswers((a) => ({ ...a, [id]: value }));
+    if (fieldErrors[id]) setFieldErrors((errs) => ({ ...errs, [id]: "" }));
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid || submitting) return;
     setSubmitting(true);
     setError(null);
+    setFieldErrors({});
     try {
       const checkout = await startGuestCheckout(dueId, {
         name: name.trim(),
         email: email.trim(),
-        ...(matricNo.trim() ? { matricNo: matricNo.trim() } : {}),
+        ...(fields ? { answers } : matricNo.trim() ? { matricNo: matricNo.trim() } : {}),
       });
       const next = `/pay/${encodeURIComponent(dueId)}?ref=${encodeURIComponent(checkout.reference)}&t=${encodeURIComponent(checkout.token)}`;
       // Keep the payment in the URL first, so Back from a hosted page returns to it.
@@ -134,6 +155,14 @@ function PayForm({ dueId }: { dueId: string }) {
     } catch (err) {
       if (err instanceof ApiError && err.code === "EMAIL_HAS_ACCOUNT") {
         setError({ message: "This email already has a Duevy account. Sign in to pay so it shows in your history.", signIn: true });
+      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field.startsWith("answers."))) {
+        // The rep may have changed the questions since this page loaded.
+        setFieldErrors(
+          Object.fromEntries(
+            err.details.filter((d) => d.field.startsWith("answers.")).map((d) => [d.field.slice("answers.".length), d.issue]),
+          ),
+        );
+        setError({ message: "Check your answers above and try again." });
       } else if (err instanceof ApiError && err.code === "DUE_ALREADY_PAID") {
         setError({ message: "This email has already paid for this. Check your inbox for the receipt." });
       } else {
@@ -190,18 +219,30 @@ function PayForm({ dueId }: { dueId: string }) {
               className={cn(BRAND_INPUT, "mt-1.5")}
             />
           </div>
-          <div>
-            <Label htmlFor="guest-matric" className="text-xs font-medium text-ink">
-              Matric number <span className="font-normal text-ink-soft">(optional)</span>
-            </Label>
-            <Input
-              id="guest-matric"
-              value={matricNo}
-              onChange={(e) => setMatricNo(e.target.value)}
-              placeholder="Helps the rep match your payment"
-              className={cn(BRAND_INPUT, "mt-1.5")}
-            />
-          </div>
+          {fields ? (
+            fields.map((f) => (
+              <AnswerField
+                key={f.id}
+                field={f}
+                value={answers[f.id] ?? ""}
+                error={fieldErrors[f.id]}
+                onChange={(v) => answer(f.id, v)}
+              />
+            ))
+          ) : (
+            <div>
+              <Label htmlFor="guest-matric" className="text-xs font-medium text-ink">
+                Matric number <span className="font-normal text-ink-soft">(optional)</span>
+              </Label>
+              <Input
+                id="guest-matric"
+                value={matricNo}
+                onChange={(e) => setMatricNo(e.target.value)}
+                placeholder="Helps the rep match your payment"
+                className={cn(BRAND_INPUT, "mt-1.5")}
+              />
+            </div>
+          )}
 
           {error && (
             <p className="rounded-2xl bg-rose-50 p-3 text-[13px] leading-relaxed text-rose-700">
@@ -226,6 +267,71 @@ function PayForm({ dueId }: { dueId: string }) {
           </p>
         </form>
       )}
+    </div>
+  );
+}
+
+/** One of the rep's questions, as the input its type calls for. */
+function AnswerField({
+  field,
+  value,
+  error,
+  onChange,
+}: {
+  field: GuestField;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  const id = `guest-q-${field.id}`;
+  const input = {
+    id,
+    value,
+    "aria-invalid": !!error,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value),
+  };
+
+  return (
+    <div>
+      <Label htmlFor={id} className="text-xs font-medium text-ink">
+        {field.label} {!field.required && <span className="font-normal text-ink-soft">(optional)</span>}
+      </Label>
+      <div className="mt-1.5">
+        {field.type === "select" ? (
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger id={id} aria-invalid={!!error} className="h-11 w-full rounded-2xl text-sm font-normal">
+              <SelectValue placeholder="Choose one" />
+            </SelectTrigger>
+            <SelectContent>
+              {(field.options ?? []).map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : field.type === "textarea" ? (
+          <textarea
+            {...input}
+            maxLength={500}
+            className="min-h-[88px] w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand placeholder:text-ink-soft"
+          />
+        ) : (
+          <Input
+            {...input}
+            maxLength={500}
+            {...(field.type === "email"
+              ? { type: "email", inputMode: "email" as const }
+              : field.type === "phone"
+                ? { type: "tel", inputMode: "tel" as const, autoComplete: "tel" }
+                : field.type === "number"
+                  ? { inputMode: "decimal" as const }
+                  : {})}
+            className={BRAND_INPUT}
+          />
+        )}
+      </div>
+      {error && <p className="mt-1 text-[11px] text-rose-600">{error}</p>}
     </div>
   );
 }

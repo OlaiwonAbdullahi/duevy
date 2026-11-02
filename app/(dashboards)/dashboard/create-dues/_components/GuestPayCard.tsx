@@ -40,7 +40,7 @@ export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionG
           <h3 className="text-sm font-semibold text-ink">Guest pay link</h3>
           <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
             {live
-              ? "Anyone with this link can pay with just their name and email. Guests don't count toward your class's paid / unpaid."
+              ? "Anyone with this link can pay with their name, email and answers to your questions. Guests don't count toward your class's paid / unpaid."
               : "The link opens once this due is published."}
           </p>
         </div>
@@ -77,6 +77,16 @@ export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionG
                     {g.email}
                     {g.matricNo ? ` · ${g.matricNo}` : ""}
                   </p>
+                  {!!g.answers?.length && (
+                    <dl className="mt-1.5 flex flex-wrap gap-1.5">
+                      {g.answers.map((a) => (
+                        <div key={a.fieldId} className="flex max-w-full gap-1 rounded-full bg-paper/70 px-2.5 py-0.5 text-[11px]">
+                          <dt className="shrink-0 text-ink-soft">{a.label}:</dt>
+                          <dd className="min-w-0 truncate font-medium text-ink">{a.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
                 </div>
                 <span className="shrink-0 text-[11px] text-ink-soft">{timeAgo(g.paidAt)}</span>
               </li>

@@ -30,6 +30,7 @@ import { CategoryPicker } from "./CategoryPicker";
 import { DatePicker } from "./DatePicker";
 import { DuePreview } from "./DuePreview";
 import { Toggle } from "../../settings/_components/Toggle";
+import { DEFAULT_GUEST_FIELDS, GuestFormBuilder, guestFieldsIssue } from "./GuestFormBuilder";
 
 /** One-tap amounts reps reach for most. */
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -129,6 +130,9 @@ export function DueForm({
   const coReps = (useSpaceReps(!editing && isLead ? repSpace?.id : undefined).data ?? []).filter((r) => r.role === "co");
   const [assignedRepId, setAssignedRepId] = useState("");
   const [allowGuests, setAllowGuests] = useState(initial?.allowGuests ?? false);
+  // A due that never had a custom form starts from the original one (optional matric no).
+  const initialGuestFields = initial?.guestFields ?? DEFAULT_GUEST_FIELDS;
+  const [guestFields, setGuestFields] = useState(initialGuestFields);
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -140,6 +144,7 @@ export function DueForm({
     title.trim().length < 3 && "a title",
     amount <= 0 && "an amount",
     !dueDate && "a deadline",
+    allowGuests && guestFieldsIssue(guestFields),
   ].filter(Boolean) as string[];
   const valid = missing.length === 0;
 
@@ -150,6 +155,7 @@ export function DueForm({
     dueDate !== (initial?.dueDate ?? "") ||
     note !== (initial?.note ?? "") ||
     allowGuests !== (initial?.allowGuests ?? false) ||
+    JSON.stringify(guestFields) !== JSON.stringify(initialGuestFields) ||
     assignedRepId !== "";
 
   const onlyDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 9);
@@ -167,6 +173,7 @@ export function DueForm({
         dueDate,
         category,
         allowGuests,
+        guestFields: guestFields.map((f) => ({ ...f, label: f.label.trim() })),
         ...(assignedRepId ? { assignedRepId } : {}),
       });
     } finally {
@@ -319,15 +326,22 @@ export function DueForm({
                 />
               </Field>
 
-              <div className="flex items-start justify-between gap-4 rounded-2xl border border-cloud bg-paper/40 p-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink">Let guests pay</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
-                    People outside {spaceName} can pay from a link you share — no Duevy account
-                    needed. Useful for dinners, events and open sales.
-                  </p>
+              <div className="rounded-2xl border border-cloud bg-paper/40 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">Let guests pay</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+                      People outside {spaceName} can pay from a link you share — no Duevy account
+                      needed. Useful for dinners, events and open sales.
+                    </p>
+                  </div>
+                  <Toggle checked={allowGuests} onChange={setAllowGuests} label="Let guests pay" />
                 </div>
-                <Toggle checked={allowGuests} onChange={setAllowGuests} label="Let guests pay" />
+                {allowGuests && (
+                  <div className="mt-4 border-t border-cloud pt-4">
+                    <GuestFormBuilder fields={guestFields} onChange={setGuestFields} />
+                  </div>
+                )}
               </div>
 
               {!editing && isLead && coReps.length > 0 && (

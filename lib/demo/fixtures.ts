@@ -1,6 +1,7 @@
 import type {
   AuditEntry,
   Beneficiary,
+  CollectionGuest,
   KycState,
   NotificationItem,
   NotificationPreferences,
@@ -115,7 +116,7 @@ const space: Space = {
 type DemoDue = RepDue & {
   /** Member ids who've paid, in payment order. */
   paidBy: string[];
-  guests: { id: string; name: string; email: string; matricNo: string | null; paidAt: string; reference: string }[];
+  guests: CollectionGuest[];
 };
 
 function due(
@@ -137,6 +138,12 @@ function due(
       matricNo: null,
       paidAt: daysAgo(Math.max(1, ageDays - 3 - g * 2), 14),
       reference: `DVY-G${i}${g}${(48213 + g * 977).toString(36).toUpperCase()}`,
+      // Sample answers to the due's guest questions (a pick for dropdowns, else a phone number).
+      answers: (rest.guestFields ?? []).map((f) => ({
+        fieldId: f.id,
+        label: f.label,
+        value: f.options?.[g % f.options.length] ?? `080${(31_420_517 + g * 7_919_331).toString().slice(0, 8)}`,
+      })),
     };
   });
   return {
@@ -148,6 +155,7 @@ function due(
     memberCount: members.length,
     assignedRepId: DEMO_USER_ID,
     allowGuests: guestCount > 0,
+    guestFields: null,
     guestPaidCount: guestCount,
     publishedAt: rest.status === "draft" ? null : daysAgo(ageDays),
     closedAt: null,
@@ -178,6 +186,7 @@ const dues: DemoDue[] = [
     dueDate: daysFromNow(5),
     paid: 31,
     guestCount: 4,
+    guestFields: [{ id: "phone", label: "Phone number", type: "phone", required: true }],
     ageDays: 18,
   }),
   due(3, {

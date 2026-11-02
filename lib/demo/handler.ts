@@ -399,6 +399,7 @@ const routes: [string, string, Handler][] = [
       memberCount: store.members.length,
       assignedRepId: (b.assignedRepId as string) ?? DEMO_USER_ID,
       allowGuests: !!b.allowGuests,
+      guestFields: (b.guestFields as DemoDue["guestFields"]) ?? null,
       guestPaidCount: 0,
       publishedAt: publish ? at : null,
       closedAt: null,

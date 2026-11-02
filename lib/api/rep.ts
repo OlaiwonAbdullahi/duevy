@@ -2,6 +2,7 @@ import { apiClient, type Page } from "./client";
 import type {
   AuditEntry,
   CollectionGuest,
+  GuestField,
   CollectionStudent,
   CollectionTotals,
   DueType,
@@ -46,6 +47,8 @@ export type DueDraft = {
   assignedRepId?: string;
   /** Let people outside the space pay it from its public link. */
   allowGuests?: boolean;
+  /** Extra questions guests answer on that link. `null` = the original form. */
+  guestFields?: GuestField[] | null;
 };
 
 export function createDue(spaceId: string, payload: DueDraft) {

@@ -1,3 +1,4 @@
+import type { GuestField } from "@/lib/api/types";
 import type { DueType } from "../../dues/_components/types";
 
 /** A rep-raised due's lifecycle: collecting, not yet published, or wound up. */
@@ -20,6 +21,8 @@ export type RepDue = {
   assignedRepId: string | null;
   /** Anyone with the public pay link can pay it, no account needed. */
   allowGuests: boolean;
+  /** Extra questions guests answer on the pay link. `null` = the original form. */
+  guestFields: GuestField[] | null;
   /** Guests who've paid it (not part of `paidCount`). */
   guestPaidCount: number;
 };
@@ -27,7 +30,7 @@ export type RepDue = {
 /** The editable slice a rep fills in when creating or editing a due. */
 export type DueDraft = Pick<
   RepDue,
-  "title" | "note" | "amount" | "dueDate" | "category" | "allowGuests"
+  "title" | "note" | "amount" | "dueDate" | "category" | "allowGuests" | "guestFields"
 > & {
   /** New dues only: the co-rep who can withdraw its collections. Omitted = the creator. */
   assignedRepId?: string;
