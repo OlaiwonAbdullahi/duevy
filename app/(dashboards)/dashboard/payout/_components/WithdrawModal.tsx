@@ -12,6 +12,7 @@ import { Modal } from "../../_components/Modal";
 import { BARE_INPUT } from "../../_components/form-styles";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { isDemoMode } from "@/lib/demo/mode";
 import { getPayoutQuote, lookupBeneficiary, type WithdrawableDue } from "@/lib/api/payouts";
 import type { PayoutQuote, WithdrawalAuthMode } from "@/lib/api/types";
 import { fromKobo } from "../../_components/format";
@@ -173,7 +174,8 @@ export function WithdrawModal({
     <Modal title="Withdraw funds" icon={MoneySend01Icon} onClose={onClose}>
       {/* Hidden, not unmounted, so Back keeps a typed-in account intact. */}
       <div hidden={step !== "details"}>
-        {(dues.length > 0 && (dues.length > 1 || spaceWide)) && (
+        {/* The demo skips the per-due picker and withdraws from the default source. */}
+        {!isDemoMode() && dues.length > 0 && (dues.length > 1 || spaceWide) && (
           <div className="mb-4">
             <label htmlFor="withdraw-source" className="block text-xs font-medium text-ink-soft">
               Take money from
