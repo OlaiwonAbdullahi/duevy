@@ -134,7 +134,7 @@ export default function RootLayout({
               <PwaChrome />
             </AuthProvider>
           </MotionProvider>
-          <Toaster position="top-center" richColors />
+          <Toaster />
           <PwaRegister />
         </ThemeProvider>
         {/* Sabilytics web analytics */}
