@@ -11,7 +11,8 @@ import {
   FullScreenIcon,
   MinimizeScreenIcon,
 } from "@hugeicons/core-free-icons";
-import { slides } from "./slides";
+import type { PublicMetrics } from "@/lib/api/metrics";
+import { PitchMetricsContext, slides } from "./slides";
 
 const SWIPE_THRESHOLD = 50;
 
@@ -32,7 +33,7 @@ function subscribeToHash(onChange: () => void) {
  * between slides, Home/End jump, F toggles fullscreen, and swipes work on
  * touch. The URL hash is the current slide, so a link opens on it.
  */
-export default function PitchDeck() {
+export default function PitchDeck({ metrics }: { metrics: PublicMetrics | null }) {
   // -1 on the server: the hash is client-only, so the slide waits for it
   // rather than flashing slide 1 before a deep link resolves.
   const index = useSyncExternalStore(subscribeToHash, indexFromHash, () => -1);
@@ -187,7 +188,9 @@ export default function PitchDeck() {
         >
           <div className="absolute inset-0 overflow-y-auto overflow-x-hidden no-scrollbar">
             <div className="min-h-full flex items-center px-5 md:px-16 pt-20 pb-28">
-              <div className="w-full max-w-6xl mx-auto">{slide.render()}</div>
+              <div className="w-full max-w-6xl mx-auto">
+                <PitchMetricsContext.Provider value={metrics}>{slide.render()}</PitchMetricsContext.Provider>
+              </div>
             </div>
           </div>
         </m.section>

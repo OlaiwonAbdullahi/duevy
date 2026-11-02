@@ -30,9 +30,9 @@ export const METRICS_REVALIDATE = 3600;
  * unreachable or the endpoint isn't live yet, so the page can render its
  * empty state instead of failing the build.
  */
-export async function getPublicMetrics(): Promise<PublicMetrics | null> {
+export async function getPublicMetrics(baseUrl = API_BASE_URL): Promise<PublicMetrics | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/public/metrics`, {
+    const res = await fetch(`${baseUrl}/public/metrics`, {
       next: { revalidate: METRICS_REVALIDATE },
     });
     if (!res.ok) return null;
