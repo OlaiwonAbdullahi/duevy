@@ -62,9 +62,14 @@ export function getGuestCheckout(reference: string, token: string) {
   );
 }
 
-/** Direct link to a paid guest checkout's PDF receipt (public, token-gated). */
+/** A paid guest checkout's PDF receipt (public, token-gated), relative to the API. */
+export function guestReceiptPath(reference: string, token: string) {
+  return `/public/checkouts/${encodeURIComponent(reference)}/receipt?t=${encodeURIComponent(token)}`;
+}
+
+/** Direct link to a paid guest checkout's PDF receipt. */
 export function guestReceiptUrl(reference: string, token: string) {
-  return `${API_BASE_URL}/public/checkouts/${encodeURIComponent(reference)}/receipt?t=${encodeURIComponent(token)}`;
+  return `${API_BASE_URL}${guestReceiptPath(reference, token)}`;
 }
 
 /** The shareable link a rep sends out for a guest-enabled due. */

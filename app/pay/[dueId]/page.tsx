@@ -26,10 +26,13 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
+import { apiClient } from "@/lib/api/client";
+import { isDemoMode } from "@/lib/demo/mode";
 import type { GuestField } from "@/lib/api/types";
 import {
   getGuestCheckout,
   getGuestDue,
+  guestReceiptPath,
   guestReceiptUrl,
   startGuestCheckout,
   type GuestCheckoutStatus,
@@ -441,17 +444,7 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
             <dd className="min-w-0 truncate font-medium text-ink">{reference}</dd>
           </div>
         </dl>
-        {checkout.receiptNumber && (
-          <a
-            href={guestReceiptUrl(reference, token)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-5 inline-flex h-11 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
-          >
-            <HugeiconsIcon icon={Download04Icon} size={15} />
-            Download receipt
-          </a>
-        )}
+        {checkout.receiptNumber && <ReceiptButton reference={reference} token={token} />}
         <p className="mt-5 text-xs text-ink-soft">
           Want all your receipts in one place?{" "}
           <Link href="/forgot-password" className="font-semibold text-brand hover:underline">
@@ -641,6 +634,50 @@ function Notice({
 
 function CardSkeleton() {
   return <div className="h-80 animate-pulse rounded-3xl border border-cloud bg-paper/50" />;
+}
+
+/**
+ * The paid receipt. A real one opens straight from the API; a demo payment's
+ * comes from the demo's sample data, so it's fetched and saved instead.
+ */
+function ReceiptButton({ reference, token }: { reference: string; token: string }) {
+  const [busy, setBusy] = useState(false);
+  const className =
+    "mt-5 inline-flex h-11 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer";
+
+  if (!isDemoMode()) {
+    return (
+      <a href={guestReceiptUrl(reference, token)} target="_blank" rel="noopener noreferrer" className={className}>
+        <HugeiconsIcon icon={Download04Icon} size={15} />
+        Download receipt
+      </a>
+    );
+  }
+
+  const download = async () => {
+    setBusy(true);
+    try {
+      const url = URL.createObjectURL(await apiClient.getBlob(guestReceiptPath(reference, token)));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Duevy-receipt-${reference}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      toast.error("Couldn't download the receipt. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button type="button" onClick={() => void download()} disabled={busy} className={className}>
+      <HugeiconsIcon icon={Download04Icon} size={15} />
+      {busy ? "Preparing…" : "Download receipt"}
+    </button>
+  );
 }
 
 function CopyButton({ done, label, onClick }: { done: boolean; label: string; onClick: () => void }) {

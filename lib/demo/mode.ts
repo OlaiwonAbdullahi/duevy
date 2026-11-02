@@ -13,9 +13,14 @@ export const DEMO_USER_ID = "demo-user-tolu";
 
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];
 
+/** Demo dues' public pay links (`/pay/demo-due-2`) work from any tab, signed in or not. */
+const DEMO_PAY_PREFIX = "/pay/demo-";
+
 export function isDemoMode(): boolean {
   if (typeof window === "undefined") return false;
   const { pathname } = window.location;
+  // Answer from sample data without switching the tab into demo mode.
+  if (pathname.startsWith(DEMO_PAY_PREFIX)) return true;
   try {
     if (pathname === DEMO_PATH) sessionStorage.setItem(KEY, "1");
     else if (AUTH_PATHS.some((p) => pathname.startsWith(p))) sessionStorage.removeItem(KEY);

@@ -5,6 +5,7 @@ import { VerificationCard } from "./_components/VerificationCard";
 import { NotificationsCard } from "./_components/NotificationsCard";
 import { AppearanceCard } from "./_components/AppearanceCard";
 import { TourCard } from "./_components/TourCard";
+import { ReceiptDesignCard } from "./_components/ReceiptDesignCard";
 import { SecurityCard } from "./_components/SecurityCard";
 import { DangerZone } from "./_components/DangerZone";
 
@@ -25,6 +26,7 @@ export default function SettingsPage() {
         <VerificationCard />
         <NotificationsCard />
         <AppearanceCard />
+        <ReceiptDesignCard />
         <TourCard />
         <SecurityCard />
         <DangerZone />

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
+  ReceiptTextIcon,
   Wallet01Icon,
   UserMultipleIcon,
   Invoice01Icon,
@@ -290,14 +292,25 @@ export default function CreateDuesPage() {
                   Dues you&apos;ve raised for {repSpace?.name ?? "your department"}.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={openCreate}
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_var(--p-primary)] transition-colors duration-300 hover:bg-brand-bright cursor-pointer sm:h-11 sm:gap-2 sm:px-6 sm:shadow-none"
-              >
-                <HugeiconsIcon icon={Add01Icon} size={16} />
-                New due
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href="/dashboard/receipt-design"
+                  aria-label="Receipt design"
+                  title="Customise your receipts"
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-cloud bg-canvas px-3 text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand sm:h-11 sm:px-5"
+                >
+                  <HugeiconsIcon icon={ReceiptTextIcon} size={16} />
+                  <span className="max-sm:hidden">Receipt design</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_var(--p-primary)] transition-colors duration-300 hover:bg-brand-bright cursor-pointer sm:h-11 sm:gap-2 sm:px-6 sm:shadow-none"
+                >
+                  <HugeiconsIcon icon={Add01Icon} size={16} />
+                  New due
+                </button>
+              </div>
             </header>
 
             {loading ? (

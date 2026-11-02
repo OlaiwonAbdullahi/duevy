@@ -53,6 +53,7 @@ const PAGE_DESC: Record<string, string> = {
   "/dashboard/kyc": "Verify your identity and student ID (KYC)",
   "/dashboard/payout": "Withdraw collected funds",
   "/dashboard/manage": "Department profile, reps and settings",
+  "/dashboard/receipt-design": "Your logo, colours and signature on receipts",
 };
 
 /** Verb-first shortcuts every student is likely to search for. */

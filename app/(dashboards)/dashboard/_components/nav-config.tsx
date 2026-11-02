@@ -86,6 +86,8 @@ export const REP_ONLY_PREFIXES = [
   ...REP_LINKS.map((link) => link.href).filter((href) => href !== "/dashboard"),
   // Not in the sidebar — reached from the dashboard banner, Payout and Settings.
   "/dashboard/kyc",
+  // Not in the sidebar — reached from the Dues page, Settings and Manage dept.
+  "/dashboard/receipt-design",
 ];
 
 export function isRepOnlyPath(pathname: string) {

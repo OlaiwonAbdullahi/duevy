@@ -8,6 +8,7 @@ import { WithdrawalApprovalsCard } from "./_components/WithdrawalApprovalsCard";
 import { AuditTrailCard } from "./_components/AuditTrailCard";
 import { DangerZone } from "./_components/DangerZone";
 import { FEATURES } from "@/lib/features";
+import { ReceiptDesignCard } from "../settings/_components/ReceiptDesignCard";
 
 export default function ManageDeptPage() {
   return (
@@ -28,6 +29,7 @@ export default function ManageDeptPage() {
         <DepartmentProfileCard />
         <PartnerCard />
         {FEATURES.themes && <SpaceThemeCard />}
+        <ReceiptDesignCard />
         <RepsCard />
         <WithdrawalApprovalsCard />
         <AuditTrailCard />

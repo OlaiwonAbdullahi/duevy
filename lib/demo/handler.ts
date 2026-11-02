@@ -11,6 +11,9 @@ import type {
   SpaceKycStatus,
 } from "@/lib/api/types";
 import { DEMO_USER_ID } from "./mode";
+import { MAX_SIGNATURES, type ReceiptDesign, type ReceiptDesignSettings } from "@/lib/api/receipt-design";
+import type { Checkout } from "@/lib/api/dues";
+import type { GuestAnswer, GuestField } from "@/lib/api/types";
 import { BANKS, SPACE_ID, store, type DemoDue } from "./fixtures";
 
 /**
@@ -251,6 +254,90 @@ function pollResults(p: Poll) {
 const kycStatus = (): SpaceKycStatus => ({ ...store.kyc, leadRepId: DEMO_USER_ID, mine: store.kyc });
 
 const S = "/spaces/([^/]+)";
+
+/** The demo space's receipt design (starts as the standard one). */
+const receiptDesign: ReceiptDesign = {
+  accent: null,
+  headerStyle: "artwork",
+  title: null,
+  showStamp: true,
+  stampText: null,
+  stampStyle: "round",
+  stampColor: null,
+  stampImage: null,
+  thankYou: null,
+  note: null,
+  showAnswers: true,
+  logo: null,
+  signatures: [],
+  updatedAt: null,
+};
+
+/**
+ * Guest checkouts opened from a demo pay link. Nothing is charged: each one
+ * "receives" its transfer a few seconds after it opens, so the whole flow —
+ * account details, waiting, confirmation — can be shown.
+ */
+type DemoGuestCheckout = {
+  checkout: Checkout;
+  dueId: string;
+  payer: { name: string; email: string; matricNo: string | null };
+  answers: GuestAnswer[];
+  receiptNumber: string | null;
+  openedAt: number;
+};
+const guestCheckouts = new Map<string, DemoGuestCheckout>();
+const GUEST_PAYS_AFTER_MS = 12_000;
+
+/** A due as its public pay link shows it, or 404 when it isn't open to guests. */
+function publicDue(id: string) {
+  const d = store.dues.find((x) => x.id === id);
+  if (!d || !d.allowGuests || d.status !== "active") notFound();
+  return d;
+}
+
+/** Check answers against the due's questions, as the API does (lib/guestForm.ts). */
+function checkAnswers(fields: GuestField[], input: Record<string, string> = {}): GuestAnswer[] {
+  const issues: { field: string; issue: string }[] = [];
+  const answers: GuestAnswer[] = [];
+  for (const f of fields) {
+    const value = (input[f.id] ?? "").trim();
+    const field = `answers.${f.id}`;
+    if (!value) {
+      if (f.required) issues.push({ field, issue: `${f.label} is required` });
+      continue;
+    }
+    if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) issues.push({ field, issue: "must be a valid email" });
+    else if (f.type === "phone" && !/^\+?[0-9 ()-]{7,20}$/.test(value)) issues.push({ field, issue: "must be a valid phone number" });
+    else if (f.type === "number" && !/^-?\d+(\.\d+)?$/.test(value)) issues.push({ field, issue: "must be a number" });
+    else if (f.type === "select" && !f.options?.includes(value)) issues.push({ field, issue: "must be one of the options" });
+    else answers.push({ fieldId: f.id, label: f.label, value });
+  }
+  if (issues.length) {
+    throw new ApiError("Request validation failed", { code: "VALIDATION_ERROR", status: 400, details: issues });
+  }
+  return answers;
+}
+
+/** Settle a demo guest checkout once its time is up: the guest joins the due's guest list. */
+function settleGuestCheckout(g: DemoGuestCheckout) {
+  if (g.checkout.status !== "pending" || Date.now() - g.openedAt < GUEST_PAYS_AFTER_MS) return;
+  const paidAt = now();
+  Object.assign(g.checkout, { status: "paid", paidAt, receivedKobo: g.checkout.breakdown.total, bankTransfer: null });
+  g.receiptNumber = `R-DEMO${Math.floor(Math.random() * 9000 + 1000)}`;
+  const d = store.dues.find((x) => x.id === g.dueId);
+  if (d && !d.guests.some((x) => x.email === g.payer.email)) {
+    d.guests.unshift({ id: uid("demo-guest"), ...g.payer, paidAt, reference: g.checkout.reference, answers: g.answers });
+  }
+}
+
+const readDataUrl = (file: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 
 const routes: [string, string, Handler][] = [
   // ---- Auth & account ------------------------------------------------------
@@ -545,6 +632,113 @@ const routes: [string, string, Handler][] = [
   ["POST", `${S}/payout/([^/]+)/(approve|reject)`, ({ params: [, id] }) => store.payouts.find((p) => p.id === id) ?? notFound()],
   ["GET", `${S}/payout/([^/]+)`, ({ params: [, id] }) => store.payouts.find((p) => p.id === id) ?? notFound()],
 
+  // ---- Guest pay (public links) ---------------------------------------------------
+  ["GET", "/public/dues/([^/]+)", ({ params: [id] }) => {
+    const d = publicDue(id!);
+    const fee = processingFee(d.amount);
+    return {
+      id: d.id,
+      title: d.title,
+      note: d.note,
+      type: d.type,
+      dueDate: d.dueDate,
+      amount: d.amount,
+      fee,
+      total: d.amount + fee,
+      canCollect: true,
+      fields: d.guestFields ?? null,
+      space: { id: store.space.id, name: store.space.name, short: store.space.short, kind: store.space.kind, hue: store.space.hue },
+    };
+  }],
+  ["POST", "/public/dues/([^/]+)/checkout", ({ params: [id], body }) => {
+    const d = publicDue(id!);
+    const b = json(body) as { name?: string; email?: string; matricNo?: string; answers?: Record<string, string> };
+    const email = String(b.email ?? "").trim().toLowerCase();
+    if (d.guests.some((g) => g.email === email)) {
+      throw new ApiError("This email has already paid for this.", { code: "DUE_ALREADY_PAID", status: 409 });
+    }
+    const answers = d.guestFields ? checkAnswers(d.guestFields, b.answers) : [];
+    // Asking again with the same email reuses the open checkout, as the API does.
+    const open = [...guestCheckouts.values()].find((g) => g.dueId === d.id && g.payer.email === email && g.checkout.status === "pending");
+    if (open) {
+      open.answers = answers;
+      return { ...open.checkout, token: "demo", reused: true };
+    }
+    const fee = processingFee(d.amount);
+    const total = d.amount + fee;
+    const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
+    const reference = ref();
+    const checkout: Checkout = {
+      reference,
+      status: "pending",
+      spaceId: store.space.id,
+      amount: total,
+      breakdown: { face: d.amount, fee, total },
+      items: [{ dueId: d.id, title: d.title, amount: d.amount, fee }],
+      bankTransfer: { accountNumber: "9912345678", bankName: "Demo Bank", accountName: `Duevy / ${store.space.short}`, amountKobo: total, expiresAt },
+      checkoutUrl: null,
+      expiresAt,
+      paidAt: null,
+      receivedKobo: null,
+      overpaidKobo: 0,
+      createdAt: now(),
+    };
+    guestCheckouts.set(reference, {
+      checkout,
+      dueId: d.id,
+      payer: { name: String(b.name ?? "").trim(), email, matricNo: b.matricNo?.trim() || null },
+      answers,
+      receiptNumber: null,
+      openedAt: Date.now(),
+    });
+    return { ...checkout, token: "demo" };
+  }],
+  ["GET", "/public/checkouts/([^/]+)", ({ params: [reference] }) => {
+    const g = guestCheckouts.get(reference!) ?? notFound();
+    settleGuestCheckout(g);
+    return { ...g.checkout, receiptNumber: g.receiptNumber };
+  }],
+  // ---- Receipt design ----------------------------------------------------------
+  ["GET", `${S}/receipt-design`, () => receiptDesign],
+  ["PUT", `${S}/receipt-design`, ({ body }) => {
+    const { signatures, ...rest } = json(body) as Partial<ReceiptDesignSettings>;
+    // Text and order for signatures that exist, as the API does.
+    if (signatures) {
+      receiptDesign.signatures = signatures.flatMap((s) => {
+        const found = receiptDesign.signatures.find((x) => x.id === s.id);
+        return found ? [{ ...found, name: s.name, role: s.role }] : [];
+      });
+    }
+    return Object.assign(receiptDesign, rest, { updatedAt: now() });
+  }],
+  ["POST", `${S}/receipt-design/(logo|stamp)`, async ({ params: [, image], body }) => {
+    const file = body instanceof FormData ? body.get("file") : null;
+    if (!(file instanceof Blob)) return unavailable();
+    return Object.assign(receiptDesign, { [image === "logo" ? "logo" : "stampImage"]: await readDataUrl(file), updatedAt: now() });
+  }],
+  ["DELETE", `${S}/receipt-design/(logo|stamp)`, ({ params: [, image] }) =>
+    Object.assign(receiptDesign, { [image === "logo" ? "logo" : "stampImage"]: null, updatedAt: now() })],
+  ["POST", `${S}/receipt-design/signatures`, () => {
+    if (receiptDesign.signatures.length >= MAX_SIGNATURES) return unavailable("A receipt can have up to 3 signatures.");
+    receiptDesign.signatures.push({ id: uid("demo-sig"), name: null, role: null, image: null });
+    return receiptDesign;
+  }],
+  ["DELETE", `${S}/receipt-design/signatures/([^/]+)`, ({ params: [, id] }) => {
+    receiptDesign.signatures = receiptDesign.signatures.filter((s) => s.id !== id);
+    return receiptDesign;
+  }],
+  ["POST", `${S}/receipt-design/signatures/([^/]+)/image`, async ({ params: [, id], body }) => {
+    const file = body instanceof FormData ? body.get("file") : null;
+    const sig = receiptDesign.signatures.find((s) => s.id === id);
+    if (!(file instanceof Blob) || !sig) return notFound();
+    sig.image = await readDataUrl(file);
+    return receiptDesign;
+  }],
+  ["DELETE", `${S}/receipt-design/signatures/([^/]+)/image`, ({ params: [, id] }) => {
+    const sig = receiptDesign.signatures.find((s) => s.id === id);
+    if (sig) sig.image = null;
+    return receiptDesign;
+  }],
   // ---- Polls -------------------------------------------------------------------
   ["GET", `${S}/polls`, () => store.polls],
   ["POST", `${S}/polls/image`, ({ body }) => {
@@ -605,7 +799,7 @@ export async function demoRequest<T>(method: string, path: string, body: unknown
     if (route.method !== method) continue;
     const match = pathname.match(route.re);
     if (!match) continue;
-    const result = route.handler({ params: match.slice(1), query: new URLSearchParams(search), body: body as Body });
+    const result = await route.handler({ params: match.slice(1), query: new URLSearchParams(search), body: body as Body });
     // Return copies so callers mutating responses can't corrupt the store.
     const copy = result === undefined ? undefined : structuredClone(result);
     return (isPage(copy) ? copy : { data: copy }) as Page<T>;
@@ -616,6 +810,25 @@ export async function demoRequest<T>(method: string, path: string, body: unknown
 /** A one-page PDF standing in for receipts and exports. */
 export async function demoBlob(path: string): Promise<Blob> {
   await latency();
+  if (/\/receipt-design\/sample$/.test(path)) {
+    const { renderDemoReceipt } = await import("./receipt-sample");
+    return renderDemoReceipt(receiptDesign, store.space.name);
+  }
+  // A demo guest's receipt, in the space's receipt design.
+  const guestReceipt = path.match(/^\/public\/checkouts\/([^/?]+)\/receipt/);
+  const g = guestReceipt && guestCheckouts.get(decodeURIComponent(guestReceipt[1]!));
+  if (g?.receiptNumber) {
+    const { renderDemoReceipt } = await import("./receipt-sample");
+    return renderDemoReceipt(receiptDesign, store.space.name, {
+      number: g.receiptNumber,
+      reference: g.checkout.reference,
+      payer: g.payer.name,
+      item: g.checkout.items[0]!.title,
+      face: g.checkout.breakdown.face,
+      fee: g.checkout.breakdown.fee,
+      answers: g.answers.map((a) => [a.label, a.value]),
+    });
+  }
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF();
   doc.setFontSize(20);
