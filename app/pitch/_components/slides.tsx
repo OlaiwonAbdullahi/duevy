@@ -22,7 +22,6 @@ import {
   Megaphone01Icon,
   Mortarboard01Icon,
   MoneyBag01Icon,
-  Note01Icon,
   Notification03Icon,
   PercentIcon,
   PinCodeIcon,
@@ -394,6 +393,25 @@ function RevenueModel() {
 
 /* ── Slides ──────────────────────────────────────────────────────────────── */
 
+/** Paying a due today vs on Duevy — the problem slide's core claim. */
+const PAY_TODAY = [
+  "Spot the announcement, with the rep's account number, in the class WhatsApp group",
+  "Copy the account number into a bank app",
+  "Transfer the amount",
+  "Screenshot the debit alert",
+  "Send the screenshot to the rep",
+  "Wait for the rep to confirm and reply with the course's WhatsApp group",
+  "Join the course group",
+  "Fill in the Google Form the rep shares later, with your details",
+];
+
+const PAY_ON_DUEVY = [
+  { title: "Join your department's space", body: "Once, with the join code your rep shares." },
+  { title: "Select your dues", body: "Pick several at once and pay them in one checkout." },
+  { title: "Pay", body: "One transfer from any bank app, confirmed automatically, with a receipt for every naira." },
+];
+
+
 const unitRows = [2000, 5000, 10000, 20000, 50000, 100000];
 const maxKeep = Math.max(...unitRows.map((a) => duesFee(a) - processingCost(a)));
 
@@ -456,77 +474,71 @@ export const slides: Slide[] = [
           <Eyebrow>The problem</Eyebrow>
         </Item>
         <Item>
-          <Heading>Every semester, the same story.</Heading>
+          <Heading>Paying a ₦2,000 due shouldn&apos;t take 8 steps.</Heading>
         </Item>
         <Item>
           <Lede>
-            Campus money runs on cash, scattered transfers and a rep&apos;s notebook. When
-            students ask where it went, there&apos;s no clean answer.
+            Today a student pays a rep&apos;s personal account and then has to prove it. Duevy
+            cuts that to 3 steps, and the payment proves itself.
           </Lede>
         </Item>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
-          {[
-            {
-              icon: MoneyBag01Icon,
-              title: "Cash & scattered transfers",
-              body: "Dues land in a rep's personal account alongside their own money.",
-            },
-            {
-              icon: Note01Icon,
-              title: "No receipts, no records",
-              body: "Who paid lives in a notebook or a WhatsApp scroll-back.",
-            },
-            {
-              icon: AlertCircleIcon,
-              title: "“Did my payment land?”",
-              body: "Students have no proof of payment when a rep's list says otherwise.",
-            },
-            {
-              icon: UserGroupIcon,
-              title: "Trust breaks down",
-              body: "Honest reps get accused. Handover to the next exec starts from zero.",
-            },
-          ].map((c) => (
-            <Item key={c.title}>
-              <Card {...c} />
-            </Item>
-          ))}
+        <div className="grid lg:grid-cols-2 gap-4 mt-10">
+          <Item>
+            <div className="h-full rounded-3xl bg-white border border-[#e6f2ec] p-6 md:p-7">
+              <p className="flex items-baseline justify-between gap-3">
+                <span className="font-semibold tracking-tight text-[#1b2520]">How students pay today</span>
+                <span className="text-[13px] font-semibold text-[#b91c1c] tabular-nums">8 steps</span>
+              </p>
+              <ol className="mt-4 space-y-2">
+                {PAY_TODAY.map((step, i) => (
+                  <li key={step} className="flex gap-3 text-[14px] leading-snug text-[#7a847f]">
+                    <span className="w-5 shrink-0 text-right font-semibold tabular-nums text-[#a3aca7]">{i + 1}</span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </Item>
+          <Item>
+            <div className="h-full rounded-3xl bg-[#0b6e4f] p-6 md:p-7 text-white">
+              <p className="flex items-baseline justify-between gap-3">
+                <span className="font-semibold tracking-tight">On Duevy</span>
+                <span className="text-[13px] font-semibold text-white/80 tabular-nums">3 steps</span>
+              </p>
+              <ol className="mt-4 space-y-4">
+                {PAY_ON_DUEVY.map((step, i) => (
+                  <li key={step.title} className="flex gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/15 text-[13px] font-semibold tabular-nums">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="font-semibold leading-snug">{step.title}</p>
+                      <p className="mt-0.5 text-[14px] leading-snug text-white/75">{step.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-6 border-t border-white/20 pt-4 text-[14px] leading-snug text-white/80">
+                No screenshots, no &ldquo;abeg check&rdquo;, no chasing the rep.
+              </p>
+            </div>
+          </Item>
         </div>
-      </Stagger>
-    ),
-  },
-  {
-    title: "Why now",
-    render: () => (
-      <Stagger>
-        <Item>
-          <Eyebrow>Why now</Eyebrow>
-        </Item>
-        <Item>
-          <Heading>Campuses went digital. Campus money didn&apos;t.</Heading>
-        </Item>
-        <div className="grid lg:grid-cols-3 gap-4 mt-12">
-          {[
-            {
-              icon: Globe02Icon,
-              title: "Universities are digitising",
-              body: "Admissions, course registration, results and school fees are moving onto portals and e-payments. Students already pay each other by transfer every day.",
-            },
-            {
-              icon: AlertCircleIcon,
-              title: "The rest is still fragmented",
-              body: "Dues, levies, handouts and association fees sit outside those systems — in personal accounts, notebooks and WhatsApp threads. Admins and students both lose track.",
-            },
-            {
-              icon: Plug01Icon,
-              title: "The rails now exist",
-              body: "Instant bank transfers and identity APIs make it cheap to verify a rep, confirm a payment automatically and settle to any bank. Duevy brings it into one platform.",
-            },
-          ].map((c) => (
-            <Item key={c.title}>
-              <Card {...c} />
-            </Item>
-          ))}
+        <div className="grid md:grid-cols-2 gap-4 mt-4">
+          <Item>
+            <Row
+              icon={MoneyBag01Icon}
+              title="For reps: dues scattered across personal accounts"
+              body="Collections land in the rep's own accounts, often more than one, mixed in with their own money."
+            />
+          </Item>
+          <Item>
+            <Row
+              icon={CheckListIcon}
+              title="For reps: reconciling by hand"
+              body="Matching every alert and screenshot to a name on a list, every semester, and getting accused when one is missed."
+            />
+          </Item>
         </div>
       </Stagger>
     ),
@@ -577,6 +589,42 @@ export const slides: Slide[] = [
                   <p className="text-[15px] leading-relaxed text-[#7a847f]">{c.body}</p>
                 </div>
               </div>
+            </Item>
+          ))}
+        </div>
+      </Stagger>
+    ),
+  },
+  {
+    title: "Why now",
+    render: () => (
+      <Stagger>
+        <Item>
+          <Eyebrow>Why now</Eyebrow>
+        </Item>
+        <Item>
+          <Heading>Campuses went digital. Campus money didn&apos;t.</Heading>
+        </Item>
+        <div className="grid lg:grid-cols-3 gap-4 mt-12">
+          {[
+            {
+              icon: Globe02Icon,
+              title: "Universities are digitising",
+              body: "Admissions, course registration, results and school fees are moving onto portals and e-payments. Students already pay each other by transfer every day.",
+            },
+            {
+              icon: AlertCircleIcon,
+              title: "The rest is still fragmented",
+              body: "Dues, levies, handouts and association fees sit outside those systems — in personal accounts, notebooks and WhatsApp threads. Admins and students both lose track.",
+            },
+            {
+              icon: Plug01Icon,
+              title: "The rails now exist",
+              body: "Instant bank transfers and identity APIs make it cheap to verify a rep, confirm a payment automatically and settle to any bank. Duevy brings it into one platform.",
+            },
+          ].map((c) => (
+            <Item key={c.title}>
+              <Card {...c} />
             </Item>
           ))}
         </div>
