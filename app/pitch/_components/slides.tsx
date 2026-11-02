@@ -679,7 +679,7 @@ export const slides: Slide[] = [
             { icon: FileExportIcon, title: "Payout breakdown & export", body: "Collected, fees and net per due; CSV export of collections." },
             { icon: AuditIcon, title: "Audit trail", body: "Every action in a space is logged for handover." },
             { icon: UserGroupIcon, title: "Circle", body: "Member list, join codes you can regenerate, remove members." },
-            { icon: SmartPhone01Icon, title: "Installable app", body: "Works in any browser; add to home screen with an offline fallback." },
+            { icon: SmartPhone01Icon, title: "Installable app", body: "Works in any browser; add to home screen with an offline fallback. Native Android and iOS apps are coming." },
           ].map((c) => (
             <Item key={c.title}>
               <Row {...c} />
@@ -970,6 +970,7 @@ export const slides: Slide[] = [
                 "Advanced collection analytics",
                 "Bulk collections across many classes",
                 "Settlement reports for institutions",
+                "Native mobile apps for Android and iOS",
               ],
             },
             {
@@ -1059,6 +1060,19 @@ export const slides: Slide[] = [
             </Item>
           ))}
         </div>
+        <Item>
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-4 rounded-3xl bg-[#08583f]/70 border border-white/10 p-6 backdrop-blur-md">
+            <IconBadge icon={SmartPhone01Icon} onBrand />
+            <div className="flex-1">
+              <h3 className="text-white font-semibold text-lg mb-1">Duevy on Android and iOS</h3>
+              <p className="text-white/75 text-[15px] leading-relaxed">
+                Native mobile apps are coming, so members can pay dues and reps can manage collections
+                from their phones.
+              </p>
+            </div>
+            <StatusChip status="planned" onBrand />
+          </div>
+        </Item>
       </Stagger>
     ),
   },
