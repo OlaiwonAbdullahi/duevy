@@ -34,7 +34,7 @@ import {
 import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
 import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
-import type { PinMode } from "./_components/PinModal";
+import { PIN_ERRORS, type PinMode } from "./_components/PinModal";
 
 const WithdrawModal = dynamic(() => import("./_components/WithdrawModal").then((mod) => mod.WithdrawModal), { ssr: false });
 const PinModal = dynamic(() => import("./_components/PinModal").then((mod) => mod.PinModal), { ssr: false });
@@ -94,15 +94,6 @@ const REJECT_ERRORS: Record<string, string> = {
 
 const fmtWhen = (iso: string) => new Date(iso).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
 
-/** Setting/changing/resetting the withdrawal code. */
-const PIN_ERRORS: Record<string, string> = {
-  INVALID_PASSWORD: "Your password is incorrect.",
-  PASSWORD_REQUIRED: "Your account has no password yet. Sign out, use \u201cForgot password\u201d to create one, then try again.",
-  WEAK_PIN: "Choose a less predictable code.",
-  INVALID_WITHDRAWAL_PIN: "Your current code is incorrect.",
-  WITHDRAWAL_PIN_LOCKED: "Too many wrong codes. Reset your code instead.",
-};
-
 const BENEFICIARY_ERRORS: Record<string, { title: string; description: string }> = {
   ACCOUNT_UNVERIFIABLE: {
     title: "We couldn't verify that account",
@@ -122,7 +113,7 @@ const BENEFICIARY_ERRORS: Record<string, { title: string; description: string }>
   },
 };
 
-/** The lead rep's withdrawal-code state: set it, it's locked/on hold, or a quiet "change" link. */
+/** The lead rep's withdrawal-code state when it needs action: not set yet, or locked. */
 function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onAction: (mode: PinMode) => void }) {
   const box =
     "mt-4 flex flex-col gap-2 rounded-3xl border px-4 py-3.5 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4";
@@ -158,14 +149,8 @@ function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onActi
       </div>
     );
   }
-  return (
-    <div className="mt-4 flex items-center justify-end gap-3 text-xs sm:mt-6">
-      <span className="text-ink-soft">Withdrawal security code is set</span>
-      <button type="button" onClick={() => onAction("change")} className="font-semibold text-brand cursor-pointer hover:underline">
-        Change code
-      </button>
-    </div>
-  );
+  // Code is set: changing it lives in Settings → Security.
+  return null;
 }
 
 /** Security banners every rep sees: a hold after a security change, or approvals missing signatories. */

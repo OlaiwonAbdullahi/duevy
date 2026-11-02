@@ -10,9 +10,10 @@ import {
 import { SettingsCard } from "./SettingsCard";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import { SessionsModal } from "./SessionsModal";
+import { WithdrawalCodeRow } from "./WithdrawalCodeRow";
 
 /** A tappable row that runs an action — change password, sign out everywhere. */
-function ActionRow({
+export function ActionRow({
   title,
   description,
   cta,
@@ -87,6 +88,8 @@ export function SecurityCard() {
           icon={Logout01Icon}
           onClick={() => setSessionsOpen(true)}
         />
+
+        <WithdrawalCodeRow />
       </div>
 
       {passwordOpen && (

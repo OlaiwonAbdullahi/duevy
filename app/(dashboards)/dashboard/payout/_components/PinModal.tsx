@@ -31,6 +31,15 @@ const COPY: Record<PinMode, { title: string; intro: string; submit: string }> = 
   },
 };
 
+/** Setting/changing/resetting the withdrawal code. */
+export const PIN_ERRORS: Record<string, string> = {
+  INVALID_PASSWORD: "Your password is incorrect.",
+  PASSWORD_REQUIRED: "Your account has no password yet. Sign out, use \u201cForgot password\u201d to create one, then try again.",
+  WEAK_PIN: "Choose a less predictable code.",
+  INVALID_WITHDRAWAL_PIN: "Your current code is incorrect.",
+  WITHDRAWAL_PIN_LOCKED: "Too many wrong codes. Reset your code instead.",
+};
+
 const WEAK = new Set(["0123", "1234", "2345", "3456", "4567", "5678", "6789", "9876", "8765", "7654", "6543", "5432", "4321", "3210"]);
 const isWeak = (pin: string) => /^(\d)\1{3}$/.test(pin) || WEAK.has(pin);
 
