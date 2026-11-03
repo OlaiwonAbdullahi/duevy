@@ -417,6 +417,47 @@ const PAY_TODAY_FALLOUT: { icon: Icon; title: string; body: string }[] = [
   { icon: Clock01Icon, title: "Hours of reconciling", body: "Every alert, screenshot and form matched to a name by hand." },
 ];
 
+/** The "How it works" slide: who does each step, and what it produces in the app. */
+const HOW_IT_WORKS: { who: "Rep" | "Student"; icon: Icon; title: string; body: string; proof: string; done?: boolean }[] = [
+  {
+    who: "Rep",
+    icon: UserCheck01Icon,
+    title: "Gets verified",
+    body: "Applies for their department and passes ID checks before collecting a naira.",
+    proof: "Verified · CSC 200L",
+  },
+  {
+    who: "Rep",
+    icon: Invoice01Icon,
+    title: "Creates dues",
+    body: "Sets the amount and deadline, and any details to collect from guests.",
+    proof: "200L dues · ₦2,000 · 14 Nov",
+  },
+  {
+    who: "Rep",
+    icon: Link01Icon,
+    title: "Shares the link",
+    body: "Drops the join code in the class WhatsApp. Outsiders can pay as guests.",
+    proof: "duevy.app/join/CSC7Q2",
+  },
+  {
+    who: "Student",
+    icon: BankIcon,
+    title: "Pays",
+    body: "Selects their dues and makes one transfer. It confirms itself, receipt included.",
+    proof: "Paid · R-000123",
+    done: true,
+  },
+  {
+    who: "Rep",
+    icon: ChartUpIcon,
+    title: "Tracks & withdraws",
+    body: "Sees who's paid, reminds the rest, and withdraws with a code or 2 of 3 reps.",
+    proof: "₦78,000 out · 2 of 3 approved",
+    done: true,
+  },
+];
+
 const PAY_ON_DUEVY = [
   { title: "Join your department's space", body: "Once, with the join code your rep shares." },
   { title: "Select your dues", body: "Pick several at once and pay them in one checkout." },
@@ -655,28 +696,56 @@ export const slides: Slide[] = [
         <Item>
           <Heading>From set-up to settled.</Heading>
         </Item>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-12">
-          {[
-            { title: "Rep gets verified", body: "Applies for their department, passes ID checks, and Duevy approves the space." },
-            { title: "Create dues", body: "Set the amount and deadline for each due — “200L CSC dues, ₦2,000.”" },
-            { title: "Share the link", body: "Drop the join link or code in the class WhatsApp. Students join — or pay as a guest, no account needed." },
-            { title: "Students pay", body: "Bank transfer, confirmed automatically, PDF receipt straight away." },
-            { title: "Track & withdraw", body: "See who's paid, remind the rest, withdraw to a bank account once it's approved." },
-          ].map((s, i) => (
-            <Item key={s.title}>
-              <div className="h-full rounded-3xl bg-white border border-[#e6f2ec] p-6">
-                <span className="text-[#0b6e4f] font-semibold text-sm tabular-nums">
-                  {String(i + 1).padStart(2, "0")}
+        <Item>
+          <Lede>
+            The rep sets it up once. Students pay in a few taps. Every naira is accounted for by
+            the time it&apos;s withdrawn.
+          </Lede>
+        </Item>
+
+        <ol className="relative mt-12 grid gap-8 lg:grid-cols-5 lg:gap-6">
+          {/* The track the steps sit on. */}
+          <span aria-hidden className="absolute left-[22px] right-[22px] top-[22px] hidden h-px bg-[#cfe3d9] lg:block" />
+          {HOW_IT_WORKS.map((step, i) => {
+            const rep = step.who === "Rep";
+            return (
+              <Item key={step.title} className="relative flex gap-4 lg:block">
+                <span
+                  className={`relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full ${
+                    rep ? "bg-[#0b6e4f] text-white" : "border-2 border-[#0b6e4f] bg-[#f7f6f2] text-[#0b6e4f]"
+                  }`}
+                >
+                  <HugeiconsIcon icon={step.icon} size={20} />
                 </span>
-                <div className="h-px bg-[#e6f2ec] my-5" />
-                <h3 className="font-semibold text-lg tracking-tight text-[#1b2520] mb-2">
-                  {s.title}
-                </h3>
-                <p className="text-[15px] leading-relaxed text-[#7a847f]">{s.body}</p>
-              </div>
-            </Item>
-          ))}
-        </div>
+                <div className="min-w-0 lg:mt-5">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-[#7a847f]">
+                    <span className="tabular-nums text-[#0b6e4f]">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="mx-1.5 text-[#cfe3d9]">/</span>
+                    {step.who}
+                  </p>
+                  <h3 className="mt-1.5 text-lg font-semibold tracking-tight text-[#1b2520]">{step.title}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-[#7a847f]">{step.body}</p>
+                  {/* What the step produces, as it looks in the app. */}
+                  <div className="mt-4 inline-flex max-w-full items-center gap-2 rounded-full border border-[#e6f2ec] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#1b2520] shadow-[0_6px_16px_-12px_rgba(11,110,79,0.45)]">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${step.done ? "bg-[#10b981]" : "bg-[#0b6e4f]"}`} />
+                    <span className="truncate">{step.proof}</span>
+                  </div>
+                </div>
+              </Item>
+            );
+          })}
+        </ol>
+
+        <Item>
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#e8ece9] pt-5 text-[13px] text-[#7a847f]">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-[#0b6e4f]" /> The rep
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full border-2 border-[#0b6e4f]" /> Students, members or guests
+            </span>
+          </div>
+        </Item>
       </Stagger>
     ),
   },
