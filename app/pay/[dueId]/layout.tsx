@@ -21,17 +21,25 @@ export default async function GuestPayLayout({
   // Signing in comes back here, so someone with an account pays as themselves.
   const { dueId } = await params;
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="mx-auto flex h-16 max-w-lg items-center justify-between px-5">
+    <div className="relative min-h-screen bg-canvas">
+      {/* A soft brand wash behind the card. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-cloud to-transparent" />
+      <header className="relative mx-auto flex h-16 max-w-lg items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logos/duevy-mark.svg" alt="Duevy" width={24} height={24} style={{ width: "auto" }} className="h-6" />
           <span className="text-lg tracking-tight text-ink">Duevy.</span>
         </Link>
-        <Link href={`/login?next=${encodeURIComponent(`/pay/${dueId}`)}`} className="text-sm font-medium text-ink-soft transition-colors hover:text-brand">
+        <Link
+          href={`/login?next=${encodeURIComponent(`/pay/${dueId}`)}`}
+          className="rounded-full border border-cloud bg-canvas/80 px-3.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-brand/30 hover:text-brand"
+        >
           Sign in
         </Link>
       </header>
-      <main className="mx-auto max-w-lg px-5 pb-16 pt-2">{children}</main>
+      <main className="relative mx-auto max-w-lg px-4 pb-10 pt-2 sm:px-5">{children}</main>
+      <footer className="relative pb-8 text-center text-[11px] text-ink-soft">
+        Payments are processed securely · {SITE_NAME}
+      </footer>
     </div>
   );
 }

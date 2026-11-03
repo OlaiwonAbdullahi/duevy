@@ -10,6 +10,7 @@ import {
   SquareLock02Icon,
   SentIcon,
   MoreVerticalIcon,
+  Share08Icon,
 } from "@hugeicons/core-free-icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { HugeIcon } from "../../_components/nav-config";
@@ -27,6 +28,7 @@ export function DueListRow({
   onDelete,
   onClose,
   onPublish,
+  onShare,
   onViewCollections,
 }: {
   due: RepDue;
@@ -34,6 +36,8 @@ export function DueListRow({
   onDelete: (due: RepDue) => void;
   onClose: (due: RepDue) => void;
   onPublish: (due: RepDue) => void;
+  /** Details and the pay link to share again. */
+  onShare: (due: RepDue) => void;
   onViewCollections: (due: RepDue) => void;
 }) {
   const rel = relativeDue(due.dueDate);
@@ -53,6 +57,7 @@ export function DueListRow({
         onDelete={onDelete}
         onClose={onClose}
         onPublish={onPublish}
+        onShare={onShare}
         onViewCollections={onViewCollections}
       />
       <div className="hidden items-center gap-4 py-4 sm:flex">
@@ -126,6 +131,17 @@ export function DueListRow({
               <HugeiconsIcon icon={SentIcon} size={16} />
             </button>
           )}
+          {due.status === "active" && (
+            <button
+              type="button"
+              onClick={() => onShare(due)}
+              aria-label={`Share ${due.title}`}
+              title="Share"
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition-colors duration-300 hover:bg-paper hover:text-brand cursor-pointer"
+            >
+              <HugeiconsIcon icon={Share08Icon} size={16} />
+            </button>
+          )}
           {/* Closed dues can't be edited (409 DUE_CLOSED). */}
           {due.status !== "closed" && (
             <button
@@ -178,6 +194,7 @@ function MobileDueRow({
   onDelete,
   onClose,
   onPublish,
+  onShare,
   onViewCollections,
 }: {
   due: RepDue;
@@ -187,6 +204,8 @@ function MobileDueRow({
   onDelete: (due: RepDue) => void;
   onClose: (due: RepDue) => void;
   onPublish: (due: RepDue) => void;
+  /** Details and the pay link to share again. */
+  onShare: (due: RepDue) => void;
   onViewCollections: (due: RepDue) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -196,6 +215,9 @@ function MobileDueRow({
 
   const actions: { label: string; icon: HugeIcon; run: () => void; danger?: boolean }[] = [
     { label: "View collections", icon: UserMultipleIcon, run: () => onViewCollections(due) },
+    ...(due.status === "active"
+      ? [{ label: "Share due", icon: Share08Icon, run: () => onShare(due) }]
+      : []),
     ...(due.status === "draft"
       ? [{ label: "Publish due", icon: SentIcon, run: () => onPublish(due) }]
       : []),

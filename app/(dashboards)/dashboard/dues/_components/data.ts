@@ -130,7 +130,12 @@ export function relativeDue(iso: string): { text: string; past: boolean } {
  * plus ₦20, charged once per checkout rather than per due.
  */
 export function basketFee(dues: Due[]): number {
-  const faceKobo = dues.reduce((sum, d) => sum + Math.round(d.faceAmount * 100), 0);
+  return checkoutFee(dues.reduce((sum, d) => sum + d.faceAmount, 0));
+}
+
+/** The same fee for a face value in naira — e.g. what one payer adds on top of a due. */
+export function checkoutFee(faceNaira: number): number {
+  const faceKobo = Math.round(faceNaira * 100);
   if (faceKobo === 0) return 0;
   return (Math.floor((faceKobo * 2 * 2 + 100) / 200) + 2_000) / 100;
 }

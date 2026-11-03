@@ -20,6 +20,7 @@ import type { DueDraft, RepDue, RepDueStatus } from "./_components/types";
 import { DueListRow } from "./_components/DueListRow";
 import { DueForm } from "./_components/DueForm";
 import { DueCollections } from "./_components/DueCollections";
+import { DueShareModal } from "./_components/DueShareModal";
 import { EmptyState } from "../_components/EmptyState";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
 import { ListSkeleton, StatRowSkeleton } from "../_components/Skeleton";
@@ -93,6 +94,8 @@ export default function CreateDuesPage() {
   const viewingDue = dueParam ? (dues.find((d) => d.id === dueParam) ?? null) : null;
   const [toDelete, setToDelete] = useState<RepDue | null>(null);
   const [toClose, setToClose] = useState<RepDue | null>(null);
+  // The details-and-share dialog: opened by publishing, or later from a due's Share action.
+  const [sharing, setSharing] = useState<{ due: RepDue; justPublished: boolean } | null>(null);
 
 
   useEffect(() => {
@@ -153,11 +156,9 @@ export default function CreateDuesPage() {
         setDues((list) => list.map((d) => (d.id === editing.id ? row : d)));
         toast.success("Due updated", { description: draft.title });
       } else {
-        const created = await createDue(spaceId, { ...toApiDraft(draft), publish: true });
-        setDues((list) => [adaptRepDue(created), ...list]);
-        toast.success("Due published", {
-          description: `${draft.title} · ${naira(draft.amount)}`,
-        });
+        const created = adaptRepDue(await createDue(spaceId, { ...toApiDraft(draft), publish: true }));
+        setDues((list) => [created, ...list]);
+        setSharing({ due: created, justPublished: true });
       }
       setEditing(null);
       setMode("list");
@@ -200,7 +201,7 @@ export default function CreateDuesPage() {
       const published = await publishDue(spaceId, due.id);
       const row = adaptRepDue(published);
       setDues((list) => list.map((d) => (d.id === due.id ? row : d)));
-      toast.success("Due published", { description: `${due.title} · ${naira(due.amount)}` });
+      setSharing({ due: row, justPublished: true });
     } catch (err) {
       if (err instanceof ApiError && err.code === "KYC_REQUIRED") {
         toastKycRequired("Verification needed to publish", "try again");
@@ -409,6 +410,7 @@ export default function CreateDuesPage() {
                           onDelete={setToDelete}
                           onClose={setToClose}
                           onPublish={publish}
+                          onShare={(d) => setSharing({ due: d, justPublished: false })}
                           onViewCollections={openCollections}
                         />
                       ))}
@@ -420,6 +422,19 @@ export default function CreateDuesPage() {
           </m.div>
         )}
       </AnimatePresence>
+
+      {sharing && (
+        <DueShareModal
+          due={sharing.due}
+          spaceName={repSpace?.name ?? "your department"}
+          justPublished={sharing.justPublished}
+          onClose={() => setSharing(null)}
+          onViewCollections={() => {
+            setSharing(null);
+            openCollections(sharing.due);
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={!!toDelete}

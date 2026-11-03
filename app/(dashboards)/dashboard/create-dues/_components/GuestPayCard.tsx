@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Link01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Link01Icon, Share08Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { CollectionGuest } from "@/lib/api/types";
 import { guestPayPath } from "@/lib/api/guest";
 import { siteOrigin } from "@/lib/site-url";
 import { UserAvatar } from "../../_components/UserAvatar";
 import { timeAgo } from "../../_components/notifications-data";
+import { useRepSpace } from "../../_components/use-rep-space";
+import { DueShareModal } from "./DueShareModal";
 import type { RepDue } from "./types";
 
 /**
@@ -16,6 +18,8 @@ import type { RepDue } from "./types";
  */
 export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionGuest[] }) {
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const spaceName = useRepSpace()?.name ?? "your department";
   const link = `${siteOrigin()}${guestPayPath(due.id)}`;
   const live = due.status === "active";
 
@@ -57,8 +61,18 @@ export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionG
             <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={14} />
             {copied ? "Copied" : "Copy"}
           </button>
+          <button
+            type="button"
+            onClick={() => setSharing(true)}
+            aria-label="Share pay link"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-cloud bg-canvas px-3.5 text-xs font-semibold text-ink transition-colors hover:border-brand/40 hover:text-brand cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            <HugeiconsIcon icon={Share08Icon} size={14} />
+            <span className="max-sm:sr-only">Share</span>
+          </button>
         </div>
       )}
+      {sharing && <DueShareModal due={due} spaceName={spaceName} onClose={() => setSharing(false)} />}
 
       <div className="mt-5">
         <p className="text-xs font-medium text-ink-soft">

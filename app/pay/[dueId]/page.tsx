@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   Download04Icon,
   Mail01Icon,
   SecurityCheckIcon,
+  SquareLock02Icon,
   Tick02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
@@ -105,19 +106,20 @@ function GuestPay() {
 // The Bachs overlay, as UI state
 // ---------------------------------------------------------------------------
 
-type OverlayNotice = { tone: "rose" | "amber" | "neutral"; title: string; body: string };
-
 /**
- * Opens checkout sessions in the Bachs overlay and turns its events into what
- * the page shows. `onCompleted` fires on the browser's `checkout.completed`,
- * which only means "go and wait for the API to confirm it". `onEnded` fires on
- * failed / expired, so the page can have the API re-check the session before a
- * retry.
+ * Opens checkout sessions in the Bachs overlay and reports its outcomes as
+ * toasts. `onCompleted` fires on the browser's `checkout.completed`, which
+ * only means "go and wait for the API to confirm it". `onEnded` fires on
+ * failed / expired, so the page can have the API re-check the session before
+ * a retry. `attempted` is set once a try ended without paying, for a "Try
+ * again" label.
  */
 function useOverlayCheckout({ onCompleted, onEnded }: { onCompleted: () => void; onEnded?: () => void }) {
   const [phase, setPhase] = useState<"idle" | "opening" | "open">("idle");
-  const [notice, setNotice] = useState<OverlayNotice | null>(null);
+  const [attempted, setAttempted] = useState(false);
   const completed = useRef(false);
+  // Set when failed / expired / error already told the payer, so closing doesn't toast twice.
+  const told = useRef(false);
   const handlers = useRef({ onCompleted, onEnded });
   useEffect(() => {
     handlers.current = { onCompleted, onEnded };
@@ -141,42 +143,30 @@ function useOverlayCheckout({ onCompleted, onEnded }: { onCompleted: () => void;
         handlers.current.onCompleted();
         return;
       case "checkout.failed":
-        setNotice({
-          tone: "rose",
-          title: "That payment didn't go through",
-          body: "Nothing was charged for it. Your details are still here — try again when you're ready.",
-        });
+        told.current = true;
+        setAttempted(true);
+        toast.error("Payment didn't go through", { description: "Nothing was charged. Your details are saved — try again." });
         handlers.current.onEnded?.();
         return;
       case "checkout.expired":
-        setNotice({
-          tone: "amber",
-          title: "The checkout timed out",
-          body: "Nothing was charged. Tap pay again and we'll open a fresh one.",
-        });
+        told.current = true;
+        setAttempted(true);
+        toast.warning("Checkout timed out", { description: "Nothing was charged. Tap pay again for a fresh one." });
         handlers.current.onEnded?.();
         return;
       case "checkout.closed":
         setPhase("idle");
-        if (!completed.current) {
-          setNotice(
-            (n) =>
-              n ?? {
-                tone: "neutral",
-                title: "Payment not finished",
-                body: "You closed the checkout before paying. Your details are saved — pick up where you left off.",
-              },
-          );
+        if (!completed.current && !told.current) {
+          setAttempted(true);
+          toast.info("Payment not finished", { description: "Your details are saved — pick up where you left off." });
         }
         return;
       case "checkout.error":
         console.error("Bachs checkout error", event.data);
+        told.current = true;
+        setAttempted(true);
         setPhase("idle");
-        setNotice({
-          tone: "rose",
-          title: "The secure checkout hit a problem",
-          body: "Nothing was charged. Please try again in a moment.",
-        });
+        toast.error("Checkout hit a problem", { description: "Nothing was charged. Please try again in a moment." });
         return;
       default:
         // opened / loaded: nothing to show.
@@ -187,29 +177,36 @@ function useOverlayCheckout({ onCompleted, onEnded }: { onCompleted: () => void;
   const open = useCallback(
     async (checkoutUrl: string) => {
       completed.current = false;
-      setNotice(null);
+      told.current = false;
       setPhase("opening");
       try {
         await openBachsCheckout(checkoutUrl, onEvent);
       } catch (err) {
         console.error("Couldn't open the Bachs checkout", err);
         setPhase("idle");
-        setNotice({
-          tone: "rose",
-          title: "Couldn't open the secure checkout",
-          body: "Check your connection (and any content blocker), then try again. Nothing was charged.",
+        setAttempted(true);
+        toast.error("Couldn't open the secure checkout", {
+          description: "Check your connection (and any content blocker), then try again. Nothing was charged.",
         });
       }
     },
     [onEvent],
   );
 
-  return { phase, notice, open, dismiss: () => setNotice(null) };
+  return { phase, attempted, open };
 }
 
 // ---------------------------------------------------------------------------
 // Step 1 — who's paying
 // ---------------------------------------------------------------------------
+
+const TRUST = ["Secure checkout", "No account needed", "Receipt by email"];
+
+/** "17 Nov" from a yyyy-mm-dd date. */
+function shortDate(ymd: string) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y!, m! - 1, d!).toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+}
 
 function PayForm({ dueId }: { dueId: string }) {
   const router = useRouter();
@@ -221,9 +218,9 @@ function PayForm({ dueId }: { dueId: string }) {
   const [matricNo, setMatricNo] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [createAccount, setCreateAccount] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Field ids the API rejected — outlined red; the reason comes as a toast.
+  const [invalid, setInvalid] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<{ message: string; signIn?: boolean } | null>(null);
   // The checkout the overlay is showing, so its completion can open the status page.
   const active = useRef<{ reference: string; token: string } | null>(null);
 
@@ -246,6 +243,12 @@ function PayForm({ dueId }: { dueId: string }) {
         if (cancelled) return;
         setDue(d);
         setState("ready");
+        if (!d.canCollect) {
+          toast.info("Not taking payments yet", {
+            description: "This department's rep is still finishing verification. Try again later.",
+            duration: 10_000,
+          });
+        }
       })
       .catch(() => !cancelled && setState("closed"));
     return () => {
@@ -272,22 +275,23 @@ function PayForm({ dueId }: { dueId: string }) {
   const fields = due.fields ?? [];
   const busy = submitting || overlay.phase !== "idle";
   const valid =
+    due.canCollect &&
     (signedIn || (name.trim().length >= 2 && EMAIL_RE.test(email.trim()))) &&
     (!!profileMatric || matricNo.trim().length > 0) &&
     fields.every((f) => !f.required || answers[f.id]?.trim());
 
+  const clearInvalid = (id: string) =>
+    invalid.has(id) && setInvalid((s) => new Set([...s].filter((x) => x !== id)));
   const answer = (id: string, value: string) => {
     setAnswers((a) => ({ ...a, [id]: value }));
-    if (fieldErrors[id]) setFieldErrors((errs) => ({ ...errs, [id]: "" }));
+    clearInvalid(`answers.${id}`);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid || busy) return;
     setSubmitting(true);
-    setError(null);
-    setFieldErrors({});
-    overlay.dismiss();
+    setInvalid(new Set());
     try {
       const checkout = await startGuestCheckout(dueId, {
         name: signedIn ? user.name : name.trim(),
@@ -305,255 +309,293 @@ function PayForm({ dueId }: { dueId: string }) {
         router.replace(statusHref(dueId, checkout.reference, checkout.token), { scroll: false });
       }
     } catch (err) {
+      const details = err instanceof ApiError ? (err.details ?? []) : [];
       if (err instanceof ApiError && err.code === "EMAIL_HAS_ACCOUNT") {
-        setError({ message: "This email already has a Duevy account. Sign in to pay, so it shows in your history.", signIn: true });
-      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field.startsWith("answers."))) {
+        toast.error("This email has a Duevy account", {
+          description: "Sign in to pay, so it shows in your history.",
+          action: { label: "Sign in", onClick: () => router.push(`/login?next=${encodeURIComponent(`/pay/${dueId}`)}`) },
+          duration: 10_000,
+        });
+      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && details.length) {
         // The rep may have changed the questions since this page loaded.
-        setFieldErrors(
-          Object.fromEntries(
-            err.details.filter((d) => d.field.startsWith("answers.")).map((d) => [d.field.slice("answers.".length), d.issue]),
-          ),
+        setInvalid(new Set(details.map((d) => d.field)));
+        const first = details[0]!;
+        toast.error(
+          first.field === "email"
+            ? "That email address doesn't look right"
+            : first.field === "matricNo"
+              ? "Enter your matric number"
+              : "Check your answers",
+          { description: first.field.startsWith("answers.") ? first.issue : undefined },
         );
-        setError({ message: "Check your answers above and try again." });
-      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field === "matricNo")) {
-        setFieldErrors({ matricNo: "Enter your matric number" });
-        setError({ message: "Check your answers above and try again." });
-      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field === "email")) {
-        setError({ message: "That email address doesn't look right. Check it and try again." });
       } else if (err instanceof ApiError && err.code === "DUE_ALREADY_PAID") {
-        setError({ message: "This email has already paid for this. Check your inbox for the receipt." });
+        toast.info("Already paid", { description: "This email has paid for this. Check your inbox for the receipt." });
       } else if (err instanceof ApiError && err.code === "CHECKOUT_OPENING") {
-        setError({ message: "Your payment is still being set up. Give it a few seconds, then try again." });
+        toast.info("Still setting up your payment", { description: "Give it a few seconds, then try again." });
       } else {
-        setError({ message: err instanceof ApiError ? err.message : "Couldn't start the payment. Please try again." });
+        toast.error("Couldn't start the payment", {
+          description: err instanceof ApiError ? err.message : "Check your connection and try again.",
+        });
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const payLabel = submitting
-    ? "Setting up…"
-    : overlay.phase !== "idle"
-      ? "Opening secure checkout…"
-      : overlay.notice
-        ? `Try again · ${exactNaira(due.total)}`
-        : `Pay ${exactNaira(due.total)}`;
+  const payLabel = !due.canCollect
+    ? "Not taking payments yet"
+    : submitting
+      ? "Setting up…"
+      : overlay.phase !== "idle"
+        ? "Opening secure checkout…"
+        : overlay.attempted
+          ? `Try again · ${exactNaira(due.total)}`
+          : `Pay ${exactNaira(due.total)}`;
 
   return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-6 sm:p-8">
-      <div className="flex items-center gap-4">
-        <SpaceEmblem space={due.space} glyph={KIND_GLYPH[due.space.kind]} size={52} />
-        <div className="min-w-0">
-          <p className="truncate text-xs text-ink-soft">
-            {due.space.name} · {SPACE_KIND_LABEL[due.space.kind]}
+    <div className="overflow-hidden rounded-[28px] border border-cloud bg-canvas shadow-[0_30px_60px_-40px_rgba(11,110,79,0.45)]">
+      {/* What's being paid, and how much. */}
+      <div className="doodle-card relative px-6 pb-7 pt-6 text-white sm:px-8">
+        <div className="relative flex items-center gap-3">
+          <span className="rounded-2xl bg-white/15 p-1 ring-1 ring-white/20">
+            <SpaceEmblem space={due.space} glyph={KIND_GLYPH[due.space.kind]} size={40} />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs text-white/75">
+              {due.space.name} · {SPACE_KIND_LABEL[due.space.kind]}
+            </p>
+            <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{due.title}</h1>
+          </div>
+        </div>
+        <div className="relative mt-6">
+          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">Amount to pay</p>
+          <p className="mt-1 text-[34px] font-semibold leading-none tracking-tight tabular-nums">{exactNaira(due.total)}</p>
+          <p className="mt-2 text-xs text-white/75">
+            {exactNaira(due.amount)} + {exactNaira(due.fee)} service fee · Due {shortDate(due.dueDate)}
           </p>
-          <h1 className="truncate text-lg font-semibold tracking-tight text-ink">{due.title}</h1>
         </div>
       </div>
-      {due.note && <p className="mt-4 text-sm leading-relaxed text-ink-soft">{due.note}</p>}
 
-      <Breakdown face={due.amount} fee={due.fee} total={due.total} />
+      <form onSubmit={submit} className="flex flex-col gap-5 p-6 sm:p-8" noValidate>
+        {due.note && <p className="-mt-1 text-sm leading-relaxed text-ink-soft">{due.note}</p>}
 
-      {!due.canCollect ? (
-        <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
-          This department can&apos;t take payments yet — its rep is still finishing verification.
-          Try again later.
-        </p>
-      ) : (
-        <form onSubmit={submit} className="mt-6 flex flex-col gap-4" noValidate>
-          {/* Disabled while the overlay is up, so nothing changes under an open payment. */}
-          <fieldset disabled={busy} className="flex min-w-0 flex-col gap-4">
-            {signedIn ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-cloud bg-paper/50 px-4 py-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
-                  <HugeiconsIcon icon={SecurityCheckIcon} size={16} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">Paying as {user.name}</p>
-                  <p className="truncate text-[11px] text-ink-soft">
-                    {user.email}
-                    {profileMatric ? ` · ${profileMatric}` : ""} · this payment goes into your Duevy history
-                  </p>
-                </div>
+        {/* Disabled while the overlay is up, so nothing changes under an open payment. */}
+        <fieldset disabled={busy} className="flex min-w-0 flex-col gap-4">
+          <legend className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Your details</legend>
+          {signedIn ? (
+            <div className="flex items-center gap-3 rounded-2xl bg-cloud/70 px-4 py-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-canvas text-brand">
+                <HugeiconsIcon icon={SecurityCheckIcon} size={16} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">Paying as {user.name}</p>
+                <p className="truncate text-[11px] text-ink-soft">
+                  {user.email}
+                  {profileMatric ? ` · ${profileMatric}` : ""}
+                </p>
               </div>
-            ) : (
-              <>
-                <div>
-                  <Label htmlFor="guest-name" className="text-xs font-medium text-ink">Full name</Label>
-                  <Input
-                    id="guest-name"
-                    autoComplete="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="As it should appear on your receipt"
-                    className={cn(BRAND_INPUT, "mt-1.5")}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="guest-email" className="text-xs font-medium text-ink">Email</Label>
-                  <Input
-                    id="guest-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="We'll send your receipt here"
-                    className={cn(BRAND_INPUT, "mt-1.5")}
-                  />
-                </div>
-              </>
-            )}
-            {!profileMatric && (
-              <div>
-                <Label htmlFor="guest-matric" className="text-xs font-medium text-ink">Matric number</Label>
+            </div>
+          ) : (
+            <>
+              <FormField id="guest-name" label="Full name">
                 <Input
-                  id="guest-matric"
-                  autoComplete="off"
-                  maxLength={32}
-                  value={matricNo}
-                  aria-invalid={!!fieldErrors.matricNo}
+                  id="guest-name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Write your name"
+                  className={BRAND_INPUT}
+                />
+              </FormField>
+              <FormField id="guest-email" label="Email">
+                <Input
+                  id="guest-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  aria-invalid={invalid.has("email")}
                   onChange={(e) => {
-                    setMatricNo(e.target.value);
-                    if (fieldErrors.matricNo) setFieldErrors((errs) => ({ ...errs, matricNo: "" }));
+                    setEmail(e.target.value);
+                    clearInvalid("email");
                   }}
-                  placeholder="Helps the rep match your payment"
-                  className={cn(BRAND_INPUT, "mt-1.5")}
+                  placeholder="Your email address"
+                  className={cn(BRAND_INPUT, invalid.has("email") && INVALID)}
                 />
-                {fieldErrors.matricNo && <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.matricNo}</p>}
-              </div>
-            )}
-            {fields.map((f) => (
-              <AnswerField
-                key={f.id}
-                field={f}
-                value={answers[f.id] ?? ""}
-                error={fieldErrors[f.id]}
-                onChange={(v) => answer(f.id, v)}
-              />
-            ))}
-
-            {!signedIn && (
-              <label
-                htmlFor="guest-create-account"
-                className="flex cursor-pointer items-start gap-3 rounded-2xl border border-cloud bg-paper/40 p-4 transition-colors has-[:checked]:border-brand/40 has-[:checked]:bg-brand/5"
-              >
-                <input
-                  id="guest-create-account"
-                  type="checkbox"
-                  checked={createAccount}
-                  onChange={(e) => setCreateAccount(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded accent-[var(--color-brand)]"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm leading-snug text-ink">
-                    Create a free Duevy account for me so I can track my payments, access receipts and
-                    manage future collections.
-                  </span>
-                  <span className="mt-1 block text-[11px] leading-relaxed text-ink-soft">
-                    You can still complete your payment without creating an account.
-                  </span>
-                </span>
-              </label>
-            )}
-          </fieldset>
-
-          {overlay.notice && <InlineNotice notice={overlay.notice} />}
-
-          {error && (
-            <p className="rounded-2xl bg-rose-50 p-3 text-[13px] leading-relaxed text-rose-700">
-              {error.message}{" "}
-              {error.signIn && (
-                <Link href={`/login?next=${encodeURIComponent(`/pay/${dueId}`)}`} className="font-semibold underline">
-                  Sign in
-                </Link>
-              )}
-            </p>
+              </FormField>
+            </>
           )}
+          {!profileMatric && (
+            <FormField id="guest-matric" label="Matric number">
+              <Input
+                id="guest-matric"
+                autoComplete="off"
+                maxLength={32}
+                value={matricNo}
+                aria-invalid={invalid.has("matricNo")}
+                onChange={(e) => {
+                  setMatricNo(e.target.value);
+                  clearInvalid("matricNo");
+                }}
+                placeholder="Your matric number"
+                className={cn(BRAND_INPUT, invalid.has("matricNo") && INVALID)}
+              />
+            </FormField>
+          )}
+          {fields.map((f) => (
+            <AnswerField
+              key={f.id}
+              field={f}
+              value={answers[f.id] ?? ""}
+              invalid={invalid.has(`answers.${f.id}`)}
+              onChange={(v) => answer(f.id, v)}
+            />
+          ))}
 
+          {!signedIn && (
+            <label
+              htmlFor="guest-create-account"
+              className="mt-1 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-cloud px-3.5 py-3 transition-colors has-[:checked]:border-brand/40 has-[:checked]:bg-cloud/50"
+            >
+              <input
+                id="guest-create-account"
+                type="checkbox"
+                checked={createAccount}
+                onChange={(e) => setCreateAccount(e.target.checked)}
+                className="mt-px h-4 w-4 shrink-0 cursor-pointer rounded accent-[var(--color-brand)]"
+              />
+              <span className="min-w-0">
+                <span className="block text-xs leading-relaxed text-ink">
+                  Create a free Duevy account for me so I can track my payments, access receipts and manage
+                  future collections.
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-soft">
+                  You can still complete your payment without creating an account.
+                </span>
+              </span>
+            </label>
+          )}
+        </fieldset>
+
+        <div className="flex flex-col gap-3">
           <button
             type="submit"
             disabled={!valid || busy}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-semibold text-white shadow-[0_12px_24px_-12px_rgba(11,110,79,0.7)] transition-all duration-300 hover:bg-brand-bright active:translate-y-px disabled:opacity-50 disabled:shadow-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
-            {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+            {busy ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <HugeiconsIcon icon={SquareLock02Icon} size={16} />
+            )}
             {payLabel}
           </button>
-          <p className="inline-flex items-center justify-center gap-1.5 text-center text-[11px] leading-relaxed text-ink-soft">
-            <HugeiconsIcon icon={SecurityCheckIcon} size={12} />
-            {signedIn
-              ? "Secure checkout — you pay without leaving this page."
-              : "No account needed. Pay securely without leaving this page; your receipt comes by email."}
-          </p>
-        </form>
-      )}
+          <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-ink-soft">
+            {TRUST.map((t) => (
+              <li key={t} className="inline-flex items-center gap-1">
+                <HugeiconsIcon icon={Tick02Icon} size={12} className="text-brand" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </form>
     </div>
   );
+}
+
+/** Red outline for a field the API rejected. */
+const INVALID = "border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15";
+
+function FormField({ id, label, optional, children }: { id: string; label: string; optional?: boolean; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id} className="text-xs font-medium text-ink">
+        {label} {optional && <span className="font-normal text-ink-soft">(optional)</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+/** A short, plain prompt for one of the rep's questions. */
+function placeholderFor(field: GuestField) {
+  switch (field.type) {
+    case "email":
+      return "Your email address";
+    case "phone":
+      return "Your phone number";
+    case "number":
+      return "Enter a number";
+    case "textarea":
+      return "Write here";
+    case "select":
+      return "Choose one";
+    default:
+      return `Your ${field.label.charAt(0).toLowerCase()}${field.label.slice(1)}`;
+  }
 }
 
 /** One of the rep's questions, as the input its type calls for. */
 function AnswerField({
   field,
   value,
-  error,
+  invalid,
   onChange,
 }: {
   field: GuestField;
   value: string;
-  error?: string;
+  invalid: boolean;
   onChange: (value: string) => void;
 }) {
   const id = `guest-q-${field.id}`;
   const input = {
     id,
     value,
-    "aria-invalid": !!error,
+    "aria-invalid": invalid,
+    placeholder: placeholderFor(field),
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value),
   };
 
   return (
-    <div>
-      <Label htmlFor={id} className="text-xs font-medium text-ink">
-        {field.label} {!field.required && <span className="font-normal text-ink-soft">(optional)</span>}
-      </Label>
-      <div className="mt-1.5">
-        {field.type === "select" ? (
-          <Select value={value} onValueChange={onChange}>
-            <SelectTrigger id={id} aria-invalid={!!error} className="h-11 w-full rounded-2xl text-sm font-normal">
-              <SelectValue placeholder="Choose one" />
-            </SelectTrigger>
-            <SelectContent>
-              {(field.options ?? []).map((o) => (
-                <SelectItem key={o} value={o}>
-                  {o}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : field.type === "textarea" ? (
-          <textarea
-            {...input}
-            maxLength={500}
-            className="min-h-[88px] w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand placeholder:text-ink-soft"
-          />
-        ) : (
-          <Input
-            {...input}
-            maxLength={500}
-            {...(field.type === "email"
-              ? { type: "email", inputMode: "email" as const }
-              : field.type === "phone"
-                ? { type: "tel", inputMode: "tel" as const, autoComplete: "tel" }
-                : field.type === "number"
-                  ? { inputMode: "decimal" as const }
-                  : {})}
-            className={BRAND_INPUT}
-          />
-        )}
-      </div>
-      {error && <p className="mt-1 text-[11px] text-rose-600">{error}</p>}
-    </div>
+    <FormField id={id} label={field.label} optional={!field.required}>
+      {field.type === "select" ? (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger id={id} aria-invalid={invalid} className={cn("h-11 w-full rounded-2xl border-cloud bg-canvas px-4 text-sm font-normal", invalid && INVALID)}>
+            <SelectValue placeholder={placeholderFor(field)} />
+          </SelectTrigger>
+          <SelectContent>
+            {(field.options ?? []).map((o) => (
+              <SelectItem key={o} value={o}>
+                {o}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : field.type === "textarea" ? (
+        <textarea
+          {...input}
+          maxLength={500}
+          className={cn(
+            "min-h-[96px] w-full resize-none rounded-2xl border border-cloud bg-canvas px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-[3px] focus:ring-brand/15 placeholder:text-ink-soft",
+            invalid && INVALID,
+          )}
+        />
+      ) : (
+        <Input
+          {...input}
+          maxLength={500}
+          {...(field.type === "email"
+            ? { type: "email", inputMode: "email" as const }
+            : field.type === "phone"
+              ? { type: "tel", inputMode: "tel" as const, autoComplete: "tel" }
+              : field.type === "number"
+                ? { inputMode: "decimal" as const }
+                : {})}
+          className={cn(BRAND_INPUT, invalid && INVALID)}
+        />
+      )}
+    </FormField>
   );
 }
 
@@ -581,6 +623,8 @@ function CheckoutStatus({
   const [copied, setCopied] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const settled = useRef(false);
+  // Seen pending on this visit: a change to paid / expired is news, so it gets a toast.
+  const sawPending = useRef(false);
   const status = checkout?.status ?? "pending";
 
   const overlay = useOverlayCheckout({
@@ -597,8 +641,14 @@ function CheckoutStatus({
     try {
       const res = await getGuestCheckout(reference, token);
       setCheckout(res);
-      if (res.status !== "pending") settled.current = true;
-      else if (manual) toast.info("Still waiting for your payment", { description: "It usually lands within a minute or two." });
+      if (res.status === "pending") {
+        sawPending.current = true;
+        if (manual) toast.info("Still waiting for your payment", { description: "It usually lands within a minute or two." });
+      } else {
+        settled.current = true;
+        if (sawPending.current && res.status === "paid") toast.success("Payment confirmed", { description: "Your receipt is ready." });
+        if (sawPending.current && res.status === "expired") toast.error("This payment expired", { description: "Nothing was charged." });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         settled.current = true;
@@ -728,7 +778,6 @@ function CheckoutStatus({
 
       {hostedUrl ? (
         <div className="mt-5 flex flex-col gap-3">
-          {overlay.notice && <InlineNotice notice={overlay.notice} />}
           <button
             type="button"
             disabled={overlay.phase !== "idle" || msLeft <= 0}
@@ -740,7 +789,9 @@ function CheckoutStatus({
             ) : (
               <HugeiconsIcon icon={SecurityCheckIcon} size={16} />
             )}
-            {overlay.phase !== "idle" ? "Opening secure checkout…" : `Pay ${exactNaira(breakdown.total)}`}
+            {overlay.phase !== "idle"
+              ? "Opening secure checkout…"
+              : `${overlay.attempted ? "Try again" : "Pay"} ${exactNaira(breakdown.total)}`}
           </button>
         </div>
       ) : bank ? (
@@ -1028,21 +1079,6 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
     <div className="flex justify-between gap-3">
       <dt className="shrink-0 text-ink-soft">{label}</dt>
       <dd className={cn("min-w-0 truncate text-right font-medium text-ink", mono && "font-mono")}>{value}</dd>
-    </div>
-  );
-}
-
-function InlineNotice({ notice }: { notice: OverlayNotice }) {
-  return (
-    <div
-      role="status"
-      className={cn(
-        "rounded-2xl p-3 text-[13px] leading-relaxed",
-        notice.tone === "rose" ? "bg-rose-50 text-rose-700" : notice.tone === "amber" ? "bg-amber-50 text-amber-800" : "bg-paper text-ink-soft",
-      )}
-    >
-      <p className="font-semibold">{notice.title}</p>
-      <p>{notice.body}</p>
     </div>
   );
 }
