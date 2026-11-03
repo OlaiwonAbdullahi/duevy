@@ -1,7 +1,7 @@
 import { apiClient } from "./client";
 import { API_BASE_URL } from "./config";
 import type { Checkout } from "./dues";
-import type { DueType, EmblemHue, GuestField, SpaceKind } from "./types";
+import type { DueType, EmblemHue, GuestAnswer, GuestField, SpaceKind } from "./types";
 
 /**
  * Guest pay: dues a rep opened to guests can be paid from a public link with a
@@ -21,7 +21,7 @@ export type GuestDue = {
   total: number;
   /** False until the rep finishes verification — the space can't collect yet. */
   canCollect: boolean;
-  /** The rep's extra questions. `null` = the original form (optional matric number). */
+  /** The rep's extra questions, on top of name, email and matric number (always asked). */
   fields: GuestField[] | null;
   space: { id: string; name: string; short: string; kind: SpaceKind; hue: EmblemHue };
 };
@@ -31,14 +31,33 @@ export type GuestCheckout = Checkout & {
   token: string;
 };
 
-export type GuestCheckoutStatus = Checkout & { receiptNumber: string | null };
+/** Where the payer's Duevy account stands. */
+export type GuestAccountState = {
+  /** The payer already has a full account (paid signed in, or activated since). */
+  exists: boolean;
+  /** They asked for one — at checkout, or from the success page. */
+  requested: boolean;
+  /** When the activation link was emailed; null until the payment is confirmed and it's sent. */
+  inviteSentAt: string | null;
+};
+
+export type GuestCheckoutStatus = Checkout & {
+  receiptNumber: string | null;
+  spaceName: string;
+  payer: { name: string; email: string; matricNo: string | null };
+  answers: GuestAnswer[];
+  account: GuestAccountState;
+};
 
 export type GuestPayer = {
   name: string;
   email: string;
+  /** Always asked; may be left out only when signed in with one on the profile. */
   matricNo?: string;
   /** Answers to the due's `fields`, keyed by field id. */
   answers?: Record<string, string>;
+  /** "Create a free Duevy account for me" — the account is made only once the payment is confirmed. */
+  createAccount?: boolean;
 };
 
 /** `404` when the link isn't open (members-only, closed, or unknown). */
@@ -47,9 +66,10 @@ export function getGuestDue(dueId: string) {
 }
 
 /**
- * Open (or reuse) a guest checkout.
+ * Open (or reuse) a guest checkout. When signed in, the session's account pays
+ * (the typed name and email are ignored), so the payment lands in its history.
  * Errors: `400 VALIDATION_ERROR` (an answer is missing or invalid; `details[].field`
- * is `answers.<fieldId>`), `409 EMAIL_HAS_ACCOUNT` (sign in instead), `409 DUE_ALREADY_PAID`,
+ * is `answers.<fieldId>`, or `matricNo`), `409 EMAIL_HAS_ACCOUNT` (sign in instead), `409 DUE_ALREADY_PAID`,
  * `409 SPACE_NOT_VERIFIED`, `404` when the link closed meanwhile.
  */
 export function startGuestCheckout(dueId: string, payer: GuestPayer) {
@@ -59,6 +79,16 @@ export function startGuestCheckout(dueId: string, payer: GuestPayer) {
 export function getGuestCheckout(reference: string, token: string) {
   return apiClient.get<GuestCheckoutStatus>(
     `/public/checkouts/${encodeURIComponent(reference)}?t=${encodeURIComponent(token)}`,
+  );
+}
+
+/**
+ * Ask for a Duevy account after the fact, or for the activation link again.
+ * Sent once the payment is confirmed. `409 ACCOUNT_EXISTS` when the email already has one.
+ */
+export function requestGuestAccount(reference: string, token: string) {
+  return apiClient.post<{ outcome: string; account: GuestAccountState }>(
+    `/public/checkouts/${encodeURIComponent(reference)}/account?t=${encodeURIComponent(token)}`,
   );
 }
 

@@ -18,18 +18,21 @@ function safeNext(raw: string | null): string | null {
   return raw;
 }
 
+/**
+ * Where to go after signing in. Read at submit time rather than on mount: a
+ * client-side <Link> to /login?next=… renders this page before the address bar
+ * changes, so reading it on mount sees the previous page's URL and loses `next`
+ * (and avoids `useSearchParams()`, which would force a Suspense boundary).
+ * Falls back to a persisted destination for the case where the URL's own
+ * `next` was lost — e.g. verifying an email link in a different tab/device
+ * than the one that started signup.
+ */
+function readNext(): string | null {
+  return safeNext(new URLSearchParams(window.location.search).get("next")) ?? readPostAuthNext();
+}
+
 export default function LoginForm() {
   const router = useRouter();
-  // Read once on mount rather than via `useSearchParams()`, which would force
-  // this route into a Suspense boundary just for a value we only need at submit time.
-  // Falls back to a persisted destination for the case where the URL's own
-  // `next` was lost — e.g. verifying an email link in a different tab/device
-  // than the one that started signup.
-  const [next] = useState(() => {
-    if (typeof window === "undefined") return null;
-    const urlNext = safeNext(new URLSearchParams(window.location.search).get("next"));
-    return urlNext ?? readPostAuthNext();
-  });
   const { login, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -40,6 +43,7 @@ export default function LoginForm() {
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
 
+    const next = readNext();
     setLoading(true);
     // Stays locked once we're redirecting, so the fields don't come back mid-navigation.
     let redirecting = false;

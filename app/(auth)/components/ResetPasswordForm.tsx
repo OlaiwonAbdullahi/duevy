@@ -11,7 +11,11 @@ import { ApiError } from "@/lib/api/errors";
 import AuthField from "./AuthField";
 import { ArrowRightIcon, CheckIcon } from "../../components/icons";
 
-export default function ResetPasswordForm({ token }: { token: string | null }) {
+/**
+ * Sets a password from an emailed link. `activate` is the account-activation
+ * link a guest gets after paying (same single-use token, friendlier words).
+ */
+export default function ResetPasswordForm({ token, activate = false }: { token: string | null; activate?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -81,11 +85,12 @@ export default function ResetPasswordForm({ token }: { token: string | null }) {
         </span>
 
         <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
-          Password updated
+          {activate ? "Account activated" : "Password updated"}
         </h1>
         <p className="text-[#7a847f] text-[15px] leading-relaxed mb-8">
-          Your password has been reset. Sign in with your new password to
-          continue.
+          {activate
+            ? "You're all set. Sign in to see your payments and receipts."
+            : "Your password has been reset. Sign in with your new password to continue."}
         </p>
 
         <button
@@ -93,7 +98,7 @@ export default function ResetPasswordForm({ token }: { token: string | null }) {
           onClick={() => router.push("/login")}
           className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] cursor-pointer"
         >
-          Back to sign in
+          {activate ? "Sign in" : "Back to sign in"}
           <ArrowRightIcon
             size={16}
             className="transition-transform duration-500 group-hover:translate-x-1"
@@ -107,10 +112,12 @@ export default function ResetPasswordForm({ token }: { token: string | null }) {
     <div className="flex flex-col">
       <div className="mb-8">
         <h1 className="text-[#1b2520] font-semibold tracking-tight text-3xl leading-tight mb-2">
-          Set a new password
+          {activate ? "Activate your account" : "Set a new password"}
         </h1>
         <p className="text-[#7a847f] text-[15px] leading-relaxed">
-          Choose a new password for your account.
+          {activate
+            ? "Choose a password for your Duevy account. Your payment is already linked to it."
+            : "Choose a new password for your account."}
         </p>
       </div>
 
@@ -151,7 +158,7 @@ export default function ResetPasswordForm({ token }: { token: string | null }) {
           disabled={loading}
           className="group mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#0b6e4f] text-white text-[15px] font-semibold transition-colors duration-300 hover:bg-[#0f996d] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
         >
-          {loading ? "Updating…" : "Update password"}
+          {loading ? (activate ? "Activating…" : "Updating…") : activate ? "Activate account" : "Update password"}
           {!loading && (
             <ArrowRightIcon
               size={16}

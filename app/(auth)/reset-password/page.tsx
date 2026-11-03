@@ -12,8 +12,8 @@ export const metadata: Metadata = pageMetadata({
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; activate?: string }>;
 }) {
-  const { token } = await searchParams;
-  return <ResetPasswordForm token={token ?? null} />;
+  const { token, activate } = await searchParams;
+  return <ResetPasswordForm token={token ?? null} activate={activate === "1"} />;
 }

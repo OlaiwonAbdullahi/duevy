@@ -39,10 +39,11 @@ NEXT_PUBLIC_LOGO_DEV_TOKEN=your_logo_dev_token
 |---|---|---|
 | `NEXT_PUBLIC_API_BASE_URL` | Yes | Base URL of the backend API, **including** the `/v1` prefix. Point this at your local backend (`http://localhost:3000/v1`) or a deployed one. |
 | `NEXT_PUBLIC_LOGO_DEV_TOKEN` | No | Public token from [logo.dev](https://logo.dev) — a fallback for bank logos we don't host in `public/banks/` (mostly smaller MFBs). Without it, or when it has no logo either, a generated DiceBear pattern seeded with the bank name is shown. See `app/(dashboards)/dashboard/payout/_components/BankLogo.tsx`. |
+| `NEXT_PUBLIC_BACHS_CHECKOUT_ORIGIN` | No | Origin the Bachs overlay checkout (`@bachs/js`) loads from and accepts checkout URLs on. Defaults to `https://checkout.bachs.io`; set it only if your sandbox `checkout_url`s are served from a different origin. See `lib/bachs/overlay.ts`. |
 
 Bank logos in `public/banks/` are generated from [nigerianbanks.xyz](https://nigerianbanks.xyz) and Blockroll open-assets (`docs/banks.json`), both MIT. Refresh them with `npm run banks:logos` (add `-- --verbose` to see what was skipped).
 
-Both are `NEXT_PUBLIC_*` and get inlined at build time, per Next.js convention.
+All are `NEXT_PUBLIC_*` and get inlined at build time, per Next.js convention.
 
 ### 3. Run the dev server
 

@@ -30,7 +30,7 @@ import { CategoryPicker } from "./CategoryPicker";
 import { DatePicker } from "./DatePicker";
 import { DuePreview } from "./DuePreview";
 import { Toggle } from "../../settings/_components/Toggle";
-import { DEFAULT_GUEST_FIELDS, GuestFormBuilder, guestFieldsIssue } from "./GuestFormBuilder";
+import { DEFAULT_GUEST_FIELDS, GuestFormBuilder, editableGuestFields, guestFieldsIssue } from "./GuestFormBuilder";
 
 /** One-tap amounts reps reach for most. */
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -129,9 +129,11 @@ export function DueForm({
   const isLead = repSpace?.membership !== "co";
   const coReps = (useSpaceReps(!editing && isLead ? repSpace?.id : undefined).data ?? []).filter((r) => r.role === "co");
   const [assignedRepId, setAssignedRepId] = useState("");
-  const [allowGuests, setAllowGuests] = useState(initial?.allowGuests ?? false);
-  // A due that never had a custom form starts from the original one (optional matric no).
-  const initialGuestFields = initial?.guestFields ?? DEFAULT_GUEST_FIELDS;
+  // New dues get a shareable pay link and the default form; existing dues keep what they have.
+  const initialAllowGuests = initial ? initial.allowGuests : true;
+  const [allowGuests, setAllowGuests] = useState(initialAllowGuests);
+  // An existing due shows its own questions (matric number is always asked, so never one of them).
+  const initialGuestFields = initial ? editableGuestFields(initial.guestFields) : DEFAULT_GUEST_FIELDS;
   const [guestFields, setGuestFields] = useState(initialGuestFields);
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -154,7 +156,7 @@ export function DueForm({
     amountDigits !== (initial ? String(initial.amount) : "") ||
     dueDate !== (initial?.dueDate ?? "") ||
     note !== (initial?.note ?? "") ||
-    allowGuests !== (initial?.allowGuests ?? false) ||
+    allowGuests !== initialAllowGuests ||
     JSON.stringify(guestFields) !== JSON.stringify(initialGuestFields) ||
     assignedRepId !== "";
 
@@ -173,7 +175,11 @@ export function DueForm({
         dueDate,
         category,
         allowGuests,
-        guestFields: guestFields.map((f) => ({ ...f, label: f.label.trim() })),
+        // Untouched, an existing due's form is sent back as it was (null stays null).
+        guestFields:
+          initial && JSON.stringify(guestFields) === JSON.stringify(initialGuestFields)
+            ? initial.guestFields
+            : guestFields.map((f) => ({ ...f, label: f.label.trim() })),
         ...(assignedRepId ? { assignedRepId } : {}),
       });
     } finally {
@@ -329,13 +335,13 @@ export function DueForm({
               <div className="rounded-2xl border border-cloud bg-paper/40 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink">Let guests pay</p>
+                    <p className="text-sm font-medium text-ink">Pay link &amp; form</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
-                      People outside {spaceName} can pay from a link you share — no Duevy account
-                      needed. Useful for dinners, events and open sales.
+                      Share a link anyone can pay from — classmates or people outside {spaceName} — with
+                      no Duevy account needed. Turn it off to keep this due to members only.
                     </p>
                   </div>
-                  <Toggle checked={allowGuests} onChange={setAllowGuests} label="Let guests pay" />
+                  <Toggle checked={allowGuests} onChange={setAllowGuests} label="Pay link and form" />
                 </div>
                 {allowGuests && (
                   <div className="mt-4 border-t border-cloud pt-4">

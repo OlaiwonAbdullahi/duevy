@@ -285,6 +285,9 @@ type DemoGuestCheckout = {
   answers: GuestAnswer[];
   receiptNumber: string | null;
   openedAt: number;
+  /** "Create a Duevy account for me" — the activation link "goes out" once it's paid, as the API does. */
+  accountRequested: boolean;
+  inviteSentAt: string | null;
 };
 const guestCheckouts = new Map<string, DemoGuestCheckout>();
 const GUEST_PAYS_AFTER_MS = 12_000;
@@ -295,6 +298,9 @@ function publicDue(id: string) {
   if (!d || !d.allowGuests || d.status !== "active") notFound();
   return d;
 }
+
+/** A due's own questions — matric number is always asked, so an older form's matric question is dropped (as the API does). */
+const guestQuestions = (fields: GuestField[] | null | undefined) => (fields ?? []).filter((f) => f.id !== "matric");
 
 /** Check answers against the due's questions, as the API does (lib/guestForm.ts). */
 function checkAnswers(fields: GuestField[], input: Record<string, string> = {}): GuestAnswer[] {
@@ -319,12 +325,25 @@ function checkAnswers(fields: GuestField[], input: Record<string, string> = {}):
   return answers;
 }
 
+/** A demo guest checkout in the shape GET /public/checkouts/:reference returns. */
+function guestStatus(g: DemoGuestCheckout) {
+  return {
+    ...g.checkout,
+    receiptNumber: g.receiptNumber,
+    spaceName: store.space.name,
+    payer: { name: g.payer.name, email: g.payer.email, matricNo: g.payer.matricNo },
+    answers: g.answers,
+    account: { exists: false, requested: g.accountRequested, inviteSentAt: g.inviteSentAt },
+  };
+}
+
 /** Settle a demo guest checkout once its time is up: the guest joins the due's guest list. */
 function settleGuestCheckout(g: DemoGuestCheckout) {
   if (g.checkout.status !== "pending" || Date.now() - g.openedAt < GUEST_PAYS_AFTER_MS) return;
   const paidAt = now();
   Object.assign(g.checkout, { status: "paid", paidAt, receivedKobo: g.checkout.breakdown.total, bankTransfer: null });
   g.receiptNumber = `R-DEMO${Math.floor(Math.random() * 9000 + 1000)}`;
+  if (g.accountRequested) g.inviteSentAt = paidAt;
   const d = store.dues.find((x) => x.id === g.dueId);
   if (d && !d.guests.some((x) => x.email === g.payer.email)) {
     d.guests.unshift({ id: uid("demo-guest"), ...g.payer, paidAt, reference: g.checkout.reference, answers: g.answers });
@@ -646,22 +665,30 @@ const routes: [string, string, Handler][] = [
       fee,
       total: d.amount + fee,
       canCollect: true,
-      fields: d.guestFields ?? null,
+      fields: guestQuestions(d.guestFields),
       space: { id: store.space.id, name: store.space.name, short: store.space.short, kind: store.space.kind, hue: store.space.hue },
     };
   }],
   ["POST", "/public/dues/([^/]+)/checkout", ({ params: [id], body }) => {
     const d = publicDue(id!);
-    const b = json(body) as { name?: string; email?: string; matricNo?: string; answers?: Record<string, string> };
+    const b = json(body) as { name?: string; email?: string; matricNo?: string; answers?: Record<string, string>; createAccount?: boolean };
     const email = String(b.email ?? "").trim().toLowerCase();
     if (d.guests.some((g) => g.email === email)) {
       throw new ApiError("This email has already paid for this.", { code: "DUE_ALREADY_PAID", status: 409 });
     }
-    const answers = d.guestFields ? checkAnswers(d.guestFields, b.answers) : [];
+    if (!b.matricNo?.trim()) {
+      throw new ApiError("Request validation failed", {
+        code: "VALIDATION_ERROR",
+        status: 400,
+        details: [{ field: "matricNo", issue: "Matric number is required" }],
+      });
+    }
+    const answers = checkAnswers(guestQuestions(d.guestFields), b.answers);
     // Asking again with the same email reuses the open checkout, as the API does.
     const open = [...guestCheckouts.values()].find((g) => g.dueId === d.id && g.payer.email === email && g.checkout.status === "pending");
     if (open) {
       open.answers = answers;
+      open.accountRequested = !!b.createAccount;
       return { ...open.checkout, token: "demo", reused: true };
     }
     const fee = processingFee(d.amount);
@@ -690,13 +717,22 @@ const routes: [string, string, Handler][] = [
       answers,
       receiptNumber: null,
       openedAt: Date.now(),
+      accountRequested: !!b.createAccount,
+      inviteSentAt: null,
     });
     return { ...checkout, token: "demo" };
   }],
   ["GET", "/public/checkouts/([^/]+)", ({ params: [reference] }) => {
     const g = guestCheckouts.get(reference!) ?? notFound();
     settleGuestCheckout(g);
-    return { ...g.checkout, receiptNumber: g.receiptNumber };
+    return guestStatus(g);
+  }],
+  ["POST", "/public/checkouts/([^/]+)/account", ({ params: [reference] }) => {
+    const g = guestCheckouts.get(reference!) ?? notFound();
+    g.accountRequested = true;
+    const paid = g.checkout.status === "paid";
+    if (paid) g.inviteSentAt = now();
+    return { outcome: paid ? "sent" : "not_paid", account: guestStatus(g).account };
   }],
   // ---- Receipt design ----------------------------------------------------------
   ["GET", `${S}/receipt-design`, () => receiptDesign],

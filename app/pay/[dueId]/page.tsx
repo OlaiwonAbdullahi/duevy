@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -12,8 +12,10 @@ import {
   Clock01Icon,
   Copy01Icon,
   Download04Icon,
-  LinkSquare01Icon,
+  Mail01Icon,
+  SecurityCheckIcon,
   Tick02Icon,
+  UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,13 +30,17 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
 import { apiClient } from "@/lib/api/client";
 import { isDemoMode } from "@/lib/demo/mode";
+import { useAuth } from "@/lib/auth/auth-context";
+import { closeBachsCheckout, openBachsCheckout, preloadBachs, type BachsCheckoutEvent } from "@/lib/bachs/overlay";
 import type { GuestField } from "@/lib/api/types";
 import {
   getGuestCheckout,
   getGuestDue,
   guestReceiptPath,
   guestReceiptUrl,
+  requestGuestAccount,
   startGuestCheckout,
+  type GuestAccountState,
   type GuestCheckoutStatus,
   type GuestDue,
 } from "@/lib/api/guest";
@@ -43,6 +49,8 @@ import { SpaceEmblem } from "../../(dashboards)/dashboard/dues/_components/Space
 import { KIND_GLYPH, SPACE_KIND_LABEL } from "../../(dashboards)/dashboard/dues/_components/data";
 
 const POLL_MS = 5000;
+/** Right after the overlay says it's done, check sooner — the webhook is usually seconds behind. */
+const CONFIRM_POLL_MS = 2000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Exact naira with kobo — what the payer must send. */
@@ -58,12 +66,19 @@ function formatCountdown(ms: number) {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+const statusHref = (dueId: string, reference: string, token: string, completed = false) =>
+  `/pay/${encodeURIComponent(dueId)}?ref=${encodeURIComponent(reference)}&t=${encodeURIComponent(token)}${completed ? "&c=1" : ""}`;
+
 /**
- * Public pay page for a guest-enabled due: `/pay/<dueId>`. A guest enters a
- * name, email and answers to any questions the rep added, then pays by bank
- * transfer — no account. Once a checkout is
- * open its reference and token ride in the URL (`?ref=&t=`), so a refresh, or
- * coming back from a hosted checkout, lands on the same payment.
+ * Public pay page for a guest-enabled due: `/pay/<dueId>`. The payer fills in
+ * the form the rep configured, can opt into a free Duevy account, and pays in
+ * the Bachs overlay without leaving the page (or, when the platform is on
+ * bank-transfer mode, into a one-time account shown here). No sign-in needed;
+ * someone already signed in pays as themselves.
+ *
+ * Once a checkout is under way its reference and token ride in the URL
+ * (`?ref=&t=`), so a refresh lands on the same payment. Only the API decides
+ * it's paid — never an overlay event.
  */
 export default function GuestPayPage() {
   return (
@@ -80,10 +95,116 @@ function GuestPay() {
   const token = searchParams.get("t");
 
   return reference && token ? (
-    <CheckoutStatus dueId={dueId} reference={reference} token={token} />
+    <CheckoutStatus dueId={dueId} reference={reference} token={token} completed={searchParams.get("c") === "1"} />
   ) : (
     <PayForm dueId={dueId} />
   );
+}
+
+// ---------------------------------------------------------------------------
+// The Bachs overlay, as UI state
+// ---------------------------------------------------------------------------
+
+type OverlayNotice = { tone: "rose" | "amber" | "neutral"; title: string; body: string };
+
+/**
+ * Opens checkout sessions in the Bachs overlay and turns its events into what
+ * the page shows. `onCompleted` fires on the browser's `checkout.completed`,
+ * which only means "go and wait for the API to confirm it". `onEnded` fires on
+ * failed / expired, so the page can have the API re-check the session before a
+ * retry.
+ */
+function useOverlayCheckout({ onCompleted, onEnded }: { onCompleted: () => void; onEnded?: () => void }) {
+  const [phase, setPhase] = useState<"idle" | "opening" | "open">("idle");
+  const [notice, setNotice] = useState<OverlayNotice | null>(null);
+  const completed = useRef(false);
+  const handlers = useRef({ onCompleted, onEnded });
+  useEffect(() => {
+    handlers.current = { onCompleted, onEnded };
+  });
+
+  // Fetch the SDK while the payer is still typing, and never leave an overlay
+  // open behind a page that's gone.
+  useEffect(() => {
+    if (!isDemoMode()) preloadBachs().catch(() => {});
+    return () => closeBachsCheckout();
+  }, []);
+
+  const onEvent = useCallback((event: BachsCheckoutEvent) => {
+    switch (event.type) {
+      case "checkout.ready":
+        // Only while opening: a late `ready` after a quick close mustn't lock the button.
+        setPhase((p) => (p === "opening" ? "open" : p));
+        return;
+      case "checkout.completed":
+        completed.current = true;
+        handlers.current.onCompleted();
+        return;
+      case "checkout.failed":
+        setNotice({
+          tone: "rose",
+          title: "That payment didn't go through",
+          body: "Nothing was charged for it. Your details are still here — try again when you're ready.",
+        });
+        handlers.current.onEnded?.();
+        return;
+      case "checkout.expired":
+        setNotice({
+          tone: "amber",
+          title: "The checkout timed out",
+          body: "Nothing was charged. Tap pay again and we'll open a fresh one.",
+        });
+        handlers.current.onEnded?.();
+        return;
+      case "checkout.closed":
+        setPhase("idle");
+        if (!completed.current) {
+          setNotice(
+            (n) =>
+              n ?? {
+                tone: "neutral",
+                title: "Payment not finished",
+                body: "You closed the checkout before paying. Your details are saved — pick up where you left off.",
+              },
+          );
+        }
+        return;
+      case "checkout.error":
+        console.error("Bachs checkout error", event.data);
+        setPhase("idle");
+        setNotice({
+          tone: "rose",
+          title: "The secure checkout hit a problem",
+          body: "Nothing was charged. Please try again in a moment.",
+        });
+        return;
+      default:
+        // opened / loaded: nothing to show.
+        return;
+    }
+  }, []);
+
+  const open = useCallback(
+    async (checkoutUrl: string) => {
+      completed.current = false;
+      setNotice(null);
+      setPhase("opening");
+      try {
+        await openBachsCheckout(checkoutUrl, onEvent);
+      } catch (err) {
+        console.error("Couldn't open the Bachs checkout", err);
+        setPhase("idle");
+        setNotice({
+          tone: "rose",
+          title: "Couldn't open the secure checkout",
+          body: "Check your connection (and any content blocker), then try again. Nothing was charged.",
+        });
+      }
+    },
+    [onEvent],
+  );
+
+  return { phase, notice, open, dismiss: () => setNotice(null) };
 }
 
 // ---------------------------------------------------------------------------
@@ -92,15 +213,31 @@ function GuestPay() {
 
 function PayForm({ dueId }: { dueId: string }) {
   const router = useRouter();
+  const { user, status: authStatus } = useAuth();
   const [due, setDue] = useState<GuestDue | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "closed">("loading");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [matricNo, setMatricNo] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [createAccount, setCreateAccount] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<{ message: string; signIn?: boolean } | null>(null);
+  // The checkout the overlay is showing, so its completion can open the status page.
+  const active = useRef<{ reference: string; token: string } | null>(null);
+
+  const overlay = useOverlayCheckout({
+    onCompleted: () => {
+      const c = active.current;
+      if (c) router.replace(statusHref(dueId, c.reference, c.token, true), { scroll: false });
+    },
+    // Have the API check the session with Bachs now, so a retry doesn't reuse a dead one.
+    onEnded: () => {
+      const c = active.current;
+      if (c) getGuestCheckout(c.reference, c.token).catch(() => {});
+    },
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -128,11 +265,16 @@ function PayForm({ dueId }: { dueId: string }) {
     );
   }
 
-  const fields = due.fields;
+  // Signed in: the account pays, so its name and email (and matric number, if
+  // the profile has one) aren't asked again.
+  const signedIn = authStatus === "authenticated" && !!user;
+  const profileMatric = signedIn ? user.matricNo : null;
+  const fields = due.fields ?? [];
+  const busy = submitting || overlay.phase !== "idle";
   const valid =
-    name.trim().length >= 2 &&
-    EMAIL_RE.test(email.trim()) &&
-    (fields ?? []).every((f) => !f.required || answers[f.id]?.trim());
+    (signedIn || (name.trim().length >= 2 && EMAIL_RE.test(email.trim()))) &&
+    (!!profileMatric || matricNo.trim().length > 0) &&
+    fields.every((f) => !f.required || answers[f.id]?.trim());
 
   const answer = (id: string, value: string) => {
     setAnswers((a) => ({ ...a, [id]: value }));
@@ -141,23 +283,30 @@ function PayForm({ dueId }: { dueId: string }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!valid || submitting) return;
+    if (!valid || busy) return;
     setSubmitting(true);
     setError(null);
     setFieldErrors({});
+    overlay.dismiss();
     try {
       const checkout = await startGuestCheckout(dueId, {
-        name: name.trim(),
-        email: email.trim(),
-        ...(fields ? { answers } : matricNo.trim() ? { matricNo: matricNo.trim() } : {}),
+        name: signedIn ? user.name : name.trim(),
+        email: signedIn ? user.email : email.trim(),
+        ...(profileMatric ? {} : { matricNo: matricNo.trim() }),
+        ...(fields.length ? { answers } : {}),
+        ...(!signedIn && createAccount ? { createAccount: true } : {}),
       });
-      const next = `/pay/${encodeURIComponent(dueId)}?ref=${encodeURIComponent(checkout.reference)}&t=${encodeURIComponent(checkout.token)}`;
-      // Keep the payment in the URL first, so Back from a hosted page returns to it.
-      router.replace(next, { scroll: false });
-      if (checkout.checkoutUrl && !checkout.bankTransfer) window.location.href = checkout.checkoutUrl;
+      active.current = { reference: checkout.reference, token: checkout.token };
+      if (checkout.checkoutUrl && !checkout.bankTransfer) {
+        // Pay in the overlay, right here; the form stays as it is underneath.
+        await overlay.open(checkout.checkoutUrl);
+      } else {
+        // Bank-transfer mode: the one-time account is shown on the status page.
+        router.replace(statusHref(dueId, checkout.reference, checkout.token), { scroll: false });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === "EMAIL_HAS_ACCOUNT") {
-        setError({ message: "This email already has a Duevy account. Sign in to pay so it shows in your history.", signIn: true });
+        setError({ message: "This email already has a Duevy account. Sign in to pay, so it shows in your history.", signIn: true });
       } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field.startsWith("answers."))) {
         // The rep may have changed the questions since this page loaded.
         setFieldErrors(
@@ -166,8 +315,15 @@ function PayForm({ dueId }: { dueId: string }) {
           ),
         );
         setError({ message: "Check your answers above and try again." });
+      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field === "matricNo")) {
+        setFieldErrors({ matricNo: "Enter your matric number" });
+        setError({ message: "Check your answers above and try again." });
+      } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details?.some((d) => d.field === "email")) {
+        setError({ message: "That email address doesn't look right. Check it and try again." });
       } else if (err instanceof ApiError && err.code === "DUE_ALREADY_PAID") {
         setError({ message: "This email has already paid for this. Check your inbox for the receipt." });
+      } else if (err instanceof ApiError && err.code === "CHECKOUT_OPENING") {
+        setError({ message: "Your payment is still being set up. Give it a few seconds, then try again." });
       } else {
         setError({ message: err instanceof ApiError ? err.message : "Couldn't start the payment. Please try again." });
       }
@@ -175,6 +331,14 @@ function PayForm({ dueId }: { dueId: string }) {
       setSubmitting(false);
     }
   };
+
+  const payLabel = submitting
+    ? "Setting up…"
+    : overlay.phase !== "idle"
+      ? "Opening secure checkout…"
+      : overlay.notice
+        ? `Try again · ${exactNaira(due.total)}`
+        : `Pay ${exactNaira(due.total)}`;
 
   return (
     <div className="rounded-3xl border border-cloud bg-canvas p-6 sm:p-8">
@@ -198,32 +362,69 @@ function PayForm({ dueId }: { dueId: string }) {
         </p>
       ) : (
         <form onSubmit={submit} className="mt-6 flex flex-col gap-4" noValidate>
-          <div>
-            <Label htmlFor="guest-name" className="text-xs font-medium text-ink">Full name</Label>
-            <Input
-              id="guest-name"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="As it should appear on your receipt"
-              className={cn(BRAND_INPUT, "mt-1.5")}
-            />
-          </div>
-          <div>
-            <Label htmlFor="guest-email" className="text-xs font-medium text-ink">Email</Label>
-            <Input
-              id="guest-email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="We'll send your receipt here"
-              className={cn(BRAND_INPUT, "mt-1.5")}
-            />
-          </div>
-          {fields ? (
-            fields.map((f) => (
+          {/* Disabled while the overlay is up, so nothing changes under an open payment. */}
+          <fieldset disabled={busy} className="flex min-w-0 flex-col gap-4">
+            {signedIn ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-cloud bg-paper/50 px-4 py-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+                  <HugeiconsIcon icon={SecurityCheckIcon} size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">Paying as {user.name}</p>
+                  <p className="truncate text-[11px] text-ink-soft">
+                    {user.email}
+                    {profileMatric ? ` · ${profileMatric}` : ""} · this payment goes into your Duevy history
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="guest-name" className="text-xs font-medium text-ink">Full name</Label>
+                  <Input
+                    id="guest-name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="As it should appear on your receipt"
+                    className={cn(BRAND_INPUT, "mt-1.5")}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="guest-email" className="text-xs font-medium text-ink">Email</Label>
+                  <Input
+                    id="guest-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="We'll send your receipt here"
+                    className={cn(BRAND_INPUT, "mt-1.5")}
+                  />
+                </div>
+              </>
+            )}
+            {!profileMatric && (
+              <div>
+                <Label htmlFor="guest-matric" className="text-xs font-medium text-ink">Matric number</Label>
+                <Input
+                  id="guest-matric"
+                  autoComplete="off"
+                  maxLength={32}
+                  value={matricNo}
+                  aria-invalid={!!fieldErrors.matricNo}
+                  onChange={(e) => {
+                    setMatricNo(e.target.value);
+                    if (fieldErrors.matricNo) setFieldErrors((errs) => ({ ...errs, matricNo: "" }));
+                  }}
+                  placeholder="Helps the rep match your payment"
+                  className={cn(BRAND_INPUT, "mt-1.5")}
+                />
+                {fieldErrors.matricNo && <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.matricNo}</p>}
+              </div>
+            )}
+            {fields.map((f) => (
               <AnswerField
                 key={f.id}
                 field={f}
@@ -231,27 +432,40 @@ function PayForm({ dueId }: { dueId: string }) {
                 error={fieldErrors[f.id]}
                 onChange={(v) => answer(f.id, v)}
               />
-            ))
-          ) : (
-            <div>
-              <Label htmlFor="guest-matric" className="text-xs font-medium text-ink">
-                Matric number <span className="font-normal text-ink-soft">(optional)</span>
-              </Label>
-              <Input
-                id="guest-matric"
-                value={matricNo}
-                onChange={(e) => setMatricNo(e.target.value)}
-                placeholder="Helps the rep match your payment"
-                className={cn(BRAND_INPUT, "mt-1.5")}
-              />
-            </div>
-          )}
+            ))}
+
+            {!signedIn && (
+              <label
+                htmlFor="guest-create-account"
+                className="flex cursor-pointer items-start gap-3 rounded-2xl border border-cloud bg-paper/40 p-4 transition-colors has-[:checked]:border-brand/40 has-[:checked]:bg-brand/5"
+              >
+                <input
+                  id="guest-create-account"
+                  type="checkbox"
+                  checked={createAccount}
+                  onChange={(e) => setCreateAccount(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded accent-[var(--color-brand)]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm leading-snug text-ink">
+                    Create a free Duevy account for me so I can track my payments, access receipts and
+                    manage future collections.
+                  </span>
+                  <span className="mt-1 block text-[11px] leading-relaxed text-ink-soft">
+                    You can still complete your payment without creating an account.
+                  </span>
+                </span>
+              </label>
+            )}
+          </fieldset>
+
+          {overlay.notice && <InlineNotice notice={overlay.notice} />}
 
           {error && (
             <p className="rounded-2xl bg-rose-50 p-3 text-[13px] leading-relaxed text-rose-700">
               {error.message}{" "}
               {error.signIn && (
-                <Link href="/login?next=/dashboard/dues" className="font-semibold underline">
+                <Link href={`/login?next=${encodeURIComponent(`/pay/${dueId}`)}`} className="font-semibold underline">
                   Sign in
                 </Link>
               )}
@@ -260,13 +474,17 @@ function PayForm({ dueId }: { dueId: string }) {
 
           <button
             type="submit"
-            disabled={!valid || submitting}
+            disabled={!valid || busy}
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
-            {submitting ? "Setting up…" : `Pay ${exactNaira(due.total)}`}
+            {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+            {payLabel}
           </button>
-          <p className="text-center text-[11px] leading-relaxed text-ink-soft">
-            No account needed. You&apos;ll pay by bank transfer and get a receipt by email.
+          <p className="inline-flex items-center justify-center gap-1.5 text-center text-[11px] leading-relaxed text-ink-soft">
+            <HugeiconsIcon icon={SecurityCheckIcon} size={12} />
+            {signedIn
+              ? "Secure checkout — you pay without leaving this page."
+              : "No account needed. Pay securely without leaving this page; your receipt comes by email."}
           </p>
         </form>
       )}
@@ -340,18 +558,38 @@ function AnswerField({
 }
 
 // ---------------------------------------------------------------------------
-// Step 2 — transfer, then the outcome
+// Step 2 — pay, then the outcome
 // ---------------------------------------------------------------------------
 
-function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference: string; token: string }) {
+function CheckoutStatus({
+  dueId,
+  reference,
+  token,
+  completed,
+}: {
+  dueId: string;
+  reference: string;
+  token: string;
+  /** The overlay just reported completion: show "confirming" while the API catches up. */
+  completed: boolean;
+}) {
   const router = useRouter();
   const [checkout, setCheckout] = useState<GuestCheckoutStatus | null>(null);
   const [missing, setMissing] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [confirming, setConfirming] = useState(completed);
   const [copied, setCopied] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const settled = useRef(false);
   const status = checkout?.status ?? "pending";
+
+  const overlay = useOverlayCheckout({
+    onCompleted: () => {
+      setConfirming(true);
+      void check(false);
+    },
+    onEnded: () => void check(false),
+  });
 
   const check = async (manual: boolean) => {
     if (settled.current) return;
@@ -360,7 +598,7 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
       const res = await getGuestCheckout(reference, token);
       setCheckout(res);
       if (res.status !== "pending") settled.current = true;
-      else if (manual) toast.info("Still waiting for your transfer", { description: "Transfers usually land within a minute or two." });
+      else if (manual) toast.info("Still waiting for your payment", { description: "It usually lands within a minute or two." });
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         settled.current = true;
@@ -382,14 +620,14 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
   // Poll while visible and still pending.
   useEffect(() => {
     if (status !== "pending" || missing) return;
-    const poll = setInterval(() => !document.hidden && void check(false), POLL_MS);
+    const poll = setInterval(() => !document.hidden && void check(false), confirming ? CONFIRM_POLL_MS : POLL_MS);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearInterval(poll);
       clearInterval(tick);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, missing]);
+  }, [status, missing, confirming]);
 
   const copy = async (key: string, value: string, label: string) => {
     try {
@@ -417,42 +655,10 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
   }
   if (!checkout) return <CardSkeleton />;
 
-  const { breakdown, items } = checkout;
-  const title = items.length === 1 ? items[0]!.title : `${items.length} dues`;
+  const { breakdown } = checkout;
 
   if (status === "paid") {
-    return (
-      <div className="rounded-3xl border border-cloud bg-canvas p-6 text-center sm:p-8">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand/10 text-brand">
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={26} />
-        </span>
-        <h1 className="mt-3 text-lg font-semibold text-ink">Payment confirmed</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          {exactNaira(checkout.receivedKobo ?? breakdown.total)} received for {title}. We&apos;ve emailed
-          your receipt.
-        </p>
-        <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
-        <dl className="mt-4 flex flex-col gap-1.5 text-left text-xs">
-          {checkout.receiptNumber && (
-            <div className="flex justify-between gap-3 text-ink-soft">
-              <dt>Receipt no.</dt>
-              <dd className="font-medium text-ink">{checkout.receiptNumber}</dd>
-            </div>
-          )}
-          <div className="flex justify-between gap-3 text-ink-soft">
-            <dt>Reference</dt>
-            <dd className="min-w-0 truncate font-medium text-ink">{reference}</dd>
-          </div>
-        </dl>
-        {checkout.receiptNumber && <ReceiptButton reference={reference} token={token} />}
-        <p className="mt-5 text-xs text-ink-soft">
-          Want all your receipts in one place?{" "}
-          <Link href="/forgot-password" className="font-semibold text-brand hover:underline">
-            Set a password for this email
-          </Link>
-        </p>
-      </div>
-    );
+    return <PaidReceipt checkout={checkout} reference={reference} token={token} onAccount={(account) => setCheckout({ ...checkout, account })} />;
   }
 
   if (status === "expired") {
@@ -461,7 +667,7 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
         tone="rose"
         icon={Clock01Icon}
         title="This payment expired"
-        body={`It closed before any money arrived, so nothing was charged. Already sent money? Contact support with reference ${reference}.`}
+        body={`It closed before any money arrived, so nothing was charged. Already paid? Contact support with reference ${reference}.`}
         action={{ label: "Start a new payment", onClick: startOver }}
       />
     );
@@ -483,16 +689,34 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
   const expiresAt = bank?.expiresAt ?? checkout.expiresAt;
   const msLeft = new Date(expiresAt).getTime() - now;
 
+  // The overlay finished: the payment is with Bachs, and we're waiting on the API.
+  if (confirming && !bank) {
+    return (
+      <div className="rounded-3xl border border-cloud bg-canvas p-6 text-center sm:p-8">
+        <span className="mx-auto block h-12 w-12 animate-spin rounded-full border-[3px] border-brand/20 border-t-brand" />
+        <h1 className="mt-4 text-lg font-semibold text-ink">Confirming your payment…</h1>
+        <p className="mx-auto mt-1 max-w-xs text-sm leading-relaxed text-ink-soft">
+          We&apos;re checking with the payment provider. This usually takes a few seconds — please keep this
+          page open.
+        </p>
+        <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
+        <p className="mt-4 text-[11px] text-ink-soft">
+          Reference <span className="font-semibold text-ink">{reference}</span>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-3xl border border-cloud bg-canvas p-6 sm:p-8">
       <div className="flex flex-col items-center gap-2 text-center">
         <span className="grid h-12 w-12 place-items-center rounded-full bg-brand/10 text-brand">
-          <HugeiconsIcon icon={BankIcon} size={22} />
+          <HugeiconsIcon icon={hostedUrl ? SecurityCheckIcon : BankIcon} size={22} />
         </span>
         <h1 className="text-lg font-semibold text-ink">{hostedUrl ? "Complete your payment" : "Pay by bank transfer"}</h1>
         <p className="text-sm text-ink-soft">
           {hostedUrl ? (
-            "Pay on our secure checkout page, then come back here — we confirm it automatically."
+            "Your payment is ready. Open the secure checkout to finish — you won't leave this page."
           ) : (
             <>
               Send the <span className="font-semibold text-ink">exact amount</span> to this one-time
@@ -503,13 +727,22 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
       </div>
 
       {hostedUrl ? (
-        <a
-          href={hostedUrl}
-          className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright"
-        >
-          <HugeiconsIcon icon={LinkSquare01Icon} size={16} />
-          Continue to payment
-        </a>
+        <div className="mt-5 flex flex-col gap-3">
+          {overlay.notice && <InlineNotice notice={overlay.notice} />}
+          <button
+            type="button"
+            disabled={overlay.phase !== "idle" || msLeft <= 0}
+            onClick={() => void overlay.open(hostedUrl)}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
+          >
+            {overlay.phase !== "idle" ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <HugeiconsIcon icon={SecurityCheckIcon} size={16} />
+            )}
+            {overlay.phase !== "idle" ? "Opening secure checkout…" : `Pay ${exactNaira(breakdown.total)}`}
+          </button>
+        </div>
       ) : bank ? (
         <div className="mt-5 flex flex-col gap-3">
           <div className="rounded-2xl border border-brand/20 bg-cloud/60 p-4">
@@ -540,7 +773,7 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
       ) : (
         <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-cloud bg-paper/50 p-5 text-center">
           <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-          <p className="text-sm text-ink-soft">Setting up your transfer account…</p>
+          <p className="text-sm text-ink-soft">Setting up your payment…</p>
         </div>
       )}
 
@@ -550,6 +783,8 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
           <>
             Expires in <span className="font-semibold tabular-nums">{formatCountdown(msLeft)}</span>
           </>
+        ) : hostedUrl ? (
+          "This checkout has expired. Checking for a final update…"
         ) : (
           "Expired — don't send money to it. Checking for a final update…"
         )}
@@ -557,15 +792,25 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
 
       <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
 
-      <button
-        type="button"
-        disabled={checking}
-        onClick={() => void check(true)}
-        className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-cloud text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand disabled:opacity-60 cursor-pointer"
-      >
-        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
-        {checking ? "Checking…" : "I've sent the money"}
-      </button>
+      {hostedUrl ? (
+        <button
+          type="button"
+          onClick={startOver}
+          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full border border-cloud text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand cursor-pointer"
+        >
+          Edit my details
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={checking}
+          onClick={() => void check(true)}
+          className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-cloud text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand disabled:opacity-60 cursor-pointer"
+        >
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
+          {checking ? "Checking…" : "I've sent the money"}
+        </button>
+      )}
       <p className="mt-3 text-center text-[11px] text-ink-soft">
         This page updates on its own. Reference <span className="font-semibold text-ink">{reference}</span>
       </p>
@@ -574,6 +819,233 @@ function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference:
 }
 
 // ---------------------------------------------------------------------------
+// Step 3 — paid
+// ---------------------------------------------------------------------------
+
+/** Re-check this many times for the activation email to go out after payment (it's sent just after). */
+const INVITE_CHECKS = 6;
+
+function PaidReceipt({
+  checkout,
+  reference,
+  token,
+  onAccount,
+}: {
+  checkout: GuestCheckoutStatus;
+  reference: string;
+  token: string;
+  onAccount: (account: GuestAccountState) => void;
+}) {
+  const { breakdown, items, account } = checkout;
+  const title = items.length === 1 ? items[0]!.title : `${items.length} dues`;
+  const paidAt = checkout.paidAt ? new Date(checkout.paidAt) : null;
+  const awaitingInvite = account.requested && !account.exists && !account.inviteSentAt;
+  const onAccountRef = useRef(onAccount);
+  useEffect(() => {
+    onAccountRef.current = onAccount;
+  });
+
+  // The activation link goes out a moment after the payment is confirmed: look again briefly.
+  useEffect(() => {
+    if (!awaitingInvite) return;
+    let left = INVITE_CHECKS;
+    const timer = setInterval(() => {
+      if (left-- <= 0) return clearInterval(timer);
+      getGuestCheckout(reference, token)
+        .then((c) => c.account.inviteSentAt && onAccountRef.current(c.account))
+        .catch(() => {});
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [awaitingInvite, reference, token]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-3xl border border-cloud bg-canvas p-6 sm:p-8">
+        <div className="text-center">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand/10 text-brand">
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={28} />
+          </span>
+          <h1 className="mt-3 text-lg font-semibold text-ink">Payment successful</h1>
+          <p className="mt-1 text-3xl font-semibold tracking-tight text-ink tabular-nums">
+            {exactNaira(checkout.receivedKobo ?? breakdown.total)}
+          </p>
+          <p className="mt-1 text-sm text-ink-soft">
+            for <span className="font-medium text-ink">{title}</span> · {checkout.spaceName}
+          </p>
+        </div>
+
+        <dl className="mt-6 flex flex-col gap-2 rounded-2xl border border-cloud bg-paper/50 p-4 text-xs">
+          <Row label="Paid by" value={checkout.payer.name} />
+          <Row label="Email" value={checkout.payer.email} />
+          {checkout.payer.matricNo && <Row label="Matric number" value={checkout.payer.matricNo} />}
+          {checkout.answers.map((a) => (
+            <Row key={a.fieldId} label={a.label} value={a.value} />
+          ))}
+          <div className="my-1 border-t border-cloud" />
+          {paidAt && (
+            <Row
+              label="Date"
+              value={paidAt.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
+            />
+          )}
+          <Row label="Transaction ref." value={reference} mono />
+          {checkout.receiptNumber && <Row label="Receipt no." value={checkout.receiptNumber} mono />}
+        </dl>
+
+        <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
+
+        <div className="mt-5 flex flex-col items-center gap-2">
+          {checkout.receiptNumber ? (
+            <ReceiptButton reference={reference} token={token} />
+          ) : (
+            <p className="text-xs text-ink-soft">Your receipt is being issued — refresh in a moment.</p>
+          )}
+          <p className="text-[11px] text-ink-soft">A copy is on its way to {checkout.payer.email}.</p>
+        </div>
+      </div>
+
+      <AccountCard account={account} email={checkout.payer.email} reference={reference} token={token} onAccount={onAccount} />
+    </div>
+  );
+}
+
+/** The payer's Duevy account: activation pending, an offer to create one, or a sign-in link. */
+function AccountCard({
+  account,
+  email,
+  reference,
+  token,
+  onAccount,
+}: {
+  account: GuestAccountState;
+  email: string;
+  reference: string;
+  token: string;
+  onAccount: (account: GuestAccountState) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const request = async () => {
+    setBusy(true);
+    try {
+      const res = await requestGuestAccount(reference, token);
+      onAccount(res.account);
+      if (res.outcome === "sent") toast.success("Activation link sent", { description: `Check ${email}.` });
+      else if (res.outcome === "already_sent") toast.info("We just sent one", { description: "Give it a minute, and check spam too." });
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError && err.code === "ACCOUNT_EXISTS"
+          ? "This email already has an account — sign in instead."
+          : "Couldn't send the link. Please try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const shell = "rounded-3xl border border-cloud bg-canvas p-5 sm:p-6";
+  const secondary =
+    "inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-cloud px-4 text-sm font-semibold text-ink transition-colors hover:border-brand/40 hover:text-brand disabled:opacity-60 cursor-pointer";
+
+  if (account.exists) {
+    return (
+      <div className={cn(shell, "flex items-center gap-3")}>
+        <IconBubble icon={SecurityCheckIcon} />
+        <p className="min-w-0 flex-1 text-sm text-ink-soft">
+          This payment is saved to your Duevy account.
+        </p>
+        <Link href="/dashboard/transactions" className={secondary}>
+          View
+        </Link>
+      </div>
+    );
+  }
+
+  if (account.requested) {
+    return (
+      <div className={cn(shell, "flex flex-col gap-3 sm:flex-row sm:items-center")}>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <IconBubble icon={Mail01Icon} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">
+              {account.inviteSentAt ? "Activate your Duevy account" : "Setting up your Duevy account…"}
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+              {account.inviteSentAt ? (
+                <>
+                  We&apos;ve emailed an activation link to <span className="font-medium text-ink">{email}</span>. Open it
+                  to set your password — it works once and expires in 72 hours. This payment is already linked.
+                </>
+              ) : (
+                <>We&apos;ll email an activation link to {email} in a moment. Your payment is safe either way.</>
+              )}
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={() => void request()} disabled={busy} className={cn(secondary, "shrink-0")}>
+          {busy ? "Sending…" : account.inviteSentAt ? "Resend link" : "Send it now"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(shell, "flex flex-col gap-3 sm:flex-row sm:items-center")}>
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <IconBubble icon={UserAdd01Icon} />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Keep your receipts in one place</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+            Create a free Duevy account for {email} to track payments and pay future collections faster. This
+            payment comes with it.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void request()}
+        disabled={busy}
+        className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
+      >
+        {busy ? "Sending…" : "Create account"}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function IconBubble({ icon }: { icon: typeof Alert01Icon }) {
+  return (
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+      <HugeiconsIcon icon={icon} size={18} />
+    </span>
+  );
+}
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <dt className="shrink-0 text-ink-soft">{label}</dt>
+      <dd className={cn("min-w-0 truncate text-right font-medium text-ink", mono && "font-mono")}>{value}</dd>
+    </div>
+  );
+}
+
+function InlineNotice({ notice }: { notice: OverlayNotice }) {
+  return (
+    <div
+      role="status"
+      className={cn(
+        "rounded-2xl p-3 text-[13px] leading-relaxed",
+        notice.tone === "rose" ? "bg-rose-50 text-rose-700" : notice.tone === "amber" ? "bg-amber-50 text-amber-800" : "bg-paper text-ink-soft",
+      )}
+    >
+      <p className="font-semibold">{notice.title}</p>
+      <p>{notice.body}</p>
+    </div>
+  );
+}
 
 function Breakdown({ face, fee, total }: { face: number; fee: number; total: number }) {
   return (
@@ -643,7 +1115,7 @@ function CardSkeleton() {
 function ReceiptButton({ reference, token }: { reference: string; token: string }) {
   const [busy, setBusy] = useState(false);
   const className =
-    "mt-5 inline-flex h-11 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer";
+    "inline-flex h-11 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer";
 
   if (!isDemoMode()) {
     return (

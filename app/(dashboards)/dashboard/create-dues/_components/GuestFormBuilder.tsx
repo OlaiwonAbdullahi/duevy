@@ -33,15 +33,24 @@ const TYPE_LABEL: Record<GuestFieldType, string> = {
   select: "Dropdown",
 };
 
-/** What a guest form asks when the rep hasn't changed it — the original optional matric number. */
-export const DEFAULT_GUEST_FIELDS: GuestField[] = [
-  { id: "matric", label: "Matric number", type: "text", required: false },
-];
+/**
+ * The form every new due starts with, on top of the always-asked fields
+ * (matches the API's DEFAULT_GUEST_FIELDS). Reps can edit, reorder or remove
+ * it — nothing has to be built before publishing.
+ */
+export const DEFAULT_GUEST_FIELDS: GuestField[] = [{ id: "phone", label: "Phone number", type: "phone", required: false }];
+
+/** Asked on every pay link, so they're shown locked. The API asks them itself. */
+const CORE_FIELDS = ["Full name", "Email", "Matric number"];
+
+/** A due's own questions, minus any an older form asked that are core now (its matric number). */
+export function editableGuestFields(fields: GuestField[] | null): GuestField[] {
+  return (fields ?? []).filter((f) => f.id !== "matric");
+}
 
 /** One-tap questions reps reach for most. */
 const PRESETS: GuestField[] = [
-  DEFAULT_GUEST_FIELDS[0]!,
-  { id: "phone", label: "Phone number", type: "phone", required: true },
+  ...DEFAULT_GUEST_FIELDS,
   { id: "department", label: "Department", type: "text", required: false },
   { id: "size", label: "T-shirt size", type: "select", required: true, options: ["S", "M", "L", "XL", "XXL"] },
 ];
@@ -59,9 +68,9 @@ const iconButton =
   "grid h-8 w-8 place-items-center rounded-full text-ink-soft transition-colors hover:bg-paper hover:text-ink disabled:pointer-events-none disabled:opacity-30 cursor-pointer";
 
 /**
- * The questions guests answer on a due's pay link, on top of the name and
- * email every guest gives (those two are needed for the receipt, so they're
- * shown locked). Reps add, reorder and remove the rest.
+ * The form payers fill in on a due's pay link, on top of the name, email and
+ * matric number every payer gives (needed for the receipt and to match
+ * payments, so they're shown locked). Reps add, edit, reorder and remove the rest.
  */
 export function GuestFormBuilder({
   fields,
@@ -86,13 +95,14 @@ export function GuestFormBuilder({
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <p className="text-xs font-medium text-ink">What guests fill in</p>
+        <p className="text-xs font-medium text-ink">What payers fill in</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">
-          Ask for anything you need to match payments, like sizes, phone numbers or seat choices.
+          A ready-to-use form to start with. Change it to ask for anything you need to match payments, like
+          sizes, levels or seat choices.
         </p>
       </div>
 
-      {["Full name", "Email"].map((label) => (
+      {CORE_FIELDS.map((label) => (
         <div key={label} className="flex items-center gap-2 rounded-2xl border border-cloud bg-paper/40 px-4 py-3">
           <HugeiconsIcon icon={SquareLock02Icon} size={14} className="text-ink-soft" />
           <p className="flex-1 text-sm text-ink">{label}</p>
@@ -157,7 +167,7 @@ export function GuestFormBuilder({
       ))}
 
       {full ? (
-        <p className="text-[11px] text-ink-soft">That&apos;s the most questions a guest form can have ({MAX_FIELDS}).</p>
+        <p className="text-[11px] text-ink-soft">That&apos;s the most questions a pay form can have ({MAX_FIELDS}).</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           <button
