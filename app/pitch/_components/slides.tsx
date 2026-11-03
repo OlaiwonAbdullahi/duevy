@@ -13,15 +13,19 @@ import {
   Building03Icon,
   ChartUpIcon,
   CheckListIcon,
+  Clock01Icon,
+  Exchange01Icon,
   FileExportIcon,
   Globe02Icon,
   Idea01Icon,
+  ImageNotFound01Icon,
   Invoice01Icon,
   Link01Icon,
   Mail01Icon,
   Megaphone01Icon,
   Mortarboard01Icon,
   MoneyBag01Icon,
+  MoneyNotFound01Icon,
   Notification03Icon,
   PercentIcon,
   PinCodeIcon,
@@ -405,6 +409,14 @@ const PAY_TODAY = [
   "Fill in the Google Form the rep shares later, with your details",
 ];
 
+/** What the 8-step way of paying causes, beside the ₦1.8M case. */
+const PAY_TODAY_FALLOUT: { icon: Icon; title: string; body: string }[] = [
+  { icon: ImageNotFound01Icon, title: "Fake transfers", body: "Edited debit alerts pass as proof of payment." },
+  { icon: MoneyNotFound01Icon, title: "Money never remitted", body: "Reps collect dues and don't pass them on." },
+  { icon: Exchange01Icon, title: "Mixed money", body: "Department money sits in the rep's own account and gets spent." },
+  { icon: Clock01Icon, title: "Hours of reconciling", body: "Every alert, screenshot and form matched to a name by hand." },
+];
+
 const PAY_ON_DUEVY = [
   { title: "Join your department's space", body: "Once, with the join code your rep shares." },
   { title: "Select your dues", body: "Pick several at once and pay them in one checkout." },
@@ -432,8 +444,8 @@ export const slides: Slide[] = [
           </Item>
           <Item>
             <p className="text-white/80 text-lg md:text-xl leading-relaxed mt-8 max-w-xl">
-              Duevy gives verified campus reps a clean way to collect dues by bank transfer — and
-              gives every student a receipt for every naira.
+              Duevy gives verified campus reps a clean way to collect dues, and gives every student
+              a receipt for every naira.
             </p>
           </Item>
           <Item>
@@ -478,66 +490,48 @@ export const slides: Slide[] = [
         </Item>
         <Item>
           <Lede>
-            Today a student pays a rep&apos;s personal account and then has to prove it. Duevy
-            cuts that to 3 steps, and the payment proves itself.
+            Students pay into a rep&apos;s personal account, then spend days proving it. Reps spend
+            theirs matching screenshots to names.
           </Lede>
         </Item>
-        <div className="grid lg:grid-cols-2 gap-4 mt-10">
+        <div className="mt-10 grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <Item>
-            <div className="h-full rounded-3xl bg-white border border-[#e6f2ec] p-6 md:p-7">
-              <p className="flex items-baseline justify-between gap-3">
-                <span className="font-semibold tracking-tight text-[#1b2520]">How students pay today</span>
-                <span className="text-[13px] font-semibold text-[#b91c1c] tabular-nums">8 steps</span>
-              </p>
-              <ol className="mt-4 space-y-2">
-                {PAY_TODAY.map((step, i) => (
-                  <li key={step} className="flex gap-3 text-[14px] leading-snug text-[#7a847f]">
-                    <span className="w-5 shrink-0 text-right font-semibold tabular-nums text-[#a3aca7]">{i + 1}</span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-[#7a847f]">
+              How a student pays today
+            </p>
+            <ol className="relative mt-5">
+              {/* The thread joining the steps. */}
+              <span aria-hidden className="absolute left-[13px] top-3 bottom-3 w-px bg-[#dfe6e2]" />
+              {PAY_TODAY.map((step, i) => (
+                <li key={step} className="relative flex items-start gap-4 py-[7px]">
+                  <span className="relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#dfe6e2] bg-[#f7f6f2] text-[12px] font-semibold tabular-nums text-[#7a847f]">
+                    {i + 1}
+                  </span>
+                  <span className="pt-[3px] text-[15px] leading-snug text-[#1b2520]">{step}</span>
+                </li>
+              ))}
+            </ol>
           </Item>
           <Item>
-            <div className="h-full rounded-3xl bg-[#0b6e4f] p-6 md:p-7 text-white">
-              <p className="flex items-baseline justify-between gap-3">
-                <span className="font-semibold tracking-tight">On Duevy</span>
-                <span className="text-[13px] font-semibold text-white/80 tabular-nums">3 steps</span>
-              </p>
-              <ol className="mt-4 space-y-4">
-                {PAY_ON_DUEVY.map((step, i) => (
-                  <li key={step.title} className="flex gap-3">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/15 text-[13px] font-semibold tabular-nums">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="font-semibold leading-snug">{step.title}</p>
-                      <p className="mt-0.5 text-[14px] leading-snug text-white/75">{step.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-6 border-t border-white/20 pt-4 text-[14px] leading-snug text-white/80">
-                No screenshots, no &ldquo;abeg check&rdquo;, no chasing the rep.
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-[#7a847f]">
+              What it leads to
+            </p>
+            <div className="mt-5 border-l-2 border-[#b91c1c] pl-5">
+              <p className="text-5xl font-semibold tracking-tight text-[#b91c1c] tabular-nums md:text-6xl">₦1.8M</p>
+              <p className="mt-2 max-w-sm text-[15px] leading-snug text-[#1b2520]">
+                collected for students&apos; handouts and mismanaged by a single rep. One real case.
               </p>
             </div>
-          </Item>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4 mt-4">
-          <Item>
-            <Row
-              icon={MoneyBag01Icon}
-              title="For reps: dues scattered across personal accounts"
-              body="Collections land in the rep's own accounts, often more than one, mixed in with their own money."
-            />
-          </Item>
-          <Item>
-            <Row
-              icon={CheckListIcon}
-              title="For reps: reconciling by hand"
-              body="Matching every alert and screenshot to a name on a list, every semester, and getting accused when one is missed."
-            />
+            <ul className="mt-7 divide-y divide-[#e8ece9] border-y border-[#e8ece9]">
+              {PAY_TODAY_FALLOUT.map((c) => (
+                <li key={c.title} className="flex items-start gap-3 py-3">
+                  <HugeiconsIcon icon={c.icon} size={18} className="mt-0.5 shrink-0 text-[#b91c1c]" />
+                  <p className="text-[15px] leading-snug text-[#7a847f]">
+                    <span className="font-semibold text-[#1b2520]">{c.title}.</span> {c.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
           </Item>
         </div>
       </Stagger>
@@ -546,49 +540,69 @@ export const slides: Slide[] = [
   {
     title: "The solution",
     render: () => (
-      <Stagger className="grid lg:grid-cols-5 gap-10 lg:gap-14 items-center">
-        <div className="lg:col-span-2">
-          <Item>
-            <Eyebrow>The solution</Eyebrow>
-          </Item>
-          <Item>
-            <Heading>Duevy puts dues on the record.</Heading>
-          </Item>
-          <Item>
-            <Lede>
-              Every payment is confirmed automatically and receipted, every rep is verified, and
-              every withdrawal is logged.
-            </Lede>
-          </Item>
-        </div>
-        <div className="lg:col-span-3 space-y-4">
+      <Stagger>
+        <Item>
+          <Eyebrow>The solution</Eyebrow>
+        </Item>
+        <Item>
+          <Heading>Duevy puts dues on the record.</Heading>
+        </Item>
+        <Item>
+          <Lede>
+            Three steps instead of eight. Every payment confirms itself and is receipted, every
+            rep is verified, and every withdrawal is logged.
+          </Lede>
+        </Item>
+
+        <Item className="mt-10">
+          <div className="rounded-[28px] bg-[#0b6e4f] px-6 py-7 text-white md:px-10 md:py-9">
+            <div className="flex items-baseline justify-between gap-4">
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-white/70">How a student pays on Duevy</p>
+              <p className="text-[13px] font-semibold text-white/70">3 steps · was 8</p>
+            </div>
+            <ol className="mt-6 grid gap-6 md:grid-cols-3 md:gap-0">
+              {PAY_ON_DUEVY.map((step, i) => (
+                <li key={step.title} className="relative md:pr-8">
+                  {/* A line running on to the next step. */}
+                  {i < PAY_ON_DUEVY.length - 1 && (
+                    <span aria-hidden className="absolute left-12 right-4 top-[18px] hidden h-px bg-white/25 md:block" />
+                  )}
+                  <span className="relative grid h-9 w-9 place-items-center rounded-full bg-white text-[15px] font-semibold text-[#0b6e4f] tabular-nums">
+                    {i + 1}
+                  </span>
+                  <p className="mt-4 text-lg font-semibold tracking-tight">{step.title}</p>
+                  <p className="mt-1 max-w-xs text-[15px] leading-snug text-white/75">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-7 border-t border-white/15 pt-4 text-[15px] text-white/85">
+              No screenshots, no &ldquo;abeg check&rdquo;, no chasing the rep, no Google Form.
+            </p>
+          </div>
+        </Item>
+
+        <div className="mt-8 grid gap-8 md:grid-cols-3 md:gap-0 md:divide-x md:divide-[#e8ece9]">
           {[
             {
               icon: BankIcon,
-              title: "Bank-transfer checkout",
-              body: "Students pay by transfer to a one-time account number. It confirms automatically — no screenshots, no “abeg check.”",
+              title: "Confirmed automatically",
+              body: "Each checkout gets a one-time account number. The transfer confirms itself, so fake alerts don't work.",
             },
             {
               icon: Invoice01Icon,
-              title: "A receipt for every payment",
-              body: "Each payment lands in the student's history with a downloadable PDF receipt.",
+              title: "A receipt for every naira",
+              body: "Every payment lands in the student's history with a PDF receipt, and in the rep's roster.",
             },
             {
               icon: UserCheck01Icon,
               title: "Verified reps, controlled payouts",
-              body: "Reps pass identity checks before collecting. Withdrawals need a security code — or sign-off from 2 of 3 reps — and every action hits the audit trail.",
+              body: "Every naira is tracked on the department's own ledger. Withdrawals need a security code or 2 of 3 reps, all logged.",
             },
-          ].map((c) => (
-            <Item key={c.title}>
-              <div className="flex gap-5 rounded-3xl bg-white border border-[#e6f2ec] p-6">
-                <IconBadge icon={c.icon} />
-                <div>
-                  <h3 className="font-semibold text-lg tracking-tight text-[#1b2520] mb-1.5">
-                    {c.title}
-                  </h3>
-                  <p className="text-[15px] leading-relaxed text-[#7a847f]">{c.body}</p>
-                </div>
-              </div>
+          ].map((c, i) => (
+            <Item key={c.title} className={i === 0 ? "md:pr-8" : i === 1 ? "md:px-8" : "md:pl-8"}>
+              <HugeiconsIcon icon={c.icon} size={22} className="text-[#0b6e4f]" />
+              <h3 className="mt-3 font-semibold tracking-tight text-[#1b2520]">{c.title}</h3>
+              <p className="mt-1.5 text-[15px] leading-relaxed text-[#7a847f]">{c.body}</p>
             </Item>
           ))}
         </div>
