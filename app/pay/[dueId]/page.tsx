@@ -913,7 +913,7 @@ function PaidReceipt({
   const { breakdown, items, account } = checkout;
   const title = items.length === 1 ? items[0]!.title : `${items.length} dues`;
   const paidAt = checkout.paidAt ? new Date(checkout.paidAt) : null;
-  const awaitingInvite = account.requested && !account.exists && !account.inviteSentAt;
+  const awaitingInvite = !!account && account.requested && !account.exists && !account.inviteSentAt;
   const onAccountRef = useRef(onAccount);
   useEffect(() => {
     onAccountRef.current = onAccount;
@@ -926,7 +926,7 @@ function PaidReceipt({
     const timer = setInterval(() => {
       if (left-- <= 0) return clearInterval(timer);
       getGuestCheckout(reference, token)
-        .then((c) => c.account.inviteSentAt && onAccountRef.current(c.account))
+        .then((c) => c.account?.inviteSentAt && onAccountRef.current(c.account))
         .catch(() => {});
     }, 4000);
     return () => clearInterval(timer);
@@ -944,14 +944,19 @@ function PaidReceipt({
             {exactNaira(checkout.receivedKobo ?? breakdown.total)}
           </p>
           <p className="mt-1 text-sm text-ink-soft">
-            for <span className="font-medium text-ink">{title}</span> · {checkout.spaceName}
+            for <span className="font-medium text-ink">{title}</span>
+            {checkout.spaceName && ` · ${checkout.spaceName}`}
           </p>
         </div>
 
         <dl className="mt-6 flex flex-col gap-2 rounded-2xl border border-cloud bg-paper/50 p-4 text-xs">
-          <Row label="Paid by" value={checkout.payer.name} />
-          <Row label="Email" value={checkout.payer.email} />
-          {checkout.payer.matricNo && <Row label="Matric number" value={checkout.payer.matricNo} />}
+          {checkout.payer && (
+            <>
+              <Row label="Paid by" value={checkout.payer.name} />
+              <Row label="Email" value={checkout.payer.email} />
+              {checkout.payer.matricNo && <Row label="Matric number" value={checkout.payer.matricNo} />}
+            </>
+          )}
           {checkout.answers.map((a) => (
             <Row key={a.fieldId} label={a.label} value={a.value} />
           ))}
@@ -974,11 +979,15 @@ function PaidReceipt({
           ) : (
             <p className="text-xs text-ink-soft">Your receipt is being issued — refresh in a moment.</p>
           )}
-          <p className="text-[11px] text-ink-soft">A copy is on its way to {checkout.payer.email}.</p>
+          <p className="text-[11px] text-ink-soft">
+            A copy is on its way to {checkout.payer ? checkout.payer.email : "your email"}.
+          </p>
         </div>
       </div>
 
-      <AccountCard account={account} email={checkout.payer.email} reference={reference} token={token} onAccount={onAccount} />
+      {account && checkout.payer && (
+        <AccountCard account={account} email={checkout.payer.email} reference={reference} token={token} onAccount={onAccount} />
+      )}
     </div>
   );
 }

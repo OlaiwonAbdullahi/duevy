@@ -41,12 +41,17 @@ export type GuestAccountState = {
   inviteSentAt: string | null;
 };
 
+/**
+ * `spaceName`, `payer`, `answers` and `account` are newer than the endpoint:
+ * an API without them gives null / empty here (see `getGuestCheckout`), and
+ * the receipt leaves those parts out rather than failing.
+ */
 export type GuestCheckoutStatus = Checkout & {
   receiptNumber: string | null;
-  spaceName: string;
-  payer: { name: string; email: string; matricNo: string | null };
+  spaceName: string | null;
+  payer: { name: string; email: string; matricNo: string | null } | null;
   answers: GuestAnswer[];
-  account: GuestAccountState;
+  account: GuestAccountState | null;
 };
 
 export type GuestPayer = {
@@ -76,10 +81,18 @@ export function startGuestCheckout(dueId: string, payer: GuestPayer) {
   return apiClient.post<GuestCheckout>(`/public/dues/${encodeURIComponent(dueId)}/checkout`, payer);
 }
 
-export function getGuestCheckout(reference: string, token: string) {
-  return apiClient.get<GuestCheckoutStatus>(
+export async function getGuestCheckout(reference: string, token: string): Promise<GuestCheckoutStatus> {
+  const c = await apiClient.get<Partial<GuestCheckoutStatus> & Checkout>(
     `/public/checkouts/${encodeURIComponent(reference)}?t=${encodeURIComponent(token)}`,
   );
+  return {
+    ...c,
+    receiptNumber: c.receiptNumber ?? null,
+    spaceName: c.spaceName ?? null,
+    payer: c.payer ?? null,
+    answers: c.answers ?? [],
+    account: c.account ?? null,
+  };
 }
 
 /**
