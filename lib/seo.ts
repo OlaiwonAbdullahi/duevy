@@ -13,11 +13,12 @@ export const DEFAULT_TITLE = "Duevy — Collect campus dues by bank transfer. No
 export const DEFAULT_DESCRIPTION =
   "Duevy helps course reps and departments in Nigerian universities collect dues and levies by bank transfer, track who has paid, and give every student a receipt.";
 
+/** The designed brand card, drawn by app/opengraph-image.tsx. */
 export const OG_IMAGE = {
-  url: "/ogimage.png",
-  width: 1352,
-  height: 648,
-  alt: "Duevy — Campus dues, made transparent.",
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: "Duevy — Collect campus dues. Track every kobo. No wahala.",
 };
 
 /**

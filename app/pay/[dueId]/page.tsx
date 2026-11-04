@@ -358,12 +358,12 @@ function PayForm({ dueId }: { dueId: string }) {
       {/* What's being paid, and how much. */}
       <div className="doodle-card relative px-6 pb-7 pt-6 text-white sm:px-8">
         <div className="relative flex items-center gap-3">
-          <span className="rounded-2xl bg-white/15 p-1 ring-1 ring-white/20">
+          <span className="rounded-xl bg-white/15 p-1 ring-1 ring-white/20">
             <SpaceEmblem space={due.space} glyph={KIND_GLYPH[due.space.kind]} size={40} />
           </span>
           <div className="min-w-0">
             <p className="truncate text-xs text-white/75">
-              {due.space.name} · {SPACE_KIND_LABEL[due.space.kind]}
+              {due.space.name}
             </p>
             <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{due.title}</h1>
           </div>

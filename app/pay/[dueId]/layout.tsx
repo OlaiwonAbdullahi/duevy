@@ -3,13 +3,28 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/seo";
+import { loadShareDue, shareDate, shareNaira } from "./share";
 
-/** Pay links are shared privately (WhatsApp, class groups) — never in search. */
-export const metadata: Metadata = {
-  title: "Pay",
-  description: `Pay your dues securely with ${SITE_NAME}. No account needed.`,
-  robots: { index: false, follow: false },
-};
+/**
+ * Pay links are shared privately (WhatsApp, class groups) — never in search —
+ * but their preview names the due, so the group knows what it's paying for.
+ * The card itself is ./opengraph-image.tsx.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ dueId: string }> }): Promise<Metadata> {
+  const { dueId } = await params;
+  const due = await loadShareDue(dueId);
+  const title = due ? `Pay ${shareNaira(due.amount)} · ${due.title}` : "Pay";
+  const description = due
+    ? `${due.spaceName}. Due ${shareDate(due.dueDate)}. Pay securely with ${SITE_NAME} — no account needed, receipt straight away.`
+    : `Pay your dues securely with ${SITE_NAME}. No account needed.`;
+  return {
+    title,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: { type: "website", url: `/pay/${dueId}`, siteName: SITE_NAME, locale: "en_NG", title, description },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function GuestPayLayout({
   children,

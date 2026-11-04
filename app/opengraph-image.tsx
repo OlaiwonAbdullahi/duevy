@@ -1,0 +1,101 @@
+import { ImageResponse } from "next/og";
+import { OG_COLORS as C, OG_SIZE, ogAssets, ogFonts } from "@/lib/og";
+
+export const alt = "Duevy — Collect campus dues. Track every kobo. No wahala.";
+export const size = OG_SIZE;
+export const contentType = "image/png";
+
+/** The share card every page uses unless it has its own (pay links do). */
+export default async function OpengraphImage() {
+  const [{ doodle, logo }, fonts] = await Promise.all([ogAssets(), ogFonts()]);
+
+  return new ImageResponse(
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        background: C.deep,
+        fontFamily: "Manrope",
+      }}
+    >
+      <img
+        src={doodle}
+        alt=""
+        width={1200}
+        height={640}
+        style={{ position: "absolute", inset: 0, objectFit: "cover" }}
+      />
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          width: "100%",
+          padding: "56px 72px",
+        }}
+      >
+        <img src={logo} alt="" height={52} width={181} />
+
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              fontSize: 64,
+              fontWeight: 700,
+              lineHeight: 1.05,
+              letterSpacing: -2.5,
+              color: "white",
+            }}
+          >
+            <span>Collect dues.</span>
+            <span>Track every kobo.</span>
+            <span style={{ color: C.mint }}>No wahala.</span>
+          </div>
+          <p
+            style={{
+              marginTop: 22,
+              fontSize: 26,
+              fontWeight: 500,
+              lineHeight: 1.4,
+              color: "rgba(255,255,255,0.78)",
+              maxWidth: 820,
+            }}
+          >
+            Dues, levies and payments for campus reps and students — and a
+            receipt for every student.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span
+            style={{
+              display: "flex",
+              borderRadius: 999,
+              background: "white",
+              color: C.deep,
+              padding: "12px 26px",
+              fontSize: 24,
+              fontWeight: 700,
+            }}
+          >
+            duevy.app
+          </span>
+          <span
+            style={{
+              fontSize: 22,
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.7)",
+            }}
+          >
+            Built for Nigerian campuses
+          </span>
+        </div>
+      </div>
+    </div>,
+    { ...size, fonts },
+  );
+}
