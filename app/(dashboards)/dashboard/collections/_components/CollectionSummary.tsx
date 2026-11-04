@@ -25,7 +25,8 @@ export function CollectionSummary({
               {naira(totals.collected)}
             </p>
             <p className="mt-1 text-xs text-ink-soft">
-              {totals.paid} of {trackedCount} students have paid.
+              {totals.paid} of {trackedCount} members have paid
+              {totals.linkPaid > 0 && `, plus ${totals.linkPaid} via the pay link`}.
             </p>
           </div>
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cloud text-brand">
@@ -43,14 +44,14 @@ export function CollectionSummary({
       <StatCard
         icon={Clock01Icon}
         label="Outstanding"
-        value={naira(totals.expected - totals.collected)}
-        hint={`${totals.unpaid} unpaid students`}
+        value={naira(totals.outstanding)}
+        hint={`${totals.unpaid} member${totals.unpaid === 1 ? "" : "s"} yet to pay`}
       />
       <StatCard
         icon={UserMultipleIcon}
         label="Collection rate"
         value={`${totals.rate}%`}
-        hint={`${trackedCount} students tracked`}
+        hint={`${trackedCount} member${trackedCount === 1 ? "" : "s"} tracked`}
       />
     </div>
   );

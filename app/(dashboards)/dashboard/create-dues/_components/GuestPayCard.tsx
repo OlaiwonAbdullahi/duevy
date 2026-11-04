@@ -27,7 +27,7 @@ export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionG
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
-      toast.success("Guest pay link copied", { description: "Share it anywhere — no account needed to pay." });
+      toast.success("Pay link copied", { description: "Share it anywhere — no account needed to pay." });
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Couldn't copy — select the link and copy it manually.");
@@ -41,10 +41,10 @@ export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionG
           <HugeiconsIcon icon={Link01Icon} size={18} />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-ink">Guest pay link</h3>
+          <h3 className="text-sm font-semibold text-ink">Pay link</h3>
           <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
             {live
-              ? "Anyone with this link can pay with their name, email and answers to your questions. Guests don't count toward your class's paid / unpaid."
+              ? "Anyone with this link can pay — no account or membership needed. People who pay through it without being a member are listed here, and included when you export \u201cEveryone who paid\u201d."
               : "The link opens once this due is published."}
           </p>
         </div>
@@ -76,10 +76,10 @@ export function GuestPayCard({ due, guests }: { due: RepDue; guests: CollectionG
 
       <div className="mt-5">
         <p className="text-xs font-medium text-ink-soft">
-          Paid as guests · <span className="text-ink">{guests.length}</span>
+          Paid via the link · <span className="text-ink">{guests.length}</span>
         </p>
         {guests.length === 0 ? (
-          <p className="mt-2 text-xs text-ink-soft">No guest payments yet.</p>
+          <p className="mt-2 text-xs text-ink-soft">No one has paid through the link yet.</p>
         ) : (
           <ul className="mt-2 flex flex-col">
             {guests.map((g) => (

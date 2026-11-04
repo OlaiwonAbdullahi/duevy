@@ -16,8 +16,8 @@ const DOODLE_RATIO = 1200 / 640;
 export type CollectionExportScope = Exclude<StatusFilter, "all"> | "all";
 
 const SCOPE_LABEL: Record<CollectionExportScope, string> = {
-  all: "All students",
-  paid: "Paid",
+  all: "Full list",
+  paid: "Everyone who paid",
   unpaid: "Yet to pay",
 };
 
@@ -53,7 +53,11 @@ async function loadImage(src: string): Promise<string | null> {
   }
 }
 
-/** Branded Duevy PDF of a due's roster, filtered to `scope`. */
+/**
+ * Branded Duevy PDF of a due's roster, filtered to `scope`. Rows can mix
+ * members and pay-link payers (`via: "link"`); when any are pay-link payers
+ * the table says how each paid, and adds a column per question they answered.
+ */
 export async function downloadCollectionPdf({
   filename,
   dueTitle,
@@ -79,7 +83,12 @@ export async function downloadCollectionPdf({
     loadImage(DOODLE_SRC),
   ]);
 
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const viaLink = rows.filter((r) => r.via === "link").length;
+  // Every question any pay-link payer answered, in first-seen order.
+  const questions = [...new Set(rows.flatMap((r) => (r.answers ?? []).map((a) => a.label)))];
+
+  // Answer columns need the width: turn the page sideways for them.
+  const doc = new jsPDF({ unit: "pt", format: "a4", orientation: questions.length > 0 ? "landscape" : "portrait" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
@@ -144,7 +153,7 @@ export async function downloadCollectionPdf({
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(INK_SOFT);
-  const subtitle = [spaceName, `${ngn(amount)} per student`, `Due ${formatDate(dueDate)}`]
+  const subtitle = [spaceName, `${ngn(amount)} each`, `Due ${formatDate(dueDate)}`]
     .filter(Boolean)
     .join("  ·  ");
   doc.text(subtitle, margin, y);
@@ -153,19 +162,26 @@ export async function downloadCollectionPdf({
   y += 22;
   const paidCount = rows.filter((r) => r.status === "paid").length;
   const unpaidCount = rows.length - paidCount;
+  const members = rows.length - viaLink;
   const stats: [string, string][] =
     scope === "paid"
       ? [
-          ["Students paid", String(paidCount)],
+          ["Paid", String(paidCount)],
+          ...(viaLink > 0
+            ? ([
+                ["Members", String(paidCount - viaLink)],
+                ["Via pay link", String(viaLink)],
+              ] as [string, string][])
+            : []),
           ["Amount collected", ngn(paidCount * amount)],
         ]
       : scope === "unpaid"
         ? [
-            ["Students yet to pay", String(unpaidCount)],
+            ["Yet to pay", String(unpaidCount)],
             ["Outstanding", ngn(unpaidCount * amount)],
           ]
         : [
-            ["Students", String(rows.length)],
+            ["Members", String(members)],
             ["Paid", String(paidCount)],
             ["Yet to pay", String(unpaidCount)],
             ["Collected", ngn(paidCount * amount)],
@@ -197,7 +213,9 @@ export async function downloadCollectionPdf({
     "Matric no.",
     "Email",
     ...(scope === "all" ? ["Status"] : []),
+    ...(viaLink > 0 ? ["Paid via"] : []),
     ...(showPayment ? ["Paid on", "Reference"] : []),
+    ...questions,
   ];
   const body = rows.map((s, i) => [
     String(i + 1),
@@ -205,11 +223,13 @@ export async function downloadCollectionPdf({
     s.matricNo || "—",
     s.email,
     ...(scope === "all" ? [STATUS_LABEL[s.status]] : []),
+    ...(viaLink > 0 ? [s.status !== "paid" ? "—" : s.via === "link" ? "Pay link" : "Duevy"] : []),
     ...(showPayment
       ? [s.status === "paid" ? formatDate(s.paidOn) : "—", s.reference ?? "—"]
       : []),
+    ...questions.map((q) => s.answers?.find((a) => a.label === q)?.value ?? "—"),
   ]);
-  const statusCol = scope === "all" ? 4 : -1;
+  const statusCol = head.indexOf("Status");
 
   autoTable(doc, {
     startY: y,

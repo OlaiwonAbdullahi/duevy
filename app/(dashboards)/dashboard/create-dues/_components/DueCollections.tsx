@@ -57,10 +57,27 @@ const EXPORT_OPTIONS: {
   label: string;
   hint: string;
 }[] = [
-  { scope: "paid", label: "Paid", hint: "Students who have paid" },
-  { scope: "unpaid", label: "Yet to pay", hint: "Students still owing" },
-  { scope: "all", label: "Everyone", hint: "The full roster" },
+  { scope: "paid", label: "Everyone who paid", hint: "Members and pay-link payers" },
+  { scope: "unpaid", label: "Yet to pay", hint: "Members still owing" },
+  { scope: "all", label: "Full list", hint: "Every member, plus pay-link payers" },
 ];
+
+/** A pay-link payer as an export row: paid, and marked as paid through the link. */
+function linkRow(g: CollectionGuest): CollectionStudent {
+  return {
+    id: g.id,
+    name: g.name,
+    matricNo: g.matricNo ?? "",
+    level: "",
+    email: g.email,
+    status: "paid",
+    paidAt: timeAgo(g.paidAt),
+    paidOn: g.paidAt,
+    reference: g.reference,
+    via: "link",
+    answers: (g.answers ?? []).map((a) => ({ label: a.label, value: a.value })),
+  };
+}
 
 function adaptStudent(api: ApiCollectionStudent): CollectionStudent {
   return {
@@ -79,18 +96,26 @@ function adaptStudent(api: ApiCollectionStudent): CollectionStudent {
 const EMPTY_TOTALS: CollectionTotals = {
   paid: 0,
   unpaid: 0,
+  linkPaid: 0,
   collected: 0,
   expected: 0,
+  outstanding: 0,
   rate: 0,
 };
 
 function adaptTotals(api: ApiCollectionTotals): CollectionTotals {
+  const members = api.paid + api.unpaid;
   return {
     paid: api.paid,
     unpaid: api.unpaid,
+    linkPaid: api.guestPaid ?? 0,
     collected: fromKobo(api.collected),
     expected: fromKobo(api.expected),
-    rate: Math.round(api.rate * 100),
+    // What unpaid members owe — not expected minus collected, which pay-link
+    // money (from outside the member list) would push down or below zero.
+    outstanding: members > 0 ? fromKobo((api.expected / members) * api.unpaid) : 0,
+    // Pay-link money can take collections past what members alone would pay.
+    rate: Math.min(100, Math.round(api.rate * 100)),
   };
 }
 
@@ -205,20 +230,27 @@ export function DueCollections({
 
   // Exports cover the whole roster for the chosen status, not just the
   // rows the current tab/search happens to show.
-  const paidTotal = students.filter((s) => s.status === "paid").length;
+  // "Everyone who paid" and "Full list" include pay-link payers too.
+  const linkRows = useMemo(() => guests.map(linkRow), [guests]);
+  const paidMembers = students.filter((s) => s.status === "paid");
   const exportCounts = {
-    all: students.length,
-    paid: paidTotal,
-    unpaid: students.length - paidTotal,
+    all: students.length + linkRows.length,
+    paid: paidMembers.length + linkRows.length,
+    unpaid: students.length - paidMembers.length,
   };
+  const nothingToExport = students.length === 0 && linkRows.length === 0;
 
   const handleExport = async (scope: CollectionExportScope) => {
     const rows =
-      scope === "all" ? students : students.filter((s) => s.status === scope);
+      scope === "all"
+        ? [...students, ...linkRows]
+        : scope === "paid"
+          ? [...paidMembers, ...linkRows]
+          : students.filter((s) => s.status === "unpaid");
     if (rows.length === 0) {
       toast.info("Nothing to export", {
         description:
-          scope === "paid" ? "No one has paid yet." : "Everyone has paid.",
+          scope === "paid" ? "No one has paid yet." : "Every member has paid.",
       });
       return;
     }
@@ -236,7 +268,7 @@ export function DueCollections({
         rows,
       });
       toast.success("PDF downloaded", {
-        description: `${rows.length} student${rows.length === 1 ? "" : "s"} exported.`,
+        description: `${rows.length} ${rows.length === 1 ? "person" : "people"} exported.`,
       });
     } catch {
       toast.error("Couldn't generate the PDF.");
@@ -323,7 +355,7 @@ export function DueCollections({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                disabled={students.length === 0 || exporting}
+                disabled={nothingToExport || exporting}
                 aria-label="Export list as PDF"
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-cloud text-ink transition-colors active:bg-paper disabled:opacity-40 cursor-pointer sm:hidden"
               >
@@ -368,7 +400,7 @@ export function DueCollections({
               <Button
                 variant="brand-outline"
                 size="pill"
-                disabled={students.length === 0 || exporting}
+                disabled={nothingToExport || exporting}
               >
                 {exporting ? (
                   <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
@@ -432,9 +464,9 @@ export function DueCollections({
               label="Collected"
               value={naira(totals.collected)}
               rate={totals.rate}
-              caption={`${totals.paid} of ${students.length} students paid · ${naira(
-                totals.expected - totals.collected,
-              )} to go`}
+              caption={`${totals.paid} of ${students.length} members paid${
+                totals.linkPaid > 0 ? ` · ${totals.linkPaid} via pay link` : ""
+              } · ${naira(totals.outstanding)} to go`}
             >
               <div className="flex gap-2.5">
                 <Button
