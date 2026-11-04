@@ -22,8 +22,12 @@ export default async function GuestPayLayout({
   const { dueId } = await params;
   return (
     <div className="relative min-h-screen bg-canvas">
-      {/* A soft brand wash behind the card. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-cloud to-transparent" />
+      {/* The brand doodle, faded right back so the card stays the focus. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 bg-[url('/doodle-card.jpg')] bg-cover bg-center opacity-[0.14]"
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-cloud/70 to-transparent" />
       <header className="relative mx-auto flex h-16 max-w-lg items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logos/duevy-mark.svg" alt="Duevy" width={24} height={24} style={{ width: "auto" }} className="h-6" />

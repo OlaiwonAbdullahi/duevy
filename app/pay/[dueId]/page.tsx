@@ -354,7 +354,7 @@ function PayForm({ dueId }: { dueId: string }) {
           : `Pay ${exactNaira(due.total)}`;
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-cloud bg-canvas shadow-[0_30px_60px_-40px_rgba(11,110,79,0.45)]">
+    <div className="overflow-hidden rounded-[28px] border border-cloud bg-canvas">
       {/* What's being paid, and how much. */}
       <div className="doodle-card relative px-6 pb-7 pt-6 text-white sm:px-8">
         <div className="relative flex items-center gap-3">
@@ -501,7 +501,7 @@ function PayForm({ dueId }: { dueId: string }) {
           <button
             type="submit"
             disabled={!valid || busy}
-            className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-semibold text-white shadow-[0_12px_24px_-12px_rgba(11,110,79,0.7)] transition-all duration-300 hover:bg-brand-bright active:translate-y-px disabled:opacity-50 disabled:shadow-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-semibold text-white transition-all duration-300 hover:bg-brand-bright active:translate-y-px disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             {busy ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -1160,8 +1160,34 @@ function Notice({
   );
 }
 
+/** The card's own shape while it loads: the dark header, then the form. */
 function CardSkeleton() {
-  return <div className="h-80 animate-pulse rounded-3xl border border-cloud bg-paper/50" />;
+  return (
+    <div aria-busy aria-label="Loading" className="overflow-hidden rounded-[28px] border border-cloud bg-canvas">
+      <div className="doodle-card px-6 pb-7 pt-6 sm:px-8">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 animate-pulse rounded-2xl bg-white/20" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-40 animate-pulse rounded-full bg-white/20" />
+            <div className="h-4 w-28 animate-pulse rounded-full bg-white/25" />
+          </div>
+        </div>
+        <div className="mt-6 h-3 w-24 animate-pulse rounded-full bg-white/20" />
+        <div className="mt-3 h-8 w-44 animate-pulse rounded-full bg-white/25" />
+        <div className="mt-3 h-3 w-52 animate-pulse rounded-full bg-white/20" />
+      </div>
+      <div className="flex flex-col gap-4 p-6 sm:p-8">
+        <div className="h-3 w-20 animate-pulse rounded-full bg-ink/[0.1]" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-3 w-24 animate-pulse rounded-full bg-ink/[0.1]" />
+            <div className="h-11 animate-pulse rounded-full bg-ink/[0.07]" />
+          </div>
+        ))}
+        <div className="mt-1 h-[52px] animate-pulse rounded-full bg-brand/35" />
+      </div>
+    </div>
+  );
 }
 
 /**

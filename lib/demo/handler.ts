@@ -660,7 +660,7 @@ const routes: [string, string, Handler][] = [
       title: d.title,
       note: d.note,
       type: d.type,
-      dueDate: d.dueDate,
+      dueDate: d.dueDate.slice(0, 10),
       amount: d.amount,
       fee,
       total: d.amount + fee,
