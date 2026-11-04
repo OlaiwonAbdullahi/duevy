@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { OG_COLORS as C, OG_SIZE, ogAssets, ogFonts } from "@/lib/og";
 
-export const alt = "Duevy — Collect campus dues. Track every kobo. No wahala.";
+export const alt = "Duevy — Payment infra for every Campus.";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
@@ -44,20 +44,19 @@ export default async function OpengraphImage() {
             style={{
               display: "flex",
               flexDirection: "column",
-              fontSize: 64,
+              fontSize: 80,
               fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: -2.5,
               color: "white",
             }}
           >
-            <span>Collect dues.</span>
-            <span>Track every kobo.</span>
-            <span style={{ color: C.mint }}>No wahala.</span>
+            <span>Payment infra for</span>
+            <span style={{ color: C.mint }}>every Campus.</span>
           </div>
           <p
             style={{
-              marginTop: 22,
+              marginTop: 30,
               fontSize: 26,
               fontWeight: 500,
               lineHeight: 1.4,
@@ -65,8 +64,8 @@ export default async function OpengraphImage() {
               maxWidth: 820,
             }}
           >
-            Dues, levies and payments for campus reps and students — and a
-            receipt for every student.
+            Duevy gives campus reps a clean way to collect dues, and gives
+            every student a receipt for every naira.
           </p>
         </div>
 
@@ -83,15 +82,6 @@ export default async function OpengraphImage() {
             }}
           >
             duevy.app
-          </span>
-          <span
-            style={{
-              fontSize: 22,
-              fontWeight: 500,
-              color: "rgba(255,255,255,0.7)",
-            }}
-          >
-            Built for Nigerian campuses
           </span>
         </div>
       </div>
