@@ -210,7 +210,8 @@ function shortDate(ymd: string) {
 
 function PayForm({ dueId }: { dueId: string }) {
   const router = useRouter();
-  const { user, status: authStatus } = useAuth();
+  const { user, status: authStatus, logout } = useAuth();
+  const [switching, setSwitching] = useState(false);
   const [due, setDue] = useState<GuestDue | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "closed">("loading");
   const [name, setName] = useState("");
@@ -394,6 +395,25 @@ function PayForm({ dueId }: { dueId: string }) {
                   {profileMatric ? ` · ${profileMatric}` : ""}
                 </p>
               </div>
+              {/* Someone else's session on this device: sign it out and pay as yourself. */}
+              <button
+                type="button"
+                disabled={switching}
+                onClick={async () => {
+                  setSwitching(true);
+                  try {
+                    await logout();
+                    toast.success("Signed out — enter your own details below.");
+                  } catch {
+                    toast.error("Couldn't sign out. Try again.");
+                  } finally {
+                    setSwitching(false);
+                  }
+                }}
+                className="shrink-0 rounded-full bg-canvas px-3 py-1.5 text-xs font-medium text-brand transition hover:bg-paper disabled:opacity-60"
+              >
+                {switching ? "Signing out…" : "Not you?"}
+              </button>
             </div>
           ) : (
             <>
