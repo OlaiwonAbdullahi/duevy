@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ReactElement } from "react";
+import { ImageResponse } from "next/og";
+import sharp from "sharp";
 
 /**
  * Shared pieces for the share cards (`opengraph-image.tsx` routes): the size
@@ -24,8 +27,13 @@ async function publicDataUrl(file: string, type: string) {
   return `data:${type};base64,${bytes.toString("base64")}`;
 }
 
-/** The doodle artwork and the white Duevy logo, ready for `<img src>`. */
-export async function ogAssets() {
+/** The doodle artwork and the white Duevy logo, ready for `<img src>`. Read once per server. */
+let assets: Promise<{ doodle: string; logo: string }> | null = null;
+export function ogAssets() {
+  return (assets ??= loadAssets());
+}
+
+async function loadAssets() {
   const [doodle, logo] = await Promise.all([
     publicDataUrl("doodle-card.jpg", "image/jpeg"),
     publicDataUrl("logos/duevy-logo-white.png", "image/png"),
@@ -38,7 +46,12 @@ export async function ogAssets() {
  * latin-ext subsets; latin-ext carries the naira sign). Shipped with the app
  * so a card never waits on Google Fonts.
  */
-export async function ogFonts() {
+let fonts: ReturnType<typeof loadFonts> | null = null;
+export function ogFonts() {
+  return (fonts ??= loadFonts());
+}
+
+async function loadFonts() {
   const dir = join(process.cwd(), "lib", "og-fonts");
   const load = (file: string) => readFile(join(dir, file));
   const files = [
@@ -107,4 +120,18 @@ export function OgNaira({
       {digits}
     </span>
   );
+}
+
+/**
+ * Render a card and send it as a JPEG: the doodle's fine texture makes the
+ * PNG ~215 KB, slow for WhatsApp and the like to fetch after the text has
+ * arrived; as a JPEG it's a fraction of that. `cacheControl` lets the CDN and
+ * the apps keep it rather than ask for it again.
+ */
+export async function ogJpeg(element: ReactElement, cacheControl: string) {
+  const png = await new ImageResponse(element, { ...OG_SIZE, fonts: await ogFonts() }).arrayBuffer();
+  const jpeg = await sharp(Buffer.from(png)).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+  return new Response(new Uint8Array(jpeg), {
+    headers: { "Content-Type": "image/jpeg", "Cache-Control": cacheControl },
+  });
 }

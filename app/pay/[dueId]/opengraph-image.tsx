@@ -1,5 +1,4 @@
-import { ImageResponse } from "next/og";
-import { OG_COLORS as C, OG_SIZE, OgNaira, ogAssets, ogFonts } from "@/lib/og";
+import { OG_COLORS as C, OG_SIZE, OgNaira, ogAssets, ogJpeg } from "@/lib/og";
 import { CATEGORY_LABEL } from "@/app/(dashboards)/dashboard/dues/_components/data";
 import { loadShareDue, shareDate } from "./share";
 
@@ -16,7 +15,7 @@ const shareNairaLength = (kobo: number) =>
 
 export const alt = "Pay your dues with Duevy";
 export const size = OG_SIZE;
-export const contentType = "image/png";
+export const contentType = "image/jpeg";
 
 /**
  * A pay link's preview card: the due, its amount and deadline, so a class group
@@ -29,13 +28,12 @@ export default async function PayLinkImage({
   params: Promise<{ dueId: string }>;
 }) {
   const { dueId } = await params;
-  const [due, { doodle, logo }, fonts] = await Promise.all([
+  const [due, { doodle, logo }] = await Promise.all([
     loadShareDue(dueId),
     ogAssets(),
-    ogFonts(),
   ]);
 
-  return new ImageResponse(
+  return ogJpeg(
     <div
       style={{
         position: "relative",
@@ -266,7 +264,7 @@ export default async function PayLinkImage({
         )}
       </div>
     </div>,
-    { ...size, fonts },
+    "public, max-age=300, s-maxage=300, stale-while-revalidate=86400",
   );
 }
 

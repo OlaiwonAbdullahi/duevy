@@ -1,15 +1,14 @@
-import { ImageResponse } from "next/og";
-import { OG_COLORS as C, OG_SIZE, ogAssets, ogFonts } from "@/lib/og";
+import { OG_COLORS as C, OG_SIZE, ogAssets, ogJpeg } from "@/lib/og";
 
 export const alt = "Duevy — Payment infra for every Campus.";
 export const size = OG_SIZE;
-export const contentType = "image/png";
+export const contentType = "image/jpeg";
 
 /** The share card every page uses unless it has its own (pay links do). */
 export default async function OpengraphImage() {
-  const [{ doodle, logo }, fonts] = await Promise.all([ogAssets(), ogFonts()]);
+  const { doodle, logo } = await ogAssets();
 
-  return new ImageResponse(
+  return ogJpeg(
     <div
       style={{
         position: "relative",
@@ -86,6 +85,6 @@ export default async function OpengraphImage() {
         </div>
       </div>
     </div>,
-    { ...size, fonts },
+    "public, max-age=86400, stale-while-revalidate=604800",
   );
 }
