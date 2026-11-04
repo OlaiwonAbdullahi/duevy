@@ -150,8 +150,6 @@ export default async function PayLinkImage({
                 borderRadius: 30,
                 background: C.canvas,
                 transform: "rotate(-4deg)",
-                boxShadow: "0 30px 60px rgba(0,0,0,0.3)",
-                overflow: "hidden",
               }}
             >
               <div
@@ -199,16 +197,8 @@ export default async function PayLinkImage({
                   height: 40,
                 }}
               >
-                <span
-                  style={{
-                    position: "absolute",
-                    left: -20,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 999,
-                    background: C.deep,
-                  }}
-                />
+                {/* The doodle's dark tone at this spot, so it reads as a hole. */}
+                <Notch side="left" color="#033c36" />
                 <span
                   style={{
                     display: "flex",
@@ -217,16 +207,8 @@ export default async function PayLinkImage({
                     borderTop: `3px dashed ${C.cloud}`,
                   }}
                 />
-                <span
-                  style={{
-                    position: "absolute",
-                    right: -20,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 999,
-                    background: C.deep,
-                  }}
-                />
+                {/* Over the mint ticket behind, so it takes its colour. */}
+                <Notch side="right" color={C.mint} />
               </div>
 
               <div
@@ -285,5 +267,36 @@ export default async function PayLinkImage({
       </div>
     </div>,
     { ...size, fonts },
+  );
+}
+
+/**
+ * A half-circle bite out of the ticket's edge. It spills a few px past the
+ * edge so it covers the ticket's anti-aliased rim (else a pale line shows).
+ */
+function Notch({ side, color }: { side: "left" | "right"; color: string }) {
+  const spill = 4;
+  return (
+    <span
+      style={{
+        position: "absolute",
+        [side]: -spill,
+        display: "flex",
+        width: 20 + spill,
+        height: 40,
+        overflow: "hidden",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          [side]: spill - 20,
+          width: 40,
+          height: 40,
+          borderRadius: 999,
+          background: color,
+        }}
+      />
+    </span>
   );
 }
