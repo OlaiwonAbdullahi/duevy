@@ -489,6 +489,9 @@ function PayForm({ dueId }: { dueId: string }) {
                   Create a free Duevy account for me so I can track my payments, access receipts and manage
                   future collections.
                 </span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-ink">
+                  Once you join your department on Duevy, you can also select several dues and pay them all at once.
+                </span>
                 <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-soft">
                   You can still complete your payment without creating an account.
                 </span>
