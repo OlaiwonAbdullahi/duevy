@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -32,6 +33,8 @@ function rowDueType(due: PayoutBreakdown["byDue"][number]): string | null | unde
 }
 
 const PER_PAGE = 10;
+
+const EMPTY_DUES: PayoutBreakdown["byDue"] = [];
 
 const EMPTY_TOTALS: PayoutBreakdown["totals"] = {
   collected: 0,
@@ -118,37 +121,26 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
-  const [totals, setTotals] = useState(EMPTY_TOTALS);
-  const [byDue, setByDue] = useState<PayoutBreakdown["byDue"]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ["space", spaceId ?? "", "payout-breakdown", from, to, page, PER_PAGE],
+    queryFn: () =>
+      getPayoutBreakdown(spaceId!, {
+        from: from || undefined,
+        to: to || undefined,
+        page,
+        perPage: PER_PAGE,
+      }),
+    enabled: !!spaceId,
+    placeholderData: keepPreviousData,
+  });
+  const totals = query.data?.data.totals ?? EMPTY_TOTALS;
+  const byDue = query.data?.data.byDue ?? EMPTY_DUES;
+  const totalPages = query.data?.meta?.totalPages ?? 1;
+  const loading = !spaceId || query.isPending;
 
   useEffect(() => {
-    if (!spaceId) return;
-    let cancelled = false;
-    setLoading(true);
-    getPayoutBreakdown(spaceId, {
-      from: from || undefined,
-      to: to || undefined,
-      page,
-      perPage: PER_PAGE,
-    })
-      .then(({ data, meta }) => {
-        if (cancelled) return;
-        setTotals(data.totals);
-        setByDue(data.byDue);
-        setTotalPages(meta?.totalPages ?? 1);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Couldn't load the payout breakdown.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [spaceId, from, to, page]);
+    if (query.isError) toast.error("Couldn't load the payout breakdown.");
+  }, [query.isError]);
 
   const hasFilter = from !== "" || to !== "";
 
@@ -207,31 +199,35 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-cloud bg-paper/60 p-4">
               <p className="text-xs font-medium text-ink-soft">Collected</p>
-              <p className="mt-1 text-lg font-semibold tracking-tight text-ink">
+              <p className="mt-1 text-lg font-semibold tracking-tight text-ink tabular-nums">
                 {nairaFromKobo(totals.collected)}
               </p>
             </div>
             <div className="rounded-2xl border border-cloud bg-paper/60 p-4">
               <p className="text-xs font-medium text-ink-soft">Fees</p>
-              <p className="mt-1 text-lg font-semibold tracking-tight text-ink">
+              <p className="mt-1 text-lg font-semibold tracking-tight text-ink tabular-nums">
                 {nairaFromKobo(totals.fees)}
               </p>
             </div>
             <div className="rounded-2xl border border-cloud bg-paper/60 p-4">
               <p className="text-xs font-medium text-ink-soft">Net</p>
-              <p className="mt-1 text-lg font-semibold tracking-tight text-brand">
+              <p className="mt-1 text-lg font-semibold tracking-tight text-brand tabular-nums">
                 {nairaFromKobo(totals.net)}
               </p>
             </div>
             <div className="rounded-2xl border border-cloud bg-paper/60 p-4">
               <p className="text-xs font-medium text-ink-soft">Paid</p>
-              <p className="mt-1 text-lg font-semibold tracking-tight text-ink">
+              <p className="mt-1 text-lg font-semibold tracking-tight text-ink tabular-nums">
                 {totals.paidCount}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-cloud">
+          <div
+            className={`mt-4 overflow-hidden rounded-2xl border border-cloud transition-opacity ${
+              query.isPlaceholderData ? "opacity-60" : ""
+            }`}
+          >
             {byDue.length === 0 ? (
               <EmptyState
                 icon={PieChart02Icon}
@@ -283,13 +279,22 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
                         </span>
                         {due.paidCount}
                       </p>
-                      <p className="text-sm font-medium text-ink md:text-right">
+                      <p className="text-sm font-medium text-ink tabular-nums md:text-right">
+                        <span className="font-semibold uppercase tracking-wide text-[11px] text-ink-soft md:hidden">
+                          Collected:{" "}
+                        </span>
                         {nairaFromKobo(due.collected)}
                       </p>
-                      <p className="text-sm text-ink-soft md:text-right">
+                      <p className="text-sm text-ink-soft tabular-nums md:text-right">
+                        <span className="font-semibold uppercase tracking-wide text-[11px] text-ink-soft md:hidden">
+                          Fees:{" "}
+                        </span>
                         {nairaFromKobo(due.fees)}
                       </p>
-                      <p className="text-sm font-semibold text-brand md:text-right">
+                      <p className="text-sm font-semibold text-brand tabular-nums md:text-right">
+                        <span className="font-semibold uppercase tracking-wide text-[11px] text-ink-soft md:hidden">
+                          Net:{" "}
+                        </span>
                         {nairaFromKobo(due.net)}
                       </p>
                     </li>
@@ -300,8 +305,9 @@ export function PayoutBreakdownCard({ spaceId }: { spaceId: string | undefined }
           </div>
 
           <p className="mt-3 text-xs text-ink-soft">
-            Fees shown are the processing charge (2% + ₦20), already paid by the
-            student on top of the due amount.
+            Fees are the processing charge students paid on top of each due, so
+            the department receives the full due amount. Withdrawal transfer
+            fees aren&apos;t included here.
           </p>
 
           {totalPages > 1 && (

@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ShieldIcon,
@@ -9,93 +12,95 @@ import {
   Clock01Icon,
   Alert01Icon,
   IdIcon,
+  FaceIdIcon,
   Upload01Icon,
   CloudUploadIcon,
   Pdf01Icon,
   Cancel01Icon,
-  BankIcon,
+  Camera01Icon,
+  LockIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  RefreshIcon,
 } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BRAND_INPUT } from "../../_components/form-styles";
-import { EMPTY_PHONE, PhoneField, toE164, type PhoneValue } from "../../_components/PhoneField";
 import { DateOfBirthPicker } from "../../_components/DateOfBirthPicker";
+import { Skeleton } from "../../_components/Skeleton";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
 import {
   submitKyc,
   resubmitStudentId,
-  submitGovernmentId,
-  lookupPayoutDestination,
-  submitPayoutDestination,
+  submitLiveness,
   MAX_KYC_DOCUMENT_BYTES,
+  STUDENT_ID_MIME_TYPES,
 } from "@/lib/api/payouts";
-import type { KycState } from "@/lib/api/types";
+import { kycRequirements, type KycState } from "@/lib/api/types";
 import { useApplyKycState, useKycStatus } from "@/lib/api/queries";
-import { AccountFields, type VerifiedAccount } from "../../payout/_components/AccountFields";
-import { BankLogo } from "../../payout/_components/BankLogo";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  joinNouns,
+  kycChecks,
+  kycLockedUntil,
+  ninCheckState,
+  type KycCheck,
+  type KycCheckKey,
+  type KycCheckState,
+} from "@/lib/kyc";
 
-const ACCEPTED_DOCUMENTS = "image/jpeg,image/png,image/webp,application/pdf";
+// Camera code stays out of the main bundle until a capture is actually started.
+const FaceCapture = dynamic(() => import("./FaceCapture").then((m) => m.FaceCapture), {
+  ssr: false,
+  loading: () => <Skeleton className="h-48 w-full rounded-2xl" />,
+});
 
-type StepState = "todo" | "pending" | "done" | "failed";
+const ACCEPTED_DOCUMENTS = STUDENT_ID_MIME_TYPES.join(",");
 
-const STEP_TONE: Record<StepState, string> = {
+const TILE_TONE: Record<KycCheckState, string> = {
   todo: "bg-cloud text-ink-soft",
   pending: "bg-amber-100 text-amber-700",
-  done: "bg-brand/10 text-brand",
-  failed: "bg-rose-100 text-rose-600",
+  approved: "bg-brand/10 text-brand",
+  rejected: "bg-rose-100 text-rose-600",
 };
 
-const STEP_ICON = {
-  todo: Clock01Icon,
-  pending: Clock01Icon,
-  done: CheckmarkCircle02Icon,
-  failed: Alert01Icon,
-} as const;
+const TILE_BADGE: Record<KycCheckState, string> = {
+  todo: "Not started",
+  pending: "In review",
+  approved: "Approved",
+  rejected: "Needs attention",
+};
 
-/** Client-side mirror of the API's file rules, so the rep isn't sent back after uploading. */
-function checkDocument(file: File | null): string | null {
-  if (!file) return null;
-  if (!ACCEPTED_DOCUMENTS.split(",").includes(file.type)) return "Use a JPEG, PNG, WebP or PDF file.";
-  if (file.size > MAX_KYC_DOCUMENT_BYTES) return "Each file must be 5 MB or smaller.";
-  return null;
-}
+const TILE_ICON: Record<KycCheckKey, typeof IdIcon> = {
+  studentId: IdIcon,
+  liveness: FaceIdIcon,
+  nin: ShieldIcon,
+};
 
-function errorMessage(err: unknown, fallback: string) {
-  if (!(err instanceof ApiError)) return fallback;
-  switch (err.code) {
-    case "FILE_TOO_LARGE":
-      return "Each file must be 5 MB or smaller.";
-    case "KYC_REJECTED":
-      return "Those details weren't accepted. Check your NIN and date of birth and try again.";
-    case "KYC_RETRY_LOCKED":
-      return "Too many failed attempts. You can try again in 24 hours.";
-    case "REP_NOT_APPROVED":
-      return "Your rep application needs to be approved first.";
-    case "ACCOUNT_UNVERIFIABLE":
-      return "We couldn't verify this account. Check the bank and number.";
-    default:
-      return err.details?.[0]?.issue ?? err.message ?? fallback;
-  }
-}
+/** Codes meaning our copy of the state is stale: something was already sent or decided. */
+const STALE_CODES = new Set([
+  "ALREADY_VERIFIED",
+  "KYC_PENDING",
+  "LIVENESS_PENDING",
+  "LIVENESS_APPROVED",
+  "STUDENT_ID_PENDING",
+  "STUDENT_ID_APPROVED",
+]);
 
-/** Bachs's requirement key for the rep's own bank account — collected by its own form, not a document. */
-const isPayoutRequirement = (key: string) => key.startsWith("payout_destination");
+type FormStep = "studentId" | "face" | "nin";
 
-/** "persons.per_x.bvn" → "your BVN"; anything document-like → "a government ID document". */
-function describeRequirement(key: string) {
-  const field = key.split(".").pop() ?? key;
-  if (field === "bvn") return "your BVN";
-  if (/document|verification|id_number|identity/i.test(field)) return "a government ID document";
-  return field.replace(/_/g, " ");
-}
+type Problem = {
+  title: string;
+  body: string;
+  /** The form step the rep should fix. */
+  step?: FormStep;
+  /** The server state changed (an attempt was spent, a lock set, or ours was stale). */
+  refetch?: boolean;
+  /** The fix is the name on the rep's profile. */
+  profileLink?: boolean;
+};
+
+type Notice = { tone: "success" | "info"; title: string; body: string };
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("en-NG", {
@@ -106,10 +111,148 @@ function formatTime(iso: string) {
   });
 }
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Client-side mirror of the API's student ID rules — a convenience; the server checks the bytes. */
+function checkDocument(file: File | null): string | null {
+  if (!file) return null;
+  if (file.type && !(STUDENT_ID_MIME_TYPES as readonly string[]).includes(file.type)) {
+    return "Use a JPEG, PNG, WebP or PDF file.";
+  }
+  if (file.size > MAX_KYC_DOCUMENT_BYTES) return "The student ID must be 5 MB or smaller.";
+  return null;
+}
+
+const FIELD_STEP: Record<string, FormStep> = {
+  studentIdCard: "studentId",
+  liveness: "face",
+  nin: "nin",
+  dob: "nin",
+};
+
+const FIELD_LABEL: Record<string, string> = {
+  studentIdCard: "Student ID",
+  liveness: "Face capture",
+  nin: "NIN",
+  dob: "Date of birth",
+};
+
 /**
- * Rep verification. A space can only collect once its lead rep passes both
- * checks: Bachs verifies identity (NIN + date of birth), and a Duevy admin
- * reviews the rep's student ID card. Shows a verified state once both pass.
+ * What went wrong, in words the rep can act on. Never includes the NIN or date
+ * of birth: only the server's per-field issue (which never echoes them).
+ */
+function problemFor(err: unknown): Problem {
+  if (!(err instanceof ApiError)) {
+    return {
+      title: "We couldn't reach Duevy",
+      body: "Check your connection and try again. Nothing was submitted.",
+    };
+  }
+  switch (err.code) {
+    case "KYC_REJECTED":
+      return {
+        title: "Your NIN didn't match",
+        body: "Your NIN and date of birth didn't match the national register. Check both against your NIN slip and try again. After three mismatches, retries lock for 24 hours.",
+        step: "nin",
+        refetch: true,
+      };
+    case "KYC_INPUT_UNREADABLE":
+      return {
+        title: "We couldn't check these details",
+        body: "The identity service couldn't read the details as sent. Make sure the name on your Duevy profile matches your NIN record, then try again. This didn't count as an attempt.",
+        step: "nin",
+        profileLink: true,
+      };
+    case "KYC_PROVIDER_UNAVAILABLE":
+      return {
+        title: "The identity service is unavailable",
+        body: "We couldn't reach the national register just now. Nothing was saved and it didn't count as an attempt. Please try again in a few minutes.",
+      };
+    case "KYC_RETRY_LOCKED": {
+      const until = err.details?.[0]?.issue?.match(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/)?.[0];
+      return {
+        title: "Too many failed attempts",
+        body: until
+          ? `NIN checks are locked until ${formatTime(until)}. You can try again after that.`
+          : "NIN checks are locked for 24 hours. You can try again after that.",
+        refetch: true,
+      };
+    }
+    case "FILE_TOO_LARGE":
+      return {
+        title: "A file is too large",
+        body: "The student ID must be 5 MB or smaller, and the face capture 15 MB or smaller.",
+      };
+    case "VALIDATION_ERROR": {
+      const detail = err.details?.[0];
+      const label = detail ? FIELD_LABEL[detail.field] : undefined;
+      return {
+        title: "Something needs fixing",
+        body: detail && label ? `${label}: ${detail.issue}.` : err.message || "Check your details and try again.",
+        step: detail ? FIELD_STEP[detail.field] : undefined,
+      };
+    }
+    case "REP_NOT_APPROVED":
+      return {
+        title: "You can't verify yet",
+        body: "Only reps and rep applicants can verify. If you've just applied, refresh the page.",
+      };
+    default:
+      if (STALE_CODES.has(err.code)) {
+        return {
+          title: "Already received",
+          body: "We already have this. We've refreshed your verification status.",
+          refetch: true,
+        };
+      }
+      if (err.status === 429) {
+        return { title: "Slow down a moment", body: "Too many requests. Wait a minute, then try again." };
+      }
+      return { title: "Couldn't submit", body: err.message || "Please try again." };
+  }
+}
+
+/** The card-level message after a submission, read out by screen readers. */
+function noticeAfter(next: KycState, sentNin: boolean): Notice {
+  if (next.canCollect) {
+    return { tone: "success", title: "You're verified", body: "Every check has passed. Your department can collect dues." };
+  }
+  const waiting = kycChecks(next).filter((c) => c.state === "pending");
+  if (sentNin && next.kycStatus === "verified") {
+    return {
+      tone: "success",
+      title: "Your NIN matched",
+      body: waiting.length
+        ? `Next, a Duevy admin reviews ${joinNouns(waiting)}. We'll notify you when it's done.`
+        : "We'll notify you as each remaining check completes.",
+    };
+  }
+  if (sentNin && ninCheckState(next) === "pending") {
+    return {
+      tone: "info",
+      title: "Your NIN needs a quick review",
+      body: "Your details partly matched the national register, so a Duevy admin will review them. We'll notify you when they decide.",
+    };
+  }
+  return {
+    tone: "success",
+    title: "Sent for review",
+    body: waiting.length
+      ? `A Duevy admin is reviewing ${joinNouns(waiting)}. We'll notify you when it's done.`
+      : "We'll notify you as each check completes.",
+  };
+}
+
+/**
+ * Rep verification, driven by the admin's KYC policy (`requirements`): the
+ * student ID card (always), a face capture taken in the app (on by default),
+ * and NIN + date of birth checked against NIMC as they're submitted (only when
+ * on). The first submission goes through one `POST …/kyc`; afterwards a
+ * rejected student ID or face capture is replaced on its own endpoint. The rep
+ * is verified once `canCollect` — every required check has passed.
  */
 export function KycCard({
   spaceId,
@@ -121,75 +264,162 @@ export function KycCard({
   onChanged?: () => void;
 }) {
   // Shared with the dashboard gate and banner, so they all update together.
-  const { data: status = null, isPending: loading } = useKycStatus(spaceId);
+  const { data: status = null, isPending: loading, refetch } = useKycStatus(spaceId);
   const applyKycState = useApplyKycState();
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
+  const [fixing, setFixing] = useState<KycCheckKey | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
 
-  const apply = (next: KycState) => {
+  const apply = (next: KycState, sentNin = false) => {
     applyKycState(next, { spaceId, isLead });
+    setNotice(noticeAfter(next, sentNin));
     onChanged?.();
   };
 
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["kyc-status"] });
+
   if (loading) {
-    return <div className="h-56 animate-pulse rounded-3xl border border-cloud bg-canvas" />;
+    return (
+      <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6" aria-busy>
+        <Skeleton className="h-9 w-2/3 rounded-xl" />
+        <Skeleton className="mt-5 h-16 rounded-2xl" />
+        <Skeleton className="mt-2 h-16 rounded-2xl" />
+        <Skeleton className="mt-2 h-16 rounded-2xl" />
+      </section>
+    );
   }
   if (!status) {
     return (
       <section className="rounded-3xl border border-cloud bg-canvas p-6 text-center">
         <p className="text-sm font-semibold text-ink">Couldn&apos;t load your verification status</p>
-        <p className="mt-1 text-xs text-ink-soft">Refresh the page to try again.</p>
+        <p className="mt-1 text-xs text-ink-soft">Check your connection and try again.</p>
+        <Button variant="brand-outline" size="pill" className="mt-4" onClick={() => void refetch()}>
+          <HugeiconsIcon icon={RefreshIcon} size={14} />
+          Try again
+        </Button>
       </section>
     );
   }
-  if (status.canWithdraw) {
-    return (
-      <section className="flex items-start gap-3 rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
-        </span>
-        <div>
-          <h2 className="text-base font-semibold tracking-tight text-ink">You&apos;re verified</h2>
-          <p className="mt-0.5 text-xs text-ink-soft">
-            Your department can collect dues and withdraw to its payout account.
-          </p>
+
+  // KYC lives on the user: every rep verifies themselves, whoever leads the space.
+  const kyc = status.mine;
+  const req = kycRequirements(kyc);
+  const checks = kycChecks(kyc);
+  const check = (key: KycCheckKey) => checks.find((c) => c.key === key);
+  const studentId = check("studentId")!;
+  const liveness = check("liveness");
+  const nin = check("nin");
+  const lockedUntil = kycLockedUntil(kyc);
+  // A co-rep can be verified while the space still waits on its lead.
+  const spaceWaitingOnLead = !isLead && !status.canCollect;
+
+  const noticeRegion = (
+    <div role="status" aria-live="polite">
+      {notice && (
+        <div
+          className={cn(
+            "mt-4 flex items-start gap-2.5 rounded-2xl px-4 py-3",
+            notice.tone === "success" ? "bg-brand/5" : "bg-amber-50",
+          )}
+        >
+          <HugeiconsIcon
+            icon={notice.tone === "success" ? CheckmarkCircle02Icon : Clock01Icon}
+            size={16}
+            className={cn("mt-0.5 shrink-0", notice.tone === "success" ? "text-brand" : "text-amber-700")}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-ink">{notice.title}</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">{notice.body}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            aria-label="Dismiss"
+            className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-full text-ink-soft hover:bg-cloud hover:text-ink"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} size={12} />
+          </button>
         </div>
+      )}
+    </div>
+  );
+
+  if (kyc.canCollect) {
+    return (
+      <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-ink">You&apos;re verified</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              {spaceWaitingOnLead
+                ? "Your checks have passed. Your department can collect once its lead rep is verified too."
+                : "Every check has passed. Your department can collect dues and withdraw."}
+            </p>
+          </div>
+        </div>
+        {noticeRegion}
+        <ul className="mt-4 flex flex-wrap gap-2" aria-label="Completed checks">
+          {checks.map((c) => (
+            <li
+              key={c.key}
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand/5 px-3 py-1.5 text-[11px] font-medium text-brand"
+            >
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} />
+              {c.label}
+            </li>
+          ))}
+        </ul>
       </section>
     );
   }
 
-  const kyc = isLead ? status.mine : status;
-  const identity: StepState =
-    kyc.kycStatus === "verified"
-      ? "done"
-      : kyc.kycStatus === "rejected"
-        ? "failed"
-        : kyc.kycStatus === "pending" && kyc.providerReference
-          ? "pending"
-          : "todo";
-  const studentId: StepState =
-    kyc.studentId.status === "approved"
-      ? "done"
-      : kyc.studentId.status === "rejected"
-        ? "failed"
-        : kyc.studentId.status === "pending"
-          ? "pending"
-          : "todo";
+  // The NIN needs (re)submitting. `POST …/kyc` always takes the student ID card
+  // with it, so this goes through the full form.
+  const ninNeedsAction = !!nin && (nin.state === "todo" || nin.state === "rejected");
+  const livenessNeedsAction = !!liveness && (liveness.state === "todo" || liveness.state === "rejected");
+  // The first submission (or a NIN retry) is one request. A partial match under
+  // review (`409 KYC_PENDING`) or a retry lock would refuse it, so then the
+  // student ID goes on its own endpoint instead.
+  const fullForm =
+    !lockedUntil && (ninNeedsAction || (studentId.state === "todo" && nin?.state !== "pending"));
+  const nothingSent = checks.every((c) => c.state === "todo");
+  const done = checks.filter((c) => c.state === "approved").length;
 
-  // Bachs listing it again after we sent one means it refused that account.
-  const payoutAsked = kyc.requirementsDue.some(isPayoutRequirement);
-  const payout: StepState = kyc.payoutDestination
-    ? payoutAsked
-      ? "failed"
-      : "done"
-    : "todo";
-  const otherRequirements = kyc.requirementsDue.filter((key) => !isPayoutRequirement(key));
-  // Needs an account at Bachs, which exists once the NIN submission is in.
-  const payoutFormShown = isLead && !formOpen && !!kyc.providerReference && payout !== "done";
+  const tileAction = (c: KycCheck): { label: string; icon: typeof IdIcon } | null => {
+    if (fullForm || formOpen) return null;
+    if (c.key === "studentId" && (c.state === "todo" || c.state === "rejected")) {
+      return { label: c.state === "rejected" ? "Upload a new card" : "Upload card", icon: Upload01Icon };
+    }
+    if (c.key === "liveness" && (c.state === "todo" || c.state === "rejected")) {
+      return { label: c.state === "rejected" ? "Retake" : "Take photo", icon: Camera01Icon };
+    }
+    return null;
+  };
 
-  // The API takes a fresh submission only when nothing is with Bachs yet, or it refused the last one.
-  const canSubmit = identity === "todo" || identity === "failed";
-  const lockedUntil =
-    kyc.retryLockedUntil && new Date(kyc.retryLockedUntil) > new Date() ? kyc.retryLockedUntil : null;
+  const tileDetail = (c: KycCheck): string => {
+    if (c.state === "approved") return c.key === "nin" ? "Matched the national register." : "Approved by a Duevy admin.";
+    if (c.state === "pending") {
+      if (c.key === "nin") return "Your details partly matched. A Duevy admin is reviewing them.";
+      return `A Duevy admin is reviewing it${c.uploadedAt ? ` (sent ${formatTime(c.uploadedAt)})` : ""}.`;
+    }
+    if (c.state === "rejected") {
+      if (c.key === "nin") {
+        return lockedUntil
+          ? `Too many failed attempts. You can try again after ${formatTime(lockedUntil)}.`
+          : "It didn't match. Check your NIN and date of birth and try again.";
+      }
+      return c.key === "studentId"
+        ? "It wasn't accepted. Upload a clearer photo or scan."
+        : "It wasn't accepted. Take a new one in good light.";
+    }
+    if (c.key === "nin") return lockedUntil ? `Locked until ${formatTime(lockedUntil)}.` : "Checked instantly when you submit.";
+    if (c.key === "liveness") return "A photo or short clip of your face, taken here.";
+    return "A clear photo or scan showing your name, photo and matric number.";
+  };
 
   return (
     <section className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-6">
@@ -197,168 +427,157 @@ export function KycCard({
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cloud text-brand">
           <HugeiconsIcon icon={ShieldIcon} size={16} />
         </span>
-        <div>
-          <h2 className="text-base font-semibold tracking-tight text-ink">
-            Verify to start collecting
-          </h2>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold tracking-tight text-ink">Verify to start collecting</h2>
           <p className="mt-0.5 text-xs text-ink-soft">
-            {isLead
-              ? "Students can pay your dues once your identity and student ID are both verified."
-              : "Students can pay this space's dues once the lead rep finishes verification."}
+            {spaceWaitingOnLead
+              ? "Verify yourself to act for your department. It collects once its lead rep is verified."
+              : "Students can pay your dues once every check below has passed."}
           </p>
         </div>
+        <span className="shrink-0 rounded-full bg-paper px-2.5 py-1 text-[11px] font-semibold tabular-nums text-ink-soft">
+          {done}/{checks.length}
+        </span>
       </div>
 
-      {/* While either form is showing it's the only thing on the card — the steps come back after. */}
-      {!formOpen && !payoutFormShown && (
-        <ul className="mt-4 flex flex-col gap-2">
-          <Step
-            label="Identity (NIN)"
-            state={identity}
-            detail={
-              identity === "pending"
-                ? "Our payment partner is checking your details."
-                : identity === "failed"
-                  ? kyc.rejectionReason ?? "Verification failed. Check your details and try again."
-                  : identity === "done"
-                    ? "Verified."
-                    : "Not submitted yet."
-            }
-          />
-          <Step
-            label="Student ID card"
-            state={studentId}
-            detail={
-              studentId === "pending"
-                ? `A Duevy admin is reviewing it${kyc.studentId.uploadedAt ? ` (sent ${formatTime(kyc.studentId.uploadedAt)})` : ""}.`
-                : studentId === "failed"
-                  ? kyc.studentId.reviewNote ?? "It wasn't accepted. Upload a clearer photo."
-                  : studentId === "done"
-                    ? "Approved."
-                    : "Not submitted yet."
-            }
-          />
-          <Step
-            label="Payout account"
-            state={payout}
-            detail={
-              payout === "done" && kyc.payoutDestination ? (
-                <span className="flex items-center gap-1.5">
-                  <BankLogo
-                    name={kyc.payoutDestination.bankName}
-                    code={kyc.payoutDestination.bankCode}
-                    className="h-4 w-4 text-[6px]" />
-                  <span className="min-w-0 truncate">
-                    {kyc.payoutDestination.accountName} · {kyc.payoutDestination.bankName}{" "}
-                    {kyc.payoutDestination.accountNumber}
-                  </span>
-                </span>
-              ) : payout === "failed"
-                  ? "Our payment partner couldn't use that account. Add another one in your name."
-                  : kyc.providerReference
-                    ? "Add the bank account in your name that withdrawals settle to."
-                    : "Added after you submit your NIN and student ID."
-            }
-          />
-        </ul>
-      )}
+      {noticeRegion}
 
-      {isLead && lockedUntil && (
-        <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-xs text-rose-600">
-          Too many failed attempts. You can try again after {formatTime(lockedUntil)}.
-        </p>
-      )}
+      {formOpen && fullForm ? (
+        <KycForm
+          spaceId={spaceId}
+          needs={{ liveness: livenessNeedsAction, nin: ninNeedsAction }}
+          studentIdNote={
+            studentId.state === "pending" || studentId.state === "approved"
+              ? "Your NIN check is sent together with your student ID card, so attach it again here."
+              : studentId.state === "rejected"
+                ? studentId.note ?? "Your last card wasn't accepted. Upload a clearer one."
+                : null
+          }
+          livenessNote={liveness?.state === "rejected" ? liveness.note : null}
+          onSubmitted={(next, sentNin) => {
+            setFormOpen(false);
+            apply(next, sentNin);
+          }}
+          onRefetch={refresh}
+          onCancel={() => setFormOpen(false)}
+        />
+      ) : (
+        <>
+          <ul className="mt-4 flex flex-col gap-2">
+            {checks.map((c) => {
+              const action = tileAction(c);
+              const open = fixing === c.key;
+              return (
+                <li key={c.key} className="rounded-2xl border border-cloud bg-paper/50 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <span className={cn("mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full", TILE_TONE[c.state])}>
+                      <HugeiconsIcon icon={TILE_ICON[c.key]} size={15} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <p className="text-xs font-semibold text-ink">{c.label}</p>
+                        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", TILE_TONE[c.state])}>
+                          {TILE_BADGE[c.state]}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">{tileDetail(c)}</p>
+                      {c.state === "rejected" && c.note && (
+                        <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-[11px] leading-relaxed text-rose-700">
+                          <span className="font-semibold">Reviewer&apos;s note: </span>
+                          {c.note}
+                        </p>
+                      )}
+                    </div>
+                    {action && !open && (
+                      <Button
+                        variant="brand-outline"
+                        size="pill"
+                        className="shrink-0 max-[380px]:px-3"
+                        onClick={() => setFixing(c.key)}
+                        aria-label={`${action.label}: ${c.label}`}
+                      >
+                        <HugeiconsIcon icon={action.icon} size={14} />
+                        <span className="max-[380px]:sr-only">{action.label}</span>
+                      </Button>
+                    )}
+                  </div>
+                  {open && c.key === "studentId" && (
+                    <StudentIdFix
+                      onCancel={() => setFixing(null)}
+                      onUpload={async (file) => {
+                        const next = await resubmitStudentId(spaceId, file);
+                        setFixing(null);
+                        toast.success("Student ID sent for review");
+                        apply(next);
+                      }}
+                      onRefetch={refresh}
+                    />
+                  )}
+                  {open && c.key === "liveness" && (
+                    <LivenessFix
+                      onCancel={() => setFixing(null)}
+                      onUpload={async (file) => {
+                        const next = await submitLiveness(spaceId, file);
+                        setFixing(null);
+                        toast.success("Face capture sent for review");
+                        apply(next);
+                      }}
+                      onRefetch={refresh}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
 
-      {isLead && canSubmit && !lockedUntil &&
-        (formOpen ? (
-          <KycForm
-            spaceId={spaceId}
-            onSubmitted={(next) => {
-              // Close it so the steps and the payout-account form show next.
-              setFormOpen(false);
-              apply(next);
-            }}
-            onCancel={() => setFormOpen(false)}
-          />
-        ) : (
-          <div className="mt-5 rounded-2xl border border-cloud bg-paper/50 p-4">
-            <p className="text-xs font-semibold text-ink">
-              {identity === "failed" ? "Try verification again" : "What you'll need"}
+          {fullForm && (
+            <div className="mt-5 rounded-2xl border border-cloud bg-paper/50 p-4">
+              <p className="text-xs font-semibold text-ink">
+                {nin?.state === "rejected" ? "Try your NIN check again" : nothingSent ? "What you'll need" : "Finish verification"}
+              </p>
+              <ul className="mt-2 flex flex-col gap-1 text-[11px] leading-relaxed text-ink-soft">
+                <li>• A clear photo or scan of your student ID card (JPEG, PNG, WebP or PDF, up to 5 MB)</li>
+                {livenessNeedsAction && <li>• A camera, for a quick photo of your face</li>}
+                {ninNeedsAction && <li>• Your 11-digit NIN and your date of birth</li>}
+                <li>• About two minutes</li>
+              </ul>
+              <Button variant="brand" size="pill-lg" className="mt-4 w-full" onClick={() => {
+                setNotice(null);
+                setFixing(null);
+                setFormOpen(true);
+              }}>
+                <HugeiconsIcon icon={ShieldIcon} size={15} />
+                {nin?.state === "rejected" ? "Try again" : nothingSent ? "Start verification" : "Continue"}
+              </Button>
+            </div>
+          )}
+
+          {!fullForm && checks.every((c) => c.state === "approved" || c.state === "pending") && (
+            <p className="mt-4 rounded-2xl bg-paper px-4 py-3 text-[11px] leading-relaxed text-ink-soft">
+              Nothing more to do for now. We&apos;ll notify you as each review finishes.
             </p>
-            <ul className="mt-2 flex flex-col gap-1 text-[11px] leading-relaxed text-ink-soft">
-              <li>• Your 11-digit NIN and date of birth</li>
-              <li>• A clear photo or scan of your student ID card (JPEG, PNG, WebP or PDF, up to 5 MB)</li>
-              <li>• A bank account in your name, for payouts</li>
-              <li>• About two minutes</li>
-            </ul>
-            <Button variant="brand" size="pill" className="mt-4 w-full" onClick={() => setFormOpen(true)}>
-              <HugeiconsIcon icon={ShieldIcon} size={15} />
-              {identity === "failed" ? "Try again" : "Start verification"}
-            </Button>
-          </div>
-        ))}
+          )}
 
-      {!isLead && identity !== "done" && (
-        <p className="mt-4 rounded-2xl bg-paper px-4 py-3 text-xs text-ink-soft">
-          Only your department&apos;s lead rep can submit verification.
+          {lockedUntil && (
+            <p className="mt-4 flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-[11px] leading-relaxed text-rose-700">
+              <HugeiconsIcon icon={LockIcon} size={14} className="mt-0.5 shrink-0" />
+              Too many failed NIN attempts. You can try again after {formatTime(lockedUntil)}.
+            </p>
+          )}
+        </>
+      )}
+
+      {req.nin && !formOpen && (
+        <p className="mt-4 text-[11px] leading-relaxed text-ink-soft">
+          Your NIN and date of birth are checked against the national register and never stored. Your
+          student ID{req.liveness ? " and face capture are" : " is"} kept privately for Duevy&apos;s review team.
         </p>
-      )}
-
-      {isLead && !canSubmit && studentId !== "pending" && studentId !== "done" && (
-        <DocumentUpload
-          title="Upload a new student ID card"
-          hint="A clear photo or scan showing your name, photo and matric number."
-          action="Send for review"
-          onUpload={async (file) => {
-            const next = await resubmitStudentId(spaceId, file);
-            toast.success("Student ID sent for review");
-            apply(next);
-          }}
-        />
-      )}
-
-      {payoutFormShown && (
-        <PayoutDestinationForm spaceId={spaceId} retry={payout === "failed"} onSubmitted={apply} />
-      )}
-
-      {isLead && !canSubmit && otherRequirements.length > 0 && (
-        <DocumentUpload
-          title="More details needed"
-          hint={`Our payment partner has asked for ${[...new Set(otherRequirements.map(describeRequirement))].join(", ")}.${
-            kyc.governmentIdSubmittedAt ? ` You sent an ID on ${formatTime(kyc.governmentIdSubmittedAt)}.` : ""
-          } Upload a government ID (NIN slip, passport, driver's licence or voter's card). If it asks for your BVN, contact support.`}
-          action="Send ID document"
-          onUpload={async (file) => {
-            const next = await submitGovernmentId(spaceId, file);
-            toast.success("ID document sent");
-            apply(next);
-          }}
-        />
       )}
     </section>
   );
 }
 
-function Step({ label, state, detail }: { label: string; state: StepState; detail: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-3 rounded-2xl border border-cloud bg-paper/50 px-4 py-3">
-      <span className={cn("mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full", STEP_TONE[state])}>
-        <HugeiconsIcon icon={STEP_ICON[state]} size={13} />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-ink">{label}</p>
-        <div className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">{detail}</div>
-      </div>
-    </li>
-  );
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** Drop zone for one document; once chosen, shows a preview card with the file's details. */
+/** Drop zone for the student ID; once chosen, shows a preview card with the file's details. */
 function FileField({
   label,
   hint,
@@ -368,13 +587,14 @@ function FileField({
   disabled,
 }: {
   label: string;
-  hint: string;
+  hint: React.ReactNode;
   file: File | null;
   onChange: (file: File | null) => void;
   error: string | null;
   disabled?: boolean;
 }) {
   const inputId = useId();
+  const errorId = useId();
   const [dragging, setDragging] = useState(false);
   const preview = useMemo(
     () => (file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null),
@@ -388,8 +608,10 @@ function FileField({
 
   return (
     <div>
-      <p className="text-xs font-medium text-ink">{label}</p>
-      <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">{hint}</p>
+      <p className="text-xs font-medium text-ink">
+        {label}
+      </p>
+      <div className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">{hint}</div>
 
       {file ? (
         <div
@@ -408,7 +630,10 @@ function FileField({
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold text-ink">{file.name}</p>
-            <p className={cn("mt-0.5 text-[11px]", error ? "font-medium text-rose-600" : "text-ink-soft")}>
+            <p
+              id={errorId}
+              className={cn("mt-0.5 text-[11px]", error ? "font-medium text-rose-600" : "text-ink-soft")}
+            >
               {error ?? `${formatBytes(file.size)} · Ready to upload`}
             </p>
           </div>
@@ -436,7 +661,7 @@ function FileField({
             if (!disabled) onChange(e.dataTransfer.files?.[0] ?? null);
           }}
           className={cn(
-            "mt-2 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors",
+            "mt-2 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/15",
             disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
             dragging ? "border-brand bg-brand/5" : "border-cloud bg-canvas hover:border-brand/40 hover:bg-brand/5",
           )}
@@ -445,7 +670,8 @@ function FileField({
             <HugeiconsIcon icon={CloudUploadIcon} size={20} />
           </span>
           <p className="mt-3 text-xs text-ink">
-            <span className="font-semibold text-brand">Click to upload</span> or drag and drop
+            <span className="font-semibold text-brand">Choose a file</span>
+            <span className="max-sm:hidden"> or drag and drop</span>
           </p>
           <p className="mt-1 text-[11px] text-ink-soft">JPEG, PNG, WebP or PDF · up to 5 MB</p>
         </label>
@@ -456,6 +682,8 @@ function FileField({
         type="file"
         accept={ACCEPTED_DOCUMENTS}
         disabled={disabled}
+        aria-label={label}
+        aria-describedby={file ? errorId : undefined}
         onChange={(e) => {
           onChange(e.target.files?.[0] ?? null);
           // Clear so picking the same file again after removing it still fires.
@@ -467,170 +695,80 @@ function FileField({
   );
 }
 
-function KycForm({
-  spaceId,
-  onSubmitted,
+function ProblemBox({ problem }: { problem: Problem }) {
+  return (
+    <div role="alert" className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+      <HugeiconsIcon icon={Alert01Icon} size={16} className="mt-0.5 shrink-0 text-rose-600" />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-rose-700">{problem.title}</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-rose-700/90">{problem.body}</p>
+        {problem.profileLink && (
+          <Link href="/dashboard/settings" className="mt-1 inline-block text-[11px] font-semibold text-rose-700 underline">
+            Check the name on your profile
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Replaces a rejected (or missing) student ID card on its own endpoint. */
+function StudentIdFix({
+  onUpload,
   onCancel,
+  onRefetch,
 }: {
-  spaceId?: string;
-  onSubmitted: (state: KycState) => void;
+  onUpload: (file: File) => Promise<void>;
   onCancel: () => void;
+  onRefetch: () => void;
 }) {
-  const [nin, setNin] = useState("");
-  const [dob, setDob] = useState("");
-  const [gender, setGender] = useState<"" | "male" | "female">("");
-  const [phone, setPhone] = useState<PhoneValue>(EMPTY_PHONE);
-  const [studentIdCard, setStudentIdCard] = useState<File | null>(null);
-  const [consent, setConsent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const inFlight = useRef(false);
+  const error = checkDocument(file);
 
-  const e164Phone = toE164(phone);
-  const phoneValid = e164Phone !== null;
-  const fileError = checkDocument(studentIdCard);
-
-  // In form order, so the list reads top to bottom.
-  const missing = [
-    !/^\d{11}$/.test(nin) && (nin ? "an 11-digit NIN" : "your NIN"),
-    !dob && "your date of birth",
-    !gender && "your gender",
-    !phoneValid && (phone.national ? "a valid phone number" : "your phone number"),
-    (!studentIdCard || fileError) && (fileError ? "a supported student ID file" : "your student ID card"),
-    !consent && "the consent box ticked",
-  ].filter((item): item is string => !!item);
-
-  const submit = async () => {
-    if (missing.length > 0 || !studentIdCard || !gender || !e164Phone) {
-      // Fixed id, so pressing again replaces the toast instead of stacking them.
-      toast.error(`Still needed: ${missing.join(", ")}.`, { id: "kyc-missing" });
-      return;
-    }
-    setSubmitting(true);
+  const upload = async () => {
+    if (!file || error || inFlight.current) return;
+    inFlight.current = true;
+    setUploading(true);
+    setProblem(null);
     try {
-      const next = await submitKyc(spaceId, {
-        nin,
-        dob,
-        gender,
-        studentIdCard,
-        phone: e164Phone,
-      });
-      toast.success("Verification submitted", {
-        description: "We'll notify you as each check completes.",
-      });
-      onSubmitted(next);
+      await onUpload(file);
     } catch (err) {
-      toast.error(errorMessage(err, "Couldn't submit your verification."));
+      const p = problemFor(err);
+      setProblem(p);
+      if (p.refetch) onRefetch();
     } finally {
-      setSubmitting(false);
+      inFlight.current = false;
+      setUploading(false);
     }
   };
 
   return (
-    <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-cloud bg-paper/50 p-4">
-      <div>
-        <label className="flex items-center gap-1.5 text-xs font-medium text-ink">
-          <HugeiconsIcon icon={IdIcon} size={14} />
-          NIN
-        </label>
-        <Input
-          value={nin}
-          onChange={(e) => setNin(e.target.value.replace(/[^0-9]/g, "").slice(0, 11))}
-          placeholder="11-digit National Identification Number"
-          inputMode="numeric"
-          autoComplete="off"
-          disabled={submitting}
-          className={cn(BRAND_INPUT, "mt-1.5 tabular-nums")}
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="text-xs font-medium text-ink">Date of birth</label>
-          <DateOfBirthPicker
-            value={dob}
-            onChange={setDob}
-            disabled={submitting}
-            className="mt-1.5"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ink">Gender</label>
-          <Select
-            value={gender}
-            onValueChange={(v) => setGender(v as "male" | "female")}
-            disabled={submitting}
-          >
-            <SelectTrigger
-              aria-label="Gender"
-              className="mt-1.5 h-11 rounded-2xl text-sm font-normal sm:w-full"
-            >
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="male">Male</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="kyc-phone" className="text-xs font-medium text-ink">
-          Phone number
-        </label>
-        <div className="mt-1.5">
-          <PhoneField
-            id="kyc-phone"
-            value={phone}
-            onChange={setPhone}
-            disabled={submitting}
-            invalid={phone.national.length > 0 && !phoneValid}
-          />
-        </div>
-        {phone.national.length > 0 && !phoneValid && (
-          <p className="mt-1 text-[11px] font-medium text-rose-600">
-            That doesn&apos;t look like a valid number for the selected country.
-          </p>
-        )}
-      </div>
-
+    <div className="mt-3 flex flex-col gap-3 border-t border-cloud pt-3" aria-busy={uploading}>
       <FileField
-        label="Student ID card"
+        label="New student ID card"
         hint="A clear photo or scan showing your name, photo and matric number."
-        file={studentIdCard}
-        onChange={setStudentIdCard}
-        error={fileError}
-        disabled={submitting}
+        file={file}
+        onChange={(f) => {
+          setFile(f);
+          setProblem(null);
+        }}
+        error={error}
+        disabled={uploading}
       />
-
-      <label className="flex items-start gap-2 text-[11px] leading-relaxed text-ink-soft">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => setConsent(e.target.checked)}
-          disabled={submitting}
-          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-cloud accent-brand"
-        />
-        I confirm this is my own NIN and consent to Duevy verifying it against the national
-        identity database. Duevy doesn&apos;t store my NIN or date of birth; my student ID is
-        kept privately for review.
-      </label>
-
+      {problem && <ProblemBox problem={problem} />}
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
-        {/* Stays pressable while incomplete — a press lists what's missing instead of doing nothing. */}
-        <Button
-          variant="brand"
-          size="pill"
-          className={cn("flex-1", missing.length > 0 && "opacity-60")}
-          disabled={submitting}
-          aria-disabled={missing.length > 0 || undefined}
-          onClick={submit}
-        >
-          {submitting && (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        <Button variant="brand" size="pill-lg" className="flex-1" disabled={!file || !!error || uploading} onClick={upload}>
+          {uploading ? (
+            <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white motion-safe:animate-spin" />
+          ) : (
+            <HugeiconsIcon icon={Upload01Icon} size={15} />
           )}
-          {submitting ? "Submitting…" : "Submit for verification"}
+          {uploading ? "Uploading…" : "Send for review"}
         </Button>
-        <Button variant="brand-outline" size="pill" disabled={submitting} onClick={onCancel}>
+        <Button variant="brand-outline" size="pill-lg" disabled={uploading} onClick={onCancel}>
           Cancel
         </Button>
       </div>
@@ -638,116 +776,401 @@ function KycForm({
   );
 }
 
-function DocumentUpload({
-  title,
-  hint,
-  action,
+/** A new face capture (first, or a retake after a rejection) on its own endpoint. */
+function LivenessFix({
   onUpload,
+  onCancel,
+  onRefetch,
 }: {
-  title: string;
-  hint: string;
-  action: string;
   onUpload: (file: File) => Promise<void>;
+  onCancel: () => void;
+  onRefetch: () => void;
 }) {
-  const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const error = checkDocument(file);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const inFlight = useRef(false);
 
-  const upload = async () => {
-    if (!file || error) return;
+  const upload = async (file: File) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setUploading(true);
+    setProblem(null);
     try {
       await onUpload(file);
-      setFile(null);
     } catch (err) {
-      toast.error(errorMessage(err, "Couldn't upload this document."));
+      const p = problemFor(err);
+      setProblem(p);
+      if (p.refetch) onRefetch();
     } finally {
+      inFlight.current = false;
       setUploading(false);
     }
   };
 
   return (
-    <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-cloud bg-paper/50 p-4">
-      <FileField
-        label={title}
-        hint={hint}
-        file={file}
-        onChange={setFile}
-        error={error}
-        disabled={uploading}
-      />
-      <Button variant="brand-outline" size="pill" disabled={!file || !!error || uploading} onClick={upload}>
-        <HugeiconsIcon icon={Upload01Icon} size={14} />
-        {uploading ? "Uploading…" : action}
-      </Button>
+    <div className="mt-3 flex flex-col gap-3 border-t border-cloud pt-3">
+      <FaceCapture onConfirm={upload} confirmLabel="Send for review" busy={uploading} />
+      {problem && <ProblemBox problem={problem} />}
+      {!uploading && (
+        <Button variant="brand-ghost" size="pill" onClick={onCancel}>
+          Not now
+        </Button>
+      )}
     </div>
   );
 }
 
-/** The rep's own bank account, sent to Bachs as their account's payout destination. */
-function PayoutDestinationForm({
+const STEP_META: Record<FormStep, { title: string; icon: typeof IdIcon }> = {
+  studentId: { title: "Student ID card", icon: IdIcon },
+  face: { title: "Face capture", icon: FaceIdIcon },
+  nin: { title: "NIN and date of birth", icon: ShieldIcon },
+};
+
+function ageOn(dob: string) {
+  const d = new Date(`${dob}T00:00:00`);
+  return (Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
+}
+
+/**
+ * The first submission (or a NIN retry), one step per check the policy asks
+ * for. Everything goes in one `POST …/kyc`, so the NIN result is known as it
+ * returns. The NIN and date of birth live only in this component's state.
+ */
+function KycForm({
   spaceId,
-  retry,
+  needs,
+  studentIdNote,
+  livenessNote,
   onSubmitted,
+  onRefetch,
+  onCancel,
 }: {
   spaceId?: string;
-  /** Bachs refused the last account. */
-  retry: boolean;
-  onSubmitted: (state: KycState) => void;
+  needs: { liveness: boolean; nin: boolean };
+  studentIdNote: string | null;
+  livenessNote: string | null;
+  onSubmitted: (state: KycState, sentNin: boolean) => void;
+  onRefetch: () => void;
+  onCancel: () => void;
 }) {
-  const [account, setAccount] = useState<VerifiedAccount | null>(null);
+  const steps = useMemo<FormStep[]>(
+    () => ["studentId", ...(needs.liveness ? (["face"] as const) : []), ...(needs.nin ? (["nin"] as const) : [])],
+    [needs.liveness, needs.nin],
+  );
+  const [index, setIndex] = useState(0);
+  const [studentIdCard, setStudentIdCard] = useState<File | null>(null);
+  const [face, setFace] = useState<File | null>(null);
+  const [nin, setNin] = useState("");
+  const [dob, setDob] = useState("");
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const ninId = useId();
+  const dobId = useId();
+  const consentId = useId();
+
+  const step = steps[index];
+  const last = index === steps.length - 1;
+  const fileError = checkDocument(studentIdCard);
+
+  // Revoke the face preview's object URL when it's replaced or the form closes.
+  const facePreview = useMemo(() => (face ? URL.createObjectURL(face) : null), [face]);
+  useEffect(() => {
+    return () => {
+      if (facePreview) URL.revokeObjectURL(facePreview);
+    };
+  }, [facePreview]);
+
+  // Each step change moves focus to its heading, so the change is announced.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    headingRef.current?.focus();
+  }, [index]);
+
+  const goTo = (target: FormStep) => {
+    const i = steps.indexOf(target);
+    if (i >= 0) setIndex(i);
+  };
+
+  const validate = (s: FormStep): string | null => {
+    if (s === "studentId") {
+      if (!studentIdCard) return "Add a photo or scan of your student ID card.";
+      return fileError;
+    }
+    if (s === "face") return face ? null : "Take a photo of your face to continue.";
+    if (!/^\d{11}$/.test(nin)) return "Enter your 11-digit NIN.";
+    if (!dob) return "Pick your date of birth.";
+    const age = ageOn(dob);
+    if (age < 15 || age > 100) return "Check your date of birth.";
+    return null;
+  };
+
+  const next = () => {
+    const err = validate(step);
+    setStepError(err);
+    if (!err) setIndex((i) => Math.min(i + 1, steps.length - 1));
+  };
+
+  const back = () => {
+    setStepError(null);
+    if (index === 0) onCancel();
+    else setIndex((i) => i - 1);
+  };
 
   const submit = async () => {
-    if (!account) return;
+    if (inFlight.current) return;
+    for (const s of steps) {
+      const err = validate(s);
+      if (err) {
+        goTo(s);
+        setStepError(err);
+        return;
+      }
+    }
+    if (!consent) {
+      setStepError("Tick the box to confirm and consent.");
+      return;
+    }
+    if (!studentIdCard) return;
+    inFlight.current = true;
     setSubmitting(true);
+    setProblem(null);
+    setStepError(null);
     try {
-      const next = await submitPayoutDestination(spaceId, {
-        bankCode: account.bankCode,
-        accountNumber: account.accountNumber,
+      const result = await submitKyc(spaceId, {
+        studentIdCard,
+        ...(needs.liveness && face ? { liveness: face } : {}),
+        ...(needs.nin ? { nin, dob } : {}),
       });
-      toast.success("Payout account added");
-      onSubmitted(next);
+      onSubmitted(result, needs.nin);
     } catch (err) {
-      toast.error(errorMessage(err, "Couldn't add your payout account."));
+      const p = problemFor(err);
+      setProblem(p);
+      if (p.step) goTo(p.step);
+      if (p.refetch) onRefetch();
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
     }
   };
 
+  if (submitting) {
+    return (
+      <div
+        className="mt-5 flex flex-col items-center gap-3 rounded-2xl border border-cloud bg-paper/50 px-4 py-8 text-center"
+        role="status"
+        aria-live="polite"
+        aria-busy
+      >
+        <span className="h-9 w-9 rounded-full border-[3px] border-brand/20 border-t-brand motion-safe:animate-spin" />
+        <p className="text-sm font-semibold text-ink">
+          {needs.nin ? "Checking your details…" : "Sending for review…"}
+        </p>
+        <p className="max-w-xs text-[11px] leading-relaxed text-ink-soft">
+          {needs.nin
+            ? "We're uploading your documents securely and checking your NIN with the national register. This can take up to a minute. Please keep this page open."
+            : "We're uploading your documents securely. Please keep this page open."}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-cloud bg-paper/50 p-4">
-      <div className="flex items-start gap-2.5">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
-          <HugeiconsIcon icon={BankIcon} size={15} />
-        </span>
-        <div>
-          <p className="text-xs font-semibold text-ink">
-            {retry ? "Add a different payout account" : "Add your payout account"}
-          </p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">
-            Our payment partner needs a bank account in your name before payouts can be switched on.
-            You can still choose where each withdrawal goes later.
-          </p>
+    <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-cloud bg-paper/50 p-4">
+      {/* Progress */}
+      <div>
+        <div className="flex items-center justify-between text-[11px] font-semibold text-ink-soft">
+          <span>
+            Step {index + 1} of {steps.length}
+          </span>
+          <span className="text-ink">{STEP_META[step].title}</span>
         </div>
+        <ol className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
+          {steps.map((s, i) => (
+            <li
+              key={s}
+              aria-label={`${STEP_META[s].title}${i < index ? ", done" : i === index ? ", current" : ""}`}
+              className={cn(
+                "h-1.5 rounded-full transition-colors motion-reduce:transition-none",
+                i <= index ? "bg-brand" : "bg-cloud",
+              )}
+            />
+          ))}
+        </ol>
       </div>
 
-      <AccountFields
-        lookup={(payload) => lookupPayoutDestination(spaceId, payload)}
-        onChange={setAccount}
-        disabled={submitting}
-        hint="Use an account in your own name. We'll look up the name to confirm."
-        confirmNote="Check this is your name as your bank holds it."
-      />
+      {problem && <ProblemBox problem={problem} />}
 
-      <Button variant="brand" size="pill" disabled={!account || submitting} onClick={submit}>
-        {submitting ? (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+      <h3 ref={headingRef} tabIndex={-1} className="flex items-center gap-2 text-sm font-semibold text-ink outline-none">
+        <HugeiconsIcon icon={STEP_META[step].icon} size={16} className="text-brand" />
+        {STEP_META[step].title}
+      </h3>
+
+      {step === "studentId" && (
+        <FileField
+          label="Upload your student ID card"
+          hint={
+            <>
+              A clear photo or scan showing your name, photo and matric number.
+              {studentIdNote && <span className="mt-1 block font-medium text-ink">{studentIdNote}</span>}
+            </>
+          }
+          file={studentIdCard}
+          onChange={(f) => {
+            setStudentIdCard(f);
+            setStepError(null);
+          }}
+          error={fileError}
+        />
+      )}
+
+      {step === "face" && (
+        <div className="flex flex-col gap-3">
+          <p className="text-[11px] leading-relaxed text-ink-soft">
+            A Duevy admin compares this with your student ID card. It&apos;s stored privately and used only to verify you.
+          </p>
+          {livenessNote && (
+            <p className="rounded-xl bg-rose-50 px-3 py-2 text-[11px] leading-relaxed text-rose-700">
+              <span className="font-semibold">Reviewer&apos;s note: </span>
+              {livenessNote}
+            </p>
+          )}
+          {face && facePreview ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-cloud bg-canvas p-3">
+              <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-cloud">
+                {face.type.startsWith("video/") ? (
+                  <video src={facePreview} muted playsInline className="h-full w-full object-cover" aria-label="Your clip" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- local blob preview
+                  <img src={facePreview} alt="Your face capture" className="h-full w-full object-cover" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-ink">
+                  {face.type.startsWith("video/") ? "Clip ready" : "Photo ready"}
+                </p>
+                <p className="mt-0.5 text-[11px] text-ink-soft">{formatBytes(face.size)}</p>
+              </div>
+              <Button variant="brand-outline" size="pill" onClick={() => setFace(null)}>
+                <HugeiconsIcon icon={RefreshIcon} size={14} />
+                Retake
+              </Button>
+            </div>
+          ) : (
+            <FaceCapture
+              onConfirm={(file) => {
+                setFace(file);
+                setStepError(null);
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {step === "nin" && (
+        <div className="flex flex-col gap-4">
+          <p className="text-[11px] leading-relaxed text-ink-soft">
+            We check these against the national register (NIMC) as you submit, under the name on your Duevy account.
+            They&apos;re never stored.
+          </p>
+          <div>
+            <label htmlFor={ninId} className="text-xs font-medium text-ink">
+              NIN
+            </label>
+            <Input
+              id={ninId}
+              value={nin}
+              onChange={(e) => {
+                setNin(e.target.value.replace(/[^0-9]/g, "").slice(0, 11));
+                setStepError(null);
+              }}
+              placeholder="11-digit National Identification Number"
+              inputMode="numeric"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={11}
+              className={cn(BRAND_INPUT, "mt-1.5 tabular-nums tracking-wider")}
+            />
+            <p className="mt-1 text-[11px] text-ink-soft">
+              It&apos;s on your NIN slip or in the NIMC app.{" "}
+              <span className="tabular-nums">{nin.length}/11</span>
+            </p>
+          </div>
+          <div>
+            <p id={dobId} className="text-xs font-medium text-ink">
+              Date of birth
+            </p>
+            <div role="group" aria-labelledby={dobId}>
+              <DateOfBirthPicker
+                value={dob}
+                onChange={(v) => {
+                  setDob(v);
+                  setStepError(null);
+                }}
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {last && (
+        <div className="flex items-start gap-2">
+          <input
+            id={consentId}
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => {
+              setConsent(e.target.checked);
+              setStepError(null);
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-cloud accent-brand"
+          />
+          <label htmlFor={consentId} className="cursor-pointer text-[11px] leading-relaxed text-ink-soft">
+            {needs.nin
+              ? "I confirm this is my own student ID, face and NIN, and consent to Duevy checking my NIN and date of birth against the national identity register. Duevy doesn't store my NIN or date of birth."
+              : "I confirm this is my own student ID and face, and consent to Duevy's review team using them to verify me."}{" "}
+            My student ID{needs.liveness ? " and face capture are" : " is"} kept privately for review.
+          </label>
+        </div>
+      )}
+
+      {stepError && (
+        <p role="alert" className="text-[11px] font-medium text-rose-600">
+          {stepError}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 sm:flex-row-reverse">
+        {last ? (
+          <Button variant="brand" size="pill-lg" className="flex-1" onClick={submit}>
+            <HugeiconsIcon icon={ShieldIcon} size={15} />
+            {needs.nin ? "Verify and submit" : "Submit for review"}
+          </Button>
         ) : (
-          <HugeiconsIcon icon={BankIcon} size={15} />
+          <Button variant="brand" size="pill-lg" className="flex-1" onClick={next}>
+            Continue
+            <HugeiconsIcon icon={ArrowRight01Icon} size={15} />
+          </Button>
         )}
-        {submitting ? "Adding account…" : "Add payout account"}
-      </Button>
+        <Button variant="brand-outline" size="pill-lg" onClick={back}>
+          {index === 0 ? (
+            "Cancel"
+          ) : (
+            <>
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={15} />
+              Back
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

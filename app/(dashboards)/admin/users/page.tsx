@@ -23,6 +23,7 @@ import {
 } from "@/lib/api/admin";
 import type { KycStatus, UserRole } from "@/lib/api/types";
 
+/** `kycStatus` is the NIN check's own status (only run while the policy requires it), not overall verification. */
 const KYC_TONES: Record<KycStatus, StatusTone> = {
   verified: "ok",
   pending: "warn",
@@ -143,9 +144,9 @@ export default function AdminUsersPage() {
         <FilterSelect
           value={kycFilter}
           onChange={setKycFilter}
-          label="Filter by KYC status"
+          label="Filter by NIN check status"
           options={[
-            { value: "all", label: "All KYC statuses" },
+            { value: "all", label: "All NIN statuses" },
             { value: "verified", label: "Verified" },
             { value: "pending", label: "Pending" },
             { value: "rejected", label: "Rejected" },
@@ -172,7 +173,7 @@ export default function AdminUsersPage() {
             headers={[
               { label: "User" },
               { label: "Role" },
-              { label: "KYC" },
+              { label: "NIN check" },
               { label: "", align: "right" },
             ]}
           >
@@ -236,9 +237,10 @@ export default function AdminUsersPage() {
           onClose={() => setSelectedId(null)}
           footer={
             <>
-              {/* Identity KYC is decided by Bachs (synced by webhook) — a manual
-                  override would be overwritten. Admins review student ID cards
-                  under Student IDs instead. */}
+              {/* No manual KYC grant: the NIN is checked against NIMC (Didit)
+                  and an admin can only decide a partial match, review the
+                  student ID or approve the face capture, all under Rep
+                  verification (/admin/verification). */}
               <Button
                 variant={
                   selected.isSuspended ? "brand-outline" : "danger-outline"
@@ -268,7 +270,7 @@ export default function AdminUsersPage() {
                 {selected.role}
               </StatusBadge>
             </ModalField>
-            <ModalField label="KYC status">
+            <ModalField label="NIN check">
               <StatusBadge tone={KYC_TONES[selected.kycStatus]}>
                 {selected.kycStatus}
               </StatusBadge>

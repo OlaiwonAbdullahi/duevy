@@ -51,8 +51,10 @@ export type CheckoutItem = {
 
 /**
  * One bank-transfer checkout covering every due in the basket. All amounts in
- * kobo. `face` goes to the space in full; `fee` (2% of face + ₦20, charged once
- * per basket) is paid by the student on top; `total` is what they transfer.
+ * kobo, all computed by the server. `face` goes to the space in full; `fee`
+ * (1.5% of the basket's face value, rounded up to the kobo) is paid by the
+ * student on top; `total` is what they transfer — the one-time 9jaPay account
+ * in `bankTransfer` accepts exactly that amount and closes at `expiresAt`.
  */
 export type Checkout = {
   reference: string;
@@ -62,7 +64,7 @@ export type Checkout = {
   breakdown: { face: number; fee: number; total: number };
   items: CheckoutItem[];
   bankTransfer: CheckoutBankTransfer | null;
-  /** Hosted checkout page to redirect the student to while pending; `null` otherwise. */
+  /** Always `null` on 9jaPay (hosted checkout pages went with Bachs). Kept for older payloads. */
   checkoutUrl: string | null;
   expiresAt: string;
   paidAt: string | null;

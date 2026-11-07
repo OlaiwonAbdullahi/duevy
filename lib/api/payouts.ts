@@ -24,19 +24,29 @@ function toQuery(params: Record<string, string | number | undefined>) {
 
 export type Bank = { code: string; name: string };
 
-/** Live Nigerian bank list (name + CBN code) from Bachs. */
+/** Live Nigerian bank list (name + CBN code) from 9jaPay. */
 export function listBanks() {
   return apiClient.get<Bank[]>(`/banks`);
 }
 
-/** Ledger balance, the lead rep's KYC state, beneficiary count and the withdrawal fee schedule. */
+/**
+ * Ledger balance, the space's own 9jaPay account, where the funds sit, today's
+ * withdrawal limit, the lead rep's KYC state, withdrawal security and fee bands.
+ */
 export function getPayoutSummary(spaceId: string) {
   return apiClient.get<PayoutSummary>(`/spaces/${spaceId}/payout/summary`);
 }
 
-/** The space's ledger — collections, withdrawals, fees, refunds — newest first. */
-export function listSpaceLedger(spaceId: string) {
-  return apiClient.get<LedgerEntry[]>(`/spaces/${spaceId}/ledger`);
+export type LedgerQuery = { page?: number; perPage?: number };
+
+/** One page of the space's ledger — collections, direct deposits, withdrawals, fees, refunds — newest first. */
+export function listSpaceLedgerPage(spaceId: string, query: LedgerQuery = {}): Promise<Page<LedgerEntry[]>> {
+  return apiClient.getPage<LedgerEntry[]>(`/spaces/${spaceId}/ledger${toQuery(query)}`);
+}
+
+/** The latest ledger entries (first page), newest first. */
+export async function listSpaceLedger(spaceId: string, perPage = 20) {
+  return (await listSpaceLedgerPage(spaceId, { perPage })).data;
 }
 
 export type BeneficiaryInput = {
@@ -49,7 +59,7 @@ export type ResolvedAccount = {
   bankName: string;
   /** Masked. */
   accountNumber: string;
-  /** Holder name resolved via Bachs name-enquiry. */
+  /** Holder name from the bank's name enquiry. */
   accountName: string;
 };
 
@@ -135,10 +145,14 @@ export type WithdrawalPinResult = {
   withdrawalPinHoldUntil: string | null;
 };
 
+/** One page of the space's withdrawals, newest first. */
+export function listPayoutsPage(spaceId: string, query: { page?: number; perPage?: number } = {}): Promise<Page<Payout[]>> {
+  return apiClient.getPage<Payout[]>(`/spaces/${spaceId}/payouts${toQuery(query)}`);
+}
+
 /** Most recent 100 withdrawals (the API's page-size ceiling). */
 export async function listPayouts(spaceId: string) {
-  const page = await apiClient.getPage<Payout[]>(`/spaces/${spaceId}/payouts?perPage=100`);
-  return page.data;
+  return (await listPayoutsPage(spaceId, { perPage: 100 })).data;
 }
 
 export function getPayout(spaceId: string, payoutId: string) {
@@ -247,30 +261,36 @@ export function getPayoutBreakdown(
 }
 
 // ---------------------------------------------------------------------------
-// Rep KYC — Bachs verifies identity (NIN + date of birth), a Duevy admin
-// verifies the student ID card. A space collects only once both pass.
+// Rep KYC. The admin policy (`requirements` on any KYC state) decides which
+// checks apply: the student ID always, the face capture (liveness) by default,
+// the NIN + date of birth (checked against NIMC through Didit) only when on.
 // ---------------------------------------------------------------------------
 
 export type KycSubmission = {
-  /** 11 digits. Sent to Bachs; never stored. */
-  nin: string;
-  /** YYYY-MM-DD. */
-  dob: string;
-  gender: "male" | "female";
-  /** JPEG, PNG, WebP or PDF, max 5 MB. */
+  /** JPEG, PNG, WebP or PDF, max 5 MB. Always required. */
   studentIdCard: File;
-  /** Only useful when Bachs asks for an ID document. */
-  governmentId?: File;
-  /** Only if Bachs asks for one. */
-  bvn?: string;
-  firstName?: string;
-  lastName?: string;
-  /** `+234` followed by 10 digits. */
-  phone?: string;
+  /** Face capture: a JPEG/PNG/WebP photo or an MP4/MOV/WebM video, max 15 MB. While `requirements.liveness`. */
+  liveness?: File;
+  /** 11 digits, while `requirements.nin`. Checked, never stored. */
+  nin?: string;
+  /** YYYY-MM-DD, while `requirements.nin`. */
+  dob?: string;
 };
 
-/** Max size of each KYC document, enforced by the API (`413 FILE_TOO_LARGE`). */
+/** Max size of the student ID card (`413 FILE_TOO_LARGE`). */
 export const MAX_KYC_DOCUMENT_BYTES = 5 * 1024 * 1024;
+/** Max size of a face capture (`413 FILE_TOO_LARGE`). */
+export const MAX_LIVENESS_BYTES = 15 * 1024 * 1024;
+
+export const STUDENT_ID_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
+export const LIVENESS_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+] as const;
 
 /**
  * KYC lives on the user. With a `spaceId` these hit the space's mount (whose
@@ -288,39 +308,35 @@ export async function getKycStatus(spaceId?: string): Promise<SpaceKycStatus> {
   return { ...mine, leadRepId: null, mine };
 }
 
-/** `multipart/form-data`. Returns `202` with the new state; the Bachs verdict arrives by webhook. */
+/**
+ * `multipart/form-data`. Returns `202` with the result already known: a NIN
+ * match, a partial match awaiting admin review (`nin.reviewStatus: "pending"`),
+ * or an error — `422 KYC_REJECTED` (counts as a failed attempt),
+ * `422 KYC_INPUT_UNREADABLE` / `503 KYC_PROVIDER_UNAVAILABLE` (not counted),
+ * `429 KYC_RETRY_LOCKED`, `413 FILE_TOO_LARGE`.
+ */
 export function submitKyc(spaceId: string | undefined, input: KycSubmission) {
   const form = new FormData();
-  for (const [key, value] of Object.entries(input)) {
-    if (value === undefined || value === "") continue;
-    form.append(key, value);
-  }
+  form.append("studentIdCard", input.studentIdCard);
+  if (input.liveness) form.append("liveness", input.liveness);
+  if (input.nin) form.append("nin", input.nin);
+  if (input.dob) form.append("dob", input.dob);
   return apiClient.post<KycState>(kycBase(spaceId), form);
 }
 
-/** Replace the student ID card after an admin rejected it. */
+/** Replace the student ID card after an admin rejected it (`409 STUDENT_ID_PENDING` / `STUDENT_ID_APPROVED`). */
 export function resubmitStudentId(spaceId: string | undefined, file: File) {
   const form = new FormData();
   form.append("studentIdCard", file);
   return apiClient.post<KycState>(`${kycBase(spaceId)}/student-id`, form);
 }
 
-/** Send Bachs a government ID document, when `requirementsDue` asks for one. */
-export function submitGovernmentId(spaceId: string | undefined, file: File) {
-  const form = new FormData();
-  form.append("governmentId", file);
-  return apiClient.post<KycState>(`${kycBase(spaceId)}/government-id`, form);
-}
-
-/** Name-enquiry for the rep's own payout account, without sending it to Bachs. */
-export function lookupPayoutDestination(spaceId: string | undefined, payload: BeneficiaryInput) {
-  return apiClient.post<ResolvedAccount>(`${kycBase(spaceId)}/payout-destination/lookup`, payload);
-}
-
 /**
- * The rep's own bank account, sent to Bachs as their payout destination.
- * Needs the NIN + student ID submission first (`409 KYC_NOT_STARTED`).
+ * A new face capture: the first, a retake after rejection, or a real one for
+ * a rep verified before liveness existed (`409 LIVENESS_PENDING` / `LIVENESS_APPROVED`).
  */
-export function submitPayoutDestination(spaceId: string | undefined, payload: BeneficiaryInput) {
-  return apiClient.post<KycState>(`${kycBase(spaceId)}/payout-destination`, payload);
+export function submitLiveness(spaceId: string | undefined, file: File) {
+  const form = new FormData();
+  form.append("liveness", file);
+  return apiClient.post<KycState>(`${kycBase(spaceId)}/liveness`, form);
 }

@@ -1,254 +1,181 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Search01Icon,
-  MoneyReceive02Icon,
-  MoneySend01Icon,
-  ReceiptDollarIcon,
-} from "@hugeicons/core-free-icons";
+import { Alert02Icon, ReceiptDollarIcon, SearchRemoveIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { listTransactions } from "@/lib/api/transactions";
-import type { Transaction as ApiTransaction } from "@/lib/api/types";
-import { StatCard } from "../_components/StatCard";
-import { InlineStat } from "../_components/overview/OverviewUI";
-import { BARE_INPUT } from "../_components/form-styles";
-import type { Transaction, TxnFilter, TxnType } from "./_components/types";
-import { TXN_META, naira, groupByDay } from "./_components/data";
-import { TransactionRow } from "./_components/TransactionRow";
+import { useTransactions } from "@/lib/api/queries";
 import { EmptyState } from "../_components/EmptyState";
+import { Skeleton } from "../_components/Skeleton";
+import { adaptTransaction } from "./_components/data";
+import { PER_PAGE, describeFilters, hasActiveFilters, toApiQuery } from "./_components/filters";
+import { useTransactionFilters } from "./_components/use-transaction-filters";
+import { FilterBar } from "./_components/FilterBar";
+import {
+  Pagination,
+  TransactionList,
+  TransactionListSkeleton,
+  TransactionsPageSkeleton,
+} from "./_components/TransactionList";
+import type { Transaction } from "./_components/types";
 
 const ReceiptModal = dynamic(() => import("./_components/ReceiptModal").then((mod) => mod.ReceiptModal), { ssr: false });
 
-const TABS: { value: TxnFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "in", label: "Money in" },
-  { value: "out", label: "Money out" },
-];
-
-/** Map an API transaction (kobo, minimal fields) to the ledger row shape. */
-function adapt(t: ApiTransaction): Transaction {
-  const type: TxnType = t.type in TXN_META ? (t.type as TxnType) : "due";
-  const meta = TXN_META[type];
-  return {
-    id: t.id,
-    type,
-    title: t.title ?? meta.label,
-    detail: t.detail ?? t.method ?? meta.label,
-    amount: t.amount / 100, // kobo → naira for the whole-naira `naira()` helper
-    method: t.method ?? "—",
-    date: t.createdAt,
-    status: t.status,
-    reference: t.reference,
-  };
+export default function TransactionsPage() {
+  // useSearchParams needs a Suspense boundary.
+  return (
+    <Suspense fallback={<TransactionsPageSkeleton />}>
+      <TransactionsView />
+    </Suspense>
+  );
 }
 
-const EMPTY_TRANSACTIONS: Transaction[] = [];
+function TransactionsView() {
+  const { filters, setFilters, clearFilters } = useTransactionFilters();
+  // Server-side filtering and paging; the previous page stays up while the next loads.
+  const query = useMemo(() => toApiQuery(filters), [filters]);
+  const tx = useTransactions(query);
+  const [selected, setSelected] = useState<Transaction | null>(null);
+  const listTop = useRef<HTMLDivElement>(null);
 
-export default function TransactionsPage() {
-  const [filter, setFilter] = useState<TxnFilter>("all");
-  const [query, setQuery] = useState("");
-  const [receiptTxn, setReceiptTxn] = useState<Transaction | null>(null);
+  const rows = useMemo(() => (tx.data?.data ?? []).map(adaptTransaction), [tx.data]);
+  const meta = tx.data?.meta;
+  const total = meta?.total ?? rows.length;
+  const totalPages = Math.max(1, meta?.totalPages ?? 1);
+  const shownPage = meta?.page ?? filters.page;
+  const active = hasActiveFilters(filters);
+  const updating = tx.isPlaceholderData && tx.isFetching;
+  const filterParts = useMemo(() => describeFilters(filters), [filters]);
 
-  // Cached: revisiting the page renders instantly and refreshes in the background.
-  const txQuery = useQuery({
-    queryKey: ["me", "transactions"],
-    queryFn: () => listTransactions({ perPage: 100 }).then(({ data }) => data.map(adapt)),
-  });
-  const transactions = txQuery.data ?? EMPTY_TRANSACTIONS;
-  const loading = txQuery.isPending;
-  const error = txQuery.isError;
-
+  // A shared or stale link past the last page lands on the last real page.
   useEffect(() => {
-    if (txQuery.isError) toast.error("Couldn't load your transactions.");
-  }, [txQuery.isError]);
+    if (tx.isPlaceholderData || !meta?.totalPages) return;
+    if (filters.page > meta.totalPages) setFilters({ page: meta.totalPages });
+  }, [tx.isPlaceholderData, meta?.totalPages, filters.page, setFilters]);
 
-  // Newest first, then apply the direction tab and search box.
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return [...transactions]
-      .sort((a, b) => +new Date(b.date) - +new Date(a.date))
-      .filter((t) => (filter === "in" ? t.amount > 0 : true))
-      .filter((t) => (filter === "out" ? t.amount < 0 : true))
-      .filter(
-        (t) =>
-          q === "" ||
-          t.title.toLowerCase().includes(q) ||
-          t.detail.toLowerCase().includes(q) ||
-          t.reference.toLowerCase().includes(q),
-      );
-  }, [filter, query, transactions]);
+  const goToPage = useCallback(
+    (page: number) => {
+      setFilters({ page });
+      const el = listTop.current;
+      if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [setFilters],
+  );
 
-  const groups = useMemo(() => groupByDay(filtered), [filtered]);
-
-  // Totals reflect settled money only — pending/failed don't move the balance.
-  const totals = useMemo(() => {
-    const settled = transactions.filter((t) => t.status === "completed");
-    return {
-      in: settled.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
-      out: settled
-        .filter((t) => t.amount < 0)
-        .reduce((s, t) => s + Math.abs(t.amount), 0),
-    };
-  }, [transactions]);
+  const closeDetails = useCallback(() => setSelected(null), []);
 
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-          Transactions
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">Transactions</h1>
         <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
           Every top up, due and bonus — your full money trail.
         </p>
       </header>
 
-      {/* Phones: money out as the headline figure, money in beside it. */}
-      <div className="mt-4 sm:hidden">
-        <InlineStat
-          label="Money out"
-          value={naira(totals.out)}
-          caption={`Net ${totals.in - totals.out < 0 ? "−" : ""}${naira(totals.in - totals.out)} · settled only`}
-          aside={
-            <div className="shrink-0 text-right">
-              <p className="text-xs font-medium text-ink-soft">Money in</p>
-              <p className="mt-1 text-lg font-semibold tracking-tight text-brand tabular-nums">
-                +{naira(totals.in)}
-              </p>
-            </div>
-          }
-        />
+      <div className="mt-5 sm:mt-6">
+        <FilterBar filters={filters} onChange={setFilters} onClear={clearFilters} />
       </div>
 
-      {/* Money in / out this session. */}
-      <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-3">
-        <StatCard
-          icon={MoneyReceive02Icon}
-          label="Money in"
-          value={naira(totals.in)}
-          tone="brand"
-        />
-        <StatCard
-          icon={MoneySend01Icon}
-          label="Money out"
-          value={naira(totals.out)}
-        />
-        <StatCard
-          icon={ReceiptDollarIcon}
-          label="Net"
-          value={`${totals.in - totals.out < 0 ? "−" : ""}${naira(
-            totals.in - totals.out,
-          )}`}
-        />
-      </div>
-
-      {/* Controls. */}
-      <div className="mt-5 flex flex-col gap-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-between">
-        <div
-          role="tablist"
-          aria-label="Filter transactions"
-          className="flex items-center rounded-full border border-cloud bg-paper p-1"
-        >
-          {TABS.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              role="tab"
-              aria-selected={filter === tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`flex-1 rounded-full px-4 py-2 text-[13px] font-semibold sm:flex-none sm:py-1.5 transition-colors duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                filter === tab.value
-                  ? "bg-brand text-white"
-                  : "text-ink-soft hover:text-ink"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Summary of the current filtered result — the count comes from the server's meta. */}
+      <section
+        ref={listTop}
+        aria-label="Result summary"
+        className="mt-4 flex scroll-mt-24 flex-col gap-3 rounded-3xl border border-cloud bg-canvas px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-ink-soft">{active ? "Matching your filters" : "All transactions"}</p>
+          {tx.isPending ? (
+            <Skeleton className="mt-1.5 h-7 w-36" />
+          ) : tx.isError && !tx.data ? (
+            <p className="mt-0.5 text-sm font-medium text-ink-soft">—</p>
+          ) : (
+            <p className="mt-0.5 text-2xl font-semibold tracking-tight text-ink tabular-nums" aria-live="polite" aria-atomic="true">
+              {total.toLocaleString("en-NG")}{" "}
+              <span className="text-sm font-medium tracking-normal text-ink-soft">
+                {total === 1 ? "transaction" : "transactions"}
+              </span>
+            </p>
+          )}
         </div>
-
-        <div className="flex items-center gap-2 rounded-full border border-cloud bg-canvas px-4 transition-colors focus-within:border-brand sm:w-64">
-          <HugeiconsIcon
-            icon={Search01Icon}
-            size={16}
-            className="shrink-0 text-ink-soft"
-          />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search transactions"
-            aria-label="Search transactions"
-            className={cn(BARE_INPUT, "h-10 px-0")}
-          />
-        </div>
-      </div>
-
-      {/* Ledger. */}
-      {/* Phones: no outer card — each day is its own card below. */}
-      <div className="mt-4 sm:rounded-3xl sm:border sm:border-cloud sm:bg-canvas sm:p-6">
-        {loading ? (
-          <ul className="flex animate-pulse flex-col gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <li key={i} className="h-14 rounded-2xl bg-paper" />
+        {filterParts.length > 0 && (
+          <ul aria-label="Active filters" className="flex min-w-0 flex-wrap gap-1.5 sm:justify-end">
+            {filterParts.map((part) => (
+              <li key={part} className="max-w-full truncate rounded-full bg-paper px-2.5 py-1 text-[11px] font-medium text-ink-soft">
+                {part}
+              </li>
             ))}
           </ul>
-        ) : error ? (
-          <EmptyState
-            icon={ReceiptDollarIcon}
-            title="Couldn't load transactions"
-            description="Something went wrong reaching the server. Refresh the page to try again."
-          />
-        ) : groups.length === 0 ? (
-          <EmptyState
-            icon={ReceiptDollarIcon}
-            title="No transactions found"
-            description="Nothing matches the current filters. Try a different tab or clear your search."
-            action={
-              (filter !== "all" || query.trim() !== "") && (
-                <Button
-                  variant="brand-outline"
-                  size="pill"
-                  onClick={() => {
-                    setFilter("all");
-                    setQuery("");
-                  }}
-                >
-                  Clear filters
+        )}
+      </section>
+
+      <div className="mt-4">
+        {tx.isPending ? (
+          <TransactionListSkeleton />
+        ) : tx.isError && !tx.data ? (
+          <Panel>
+            <EmptyState
+              icon={Alert02Icon}
+              title="Couldn't load transactions"
+              description="Something went wrong reaching the server. Check your connection and try again."
+              action={
+                <Button variant="brand-outline" size="pill" onClick={() => void tx.refetch()} disabled={tx.isFetching}>
+                  {tx.isFetching ? "Retrying…" : "Try again"}
                 </Button>
-              )
-            }
-          />
+              }
+            />
+          </Panel>
+        ) : rows.length === 0 && total === 0 ? (
+          <Panel>
+            {active ? (
+              <EmptyState
+                icon={SearchRemoveIcon}
+                title="No results for these filters"
+                description="Nothing matches what you've picked. Widen the dates or clear the filters to see everything."
+                action={
+                  <Button variant="brand-outline" size="pill" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={ReceiptDollarIcon}
+                title="No transactions yet"
+                description="Dues you pay, top ups and bonuses will show up here as soon as money moves."
+              />
+            )}
+          </Panel>
         ) : (
-          <div className="flex flex-col gap-5 sm:gap-6">
-            {groups.map(([label, txns]) => (
-              <div key={label}>
-                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-ink-soft sm:mb-1 sm:px-0">
-                  {label}
-                </p>
-                <ul className="flex flex-col max-sm:rounded-3xl max-sm:border max-sm:border-cloud max-sm:bg-canvas max-sm:px-4">
-                  {txns.map((txn) => (
-                    <TransactionRow
-                      key={txn.id}
-                      txn={txn}
-                      onSelect={setReceiptTxn}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <>
+            {tx.isError && (
+              <p role="status" className="mb-3 flex items-center gap-2 rounded-2xl bg-rose-100 px-4 py-2.5 text-xs text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
+                <HugeiconsIcon icon={Alert02Icon} size={14} aria-hidden className="shrink-0" />
+                <span className="min-w-0 flex-1">Couldn&apos;t refresh — showing the last loaded results.</span>
+                <button type="button" onClick={() => void tx.refetch()} className="cursor-pointer font-semibold underline-offset-2 hover:underline">
+                  Retry
+                </button>
+              </p>
+            )}
+            <TransactionList rows={rows} updating={updating} onSelect={setSelected} />
+            <Pagination
+              page={shownPage}
+              totalPages={totalPages}
+              total={total}
+              perPage={meta?.perPage ?? PER_PAGE}
+              shownCount={rows.length}
+              onPage={goToPage}
+            />
+          </>
         )}
       </div>
 
-      {receiptTxn && (
-        <ReceiptModal txn={receiptTxn} onClose={() => setReceiptTxn(null)} />
-      )}
+      {selected && <ReceiptModal txn={selected} onClose={closeDetails} />}
     </div>
   );
+}
+
+function Panel({ children }: { children: React.ReactNode }) {
+  return <div className="rounded-3xl border border-cloud bg-canvas">{children}</div>;
 }

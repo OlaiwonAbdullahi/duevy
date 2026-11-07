@@ -282,7 +282,7 @@ export function DueForm({
                   Up to{" "}
                   <span className="font-semibold text-ink tabular-nums">{naira(amount * memberCount)}</span>{" "}
                   from {memberCount.toLocaleString("en-NG")} member{memberCount === 1 ? "" : "s"}. Members pay
-                  a small service fee on top, so you receive the full {naira(amount)} each.
+                  a 1.5% processing fee on top, so you receive the full {naira(amount)} each.
                 </p>
               </div>
             )}

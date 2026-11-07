@@ -5,6 +5,7 @@ import type {
   Dispute,
   DisputeType,
   DisputeStatus,
+  DocumentReviewStatus,
   KycState,
   KycStatus,
   PartnerRedemptionSource,
@@ -103,14 +104,15 @@ export function deactivateUser(userId: string, reason: string) {
 
 export function reviewKyc(
   userId: string,
-  // Identity is Bachs's call — an admin can only revoke it, never mark verified.
+  // An admin can only revoke verification, never grant it (except by approving a partial NIN match).
   payload: { decision: "rejected"; note?: string },
 ) {
   return apiClient.post<{ kycStatus: KycStatus }>(`/admin/users/${userId}/kyc/review`, payload);
 }
 
-// Rep student ID review — Bachs verifies identity (NIN); an admin confirms the
-// rep is a student. A space can only collect once its lead's card is approved.
+// Rep KYC review queues. Duevy admins review the student ID card (always
+// required) and the face capture (required while the policy says so), and
+// decide NIN checks that only partly matched. Didit/NIMC checks the NIN itself.
 
 export type StudentIdReviewRow = {
   userId: string;
@@ -137,12 +139,98 @@ export function listStudentIdsForReview(
   return apiClient.getPage<StudentIdReviewRow[]>(`/admin/kyc/student-ids${toQuery(query)}`);
 }
 
-/** A note is required to reject; the rep is notified either way. */
+/** A note is required to reject (in every review below); the rep is notified either way. */
 export function reviewStudentId(
   userId: string,
   payload: { decision: "approved" | "rejected"; note?: string },
 ) {
   return apiClient.post<KycState>(`/admin/users/${userId}/student-id/review`, payload);
+}
+
+export type ReviewDecision = { decision: "approved" | "rejected"; note?: string };
+
+/** A signed, short-lived link to a private KYC upload. */
+export type SignedDocument = {
+  status: DocumentReviewStatus | null;
+  mimeType: string | null;
+  viewUrl: string | null;
+  viewUrlExpiresInSeconds: number;
+};
+
+export type LivenessReviewRow = {
+  userId: string;
+  name: string;
+  email: string;
+  matricNo: string | null;
+  institution: string | null;
+  liveness: SignedDocument & {
+    /** Play `video` in a `<video>` element. `null` for a rep verified before liveness existed. */
+    kind: "photo" | "video" | null;
+    uploadedAt: string | null;
+    reviewedAt: string | null;
+    reviewNote: string | null;
+  };
+  /** The student ID card, to compare faces. */
+  studentId: SignedDocument;
+};
+
+/** Face captures to review, each with the rep's student ID card to compare. */
+export function listLivenessForReview(
+  query: { status?: DocumentReviewStatus; page?: number; perPage?: number } = {},
+): Promise<Page<LivenessReviewRow[]>> {
+  return apiClient.getPage<LivenessReviewRow[]>(`/admin/kyc/liveness${toQuery(query)}`);
+}
+
+export function reviewLiveness(userId: string, payload: ReviewDecision) {
+  return apiClient.post<KycState>(`/admin/users/${userId}/liveness/review`, payload);
+}
+
+/** A NIN check that only partly matched. The NIN is never stored, so never shown. */
+export type NinReviewRow = {
+  userId: string;
+  name: string;
+  email: string;
+  matricNo: string | null;
+  institution: string | null;
+  kycStatus: KycStatus;
+  submittedAt: string | null;
+  /** How closely the account name matched the NIMC record, as the provider scored it. */
+  nameMatchScore: number | null;
+  reviewStatus: DocumentReviewStatus;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  /** Look the check up in the Didit console by this. */
+  providerReference: string | null;
+  studentIdStatus: StudentIdStatus | null;
+};
+
+export function listNinReviews(
+  query: { status?: DocumentReviewStatus; page?: number; perPage?: number } = {},
+): Promise<Page<NinReviewRow[]>> {
+  return apiClient.getPage<NinReviewRow[]>(`/admin/kyc/nin-reviews${toQuery(query)}`);
+}
+
+/** Approve verifies the rep; reject counts as a failed attempt. */
+export function reviewNin(userId: string, payload: ReviewDecision) {
+  return apiClient.post<KycState>(`/admin/users/${userId}/nin/review`, payload);
+}
+
+/** Which checks every rep must pass. The student ID is always required. */
+export type KycPolicy = {
+  ninRequired: boolean;
+  livenessRequired: boolean;
+  studentIdRequired: true;
+  /** Spaces whose lead rep doesn't meet this policy, so can't collect. */
+  leadRepsNotMeetingPolicy: number;
+};
+
+export function getKycPolicy() {
+  return apiClient.get<KycPolicy>("/admin/settings/kyc");
+}
+
+/** Needs the `overrides` permission. Applies to every rep within seconds; audit-logged. */
+export function updateKycPolicy(patch: { ninRequired?: boolean; livenessRequired?: boolean }) {
+  return apiClient.put<KycPolicy>("/admin/settings/kyc", patch);
 }
 
 // ---------------------------------------------------------------------------
@@ -173,9 +261,11 @@ export type AdminRep = {
   kyc?: {
     status: ApplicationKyc["identity"]["status"];
     studentIdStatus: ApplicationKyc["studentId"]["status"];
-    payoutsActive: boolean;
+    ninReviewStatus?: DocumentReviewStatus | null;
     submittedAt: string | null;
-    payoutAccount: { bankName: string | null; accountMasked: string; accountName: string | null } | null;
+    /** Bachs-era fields; no longer sent. */
+    payoutsActive?: boolean;
+    payoutAccount?: { bankName: string | null; accountMasked: string; accountName: string | null } | null;
   };
   /** What the rep filled in at sign-up. */
   application?: {
@@ -215,10 +305,17 @@ export function getAdminHealth() {
 }
 
 export type ApplicationKyc = {
+  /** The NIN check (Didit → NIMC); only meaningful while the policy requires it. */
   identity: {
     status: "unverified" | "pending" | "verified" | "rejected";
     rejectionReason: string | null;
-    requirementsDue: string[];
+    ninOutcome?: string | null;
+    nameMatchScore?: number | null;
+    /** `pending` when a partial match awaits an admin (`/admin/kyc/nin-reviews`). */
+    ninReviewStatus?: DocumentReviewStatus | null;
+    ninReviewNote?: string | null;
+    /** Bachs-era; no longer sent. */
+    requirementsDue?: string[];
     submittedAt: string | null;
     resolvedAt: string | null;
   };
@@ -232,15 +329,24 @@ export type ApplicationKyc = {
     viewUrl: string | null;
     viewUrlExpiresInSeconds: number;
   };
+  /** The face capture, with a signed link. */
+  liveness?: SignedDocument & {
+    kind: "photo" | "video" | null;
+    uploadedAt: string | null;
+    reviewedAt: string | null;
+    reviewNote: string | null;
+  };
 };
 
-/** Final approval needs the NIN verified and a student ID on file (approval approves it). */
-export function applicationKycReady(kyc: ApplicationKyc | null) {
-  return (
-    !!kyc &&
-    kyc.identity.status === "verified" &&
-    (kyc.studentId.status === "pending" || kyc.studentId.status === "approved")
-  );
+/**
+ * Final approval needs a student ID on file (approval approves it) and, while
+ * the policy requires the NIN, a verified NIN. Without a policy (older API)
+ * the NIN is treated as required, as it was under Bachs.
+ */
+export function applicationKycReady(kyc: ApplicationKyc | null, policy?: Pick<KycPolicy, "ninRequired"> | null) {
+  if (!kyc) return false;
+  const ninOk = policy && !policy.ninRequired ? true : kyc.identity.status === "verified";
+  return ninOk && (kyc.studentId.status === "pending" || kyc.studentId.status === "approved");
 }
 
 export type RepApplication = {
@@ -259,7 +365,7 @@ export type RepApplication = {
     /** From KYC: "male" | "female". */
     gender?: string | null;
   } | null;
-  /** NIN verification (Bachs) and the student ID card — reviewed before final approval. */
+  /** The NIN check (when required), student ID card and face capture — reviewed before final approval. */
   kyc: ApplicationKyc | null;
   requestedSpace: {
     name: string;
@@ -671,28 +777,6 @@ export function updateAdminRole(role: AdminSubRole, permissions: AdminPermission
 }
 
 // ---------------------------------------------------------------------------
-// Payment settings
-// ---------------------------------------------------------------------------
-
-/** `hosted`: redirect students to Bachs's checkout page. `custom`: show a one-time bank account on Duevy. */
-export type CheckoutMode = "hosted" | "custom";
-
-export type PaymentSettings = {
-  checkoutMode: CheckoutMode;
-  updatedAt: string | null;
-  updatedById: string | null;
-};
-
-export function getPaymentSettings() {
-  return apiClient.get<PaymentSettings>("/admin/settings/payments");
-}
-
-/** Super admin only. Applies to checkouts opened afterwards. */
-export function updatePaymentSettings(checkoutMode: CheckoutMode) {
-  return apiClient.put<PaymentSettings>("/admin/settings/payments", { checkoutMode });
-}
-
-// ---------------------------------------------------------------------------
 // 14.10 Reports
 // ---------------------------------------------------------------------------
 
@@ -735,7 +819,7 @@ export function reportDownloadPath(reportId: string) {
   return `/admin/reports/${reportId}/download`;
 }
 
-// Bachs is the sole, non-switchable payment provider — the admin gateway-
-// switch endpoints that used to live here are gone.
+// 9jaPay is the sole payment provider. `GET|PUT /admin/settings/payments`
+// (hosted vs custom checkout) were removed with Bachs.
 
 export type { ApiMeta };

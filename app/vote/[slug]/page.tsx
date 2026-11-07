@@ -149,7 +149,7 @@ export default function VotePage() {
     setSubmitting(true);
     try {
       const res = await castVote(slug, payload);
-      // A paid vote always redirects to a Bachs checkout.
+      // A paid vote may come back with a checkout to finish (the API answers 501 while paid voting is off).
       if (res.checkoutUrl) {
         window.location.href = res.checkoutUrl;
         return;

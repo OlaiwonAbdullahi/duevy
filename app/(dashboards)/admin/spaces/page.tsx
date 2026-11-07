@@ -15,6 +15,7 @@ import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 import { DataTable } from "../_components/DataTable";
 import { Toolbar, SearchInput, FilterSelect } from "../_components/Toolbar";
 import { AdminModal, ModalField } from "../_components/AdminModal";
+import { PERMISSION_LABELS, isForbidden, useAdminPermissions } from "../_components/permissions";
 import { nairaFromKobo, formatPercent01 } from "../_components/format";
 import { ApiError } from "@/lib/api/errors";
 import type { SpaceKind } from "@/lib/api/types";
@@ -147,6 +148,11 @@ export default function AdminSpacesPage() {
   const [kindFilter, setKindFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Clearing a withdrawal code needs the `payouts` permission; confirmed inline.
+  const { can } = useAdminPermissions();
+  const [pinForbidden, setPinForbidden] = useState(false);
+  const canClearPin = can("payouts") !== false && !pinForbidden;
+  const [confirmClearPin, setConfirmClearPin] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<AdminSpaceInput>(EMPTY_FORM);
@@ -266,13 +272,7 @@ export default function AdminSpacesPage() {
   }
 
   async function handleClearPin(space: AdminSpace) {
-    if (
-      !window.confirm(
-        `Clear the withdrawal code for ${space.name}? Withdrawals stop until the lead rep sets a new code.`,
-      )
-    ) {
-      return;
-    }
+    if (busy) return;
     setBusy(true);
     try {
       await clearWithdrawalPin(space.id);
@@ -283,9 +283,16 @@ export default function AdminSpacesPage() {
             : s,
         ),
       );
-      toast.success("Withdrawal code cleared. The lead rep has been notified.");
+      toast.success("Withdrawal code cleared. Every rep on the space has been notified.");
+      setConfirmClearPin(null);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn't clear the withdrawal code.");
+      if (isForbidden(err)) {
+        setPinForbidden(true);
+        setConfirmClearPin(null);
+        toast.error(`Clearing a withdrawal code needs the ${PERMISSION_LABELS.payouts} permission.`);
+      } else {
+        toast.error(err instanceof ApiError ? err.message : "Couldn't clear the withdrawal code.");
+      }
     } finally {
       setBusy(false);
     }
@@ -538,17 +545,59 @@ export default function AdminSpacesPage() {
                   The lead rep sets this code themselves and enters it on every withdrawal — Duevy never sees it.
                   Clear it only if the rep&apos;s account may be compromised; they&apos;ll need to set a new one.
                 </p>
-                {selected.withdrawalPinSet && (
-                  <Button
-                    variant="danger-outline"
-                    size="pill"
-                    className="mt-3"
-                    disabled={busy}
-                    onClick={() => handleClearPin(selected)}
-                  >
-                    Clear code
-                  </Button>
-                )}
+                {selected.withdrawalPinSet &&
+                  (confirmClearPin === selected.id ? (
+                    <div
+                      role="alertdialog"
+                      aria-label={`Clear the withdrawal code for ${selected.name}?`}
+                      className="mt-3 rounded-xl border border-rose-200 bg-rose-50/60 p-3 dark:border-rose-500/30 dark:bg-rose-500/10"
+                    >
+                      <p className="text-xs font-semibold text-ink">
+                        Clear the withdrawal code for {selected.name}?
+                      </p>
+                      <p className="mt-1 text-xs text-ink-soft">
+                        Withdrawals stop until the lead rep sets a new code, and every rep on the space is
+                        notified. This is audit-logged.
+                      </p>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <Button
+                          variant="brand-outline"
+                          size="pill"
+                          disabled={busy}
+                          onClick={() => setConfirmClearPin(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="pill"
+                          disabled={busy}
+                          aria-busy={busy || undefined}
+                          onClick={() => void handleClearPin(selected)}
+                        >
+                          {busy ? "Clearing…" : "Clear code"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        variant="danger-outline"
+                        size="pill"
+                        className="mt-3"
+                        disabled={busy || !canClearPin}
+                        aria-describedby={canClearPin ? undefined : "clear-pin-permission"}
+                        onClick={() => setConfirmClearPin(selected.id)}
+                      >
+                        Clear code
+                      </Button>
+                      {!canClearPin && (
+                        <p id="clear-pin-permission" className="mt-2 text-xs text-ink-soft">
+                          Needs the {PERMISSION_LABELS.payouts} permission.
+                        </p>
+                      )}
+                    </>
+                  ))}
               </div>
             </>
           )}

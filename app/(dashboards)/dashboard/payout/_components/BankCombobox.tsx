@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
@@ -34,6 +34,7 @@ export function BankCombobox({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const listboxId = useId();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
@@ -75,6 +76,7 @@ export function BankCombobox({
           type="button"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           aria-label="Bank"
           disabled={disabled || (loading && banks.length === 0)}
           className="mt-1.5 flex h-11 w-full items-center gap-2 rounded-2xl border border-cloud bg-canvas px-4 text-left text-sm text-ink transition-colors outline-none cursor-pointer focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
@@ -122,7 +124,7 @@ export function BankCombobox({
         {filtered.length === 0 ? (
           <p className="px-3 py-6 text-center text-[13px] text-ink-soft">No banks found.</p>
         ) : (
-          <ul ref={listRef} role="listbox" className="max-h-64 overflow-y-auto p-1.5">
+          <ul ref={listRef} id={listboxId} role="listbox" className="max-h-64 overflow-y-auto p-1.5">
             {filtered.map((bank, index) => {
               const selected = bank.code === value;
               const isActive = index === active;

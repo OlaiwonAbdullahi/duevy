@@ -1,37 +1,39 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import type { Beneficiary, Payout } from "./_components/types";
-import { PayoutBalanceCard } from "./_components/PayoutBalanceCard";
-import { BeneficiariesCard } from "./_components/BeneficiariesCard";
 import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, Clock01Icon } from "@hugeicons/core-free-icons";
+import { PayoutBalanceCard, SpaceAccountCard } from "./_components/PayoutBalanceCard";
 import { PayoutHistory } from "./_components/PayoutHistory";
-import type { WithdrawAuth, WithdrawTarget } from "./_components/WithdrawModal";
+import type { WithdrawRequest } from "./_components/WithdrawModal";
 import { PendingApprovalCard } from "./_components/PendingApprovalCard";
+import { isPayoutInFlight } from "./_components/data";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
+import { EmptyState } from "../_components/EmptyState";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useSpaceReps } from "@/lib/api/queries";
+import {
+  invalidateSpaceMoney,
+  queryKeys,
+  useBeneficiaries,
+  usePayoutSummary,
+  useSpaceReps,
+  useWithdrawableDues,
+} from "@/lib/api/queries";
 import { useRepSpace } from "../_components/use-rep-space";
-import { fromKobo } from "../_components/format";
-import { timeAgo } from "../_components/notifications-data";
+import { nairaFromKobo } from "../_components/format";
 import { Skeleton } from "../_components/Skeleton";
 import {
-  getPayoutSummary,
-  listBeneficiaries,
   addBeneficiary,
-  removeBeneficiary,
   requestPayout,
   setWithdrawalPin,
   resetWithdrawalPin,
-  listPayouts,
-  listWithdrawableDues,
   getPayout,
   rejectPayout,
-  type WithdrawableDue,
 } from "@/lib/api/payouts";
-import type { BeneficiaryDraft } from "./_components/AddBeneficiaryModal";
 import type { Payout as ApiPayout, PayoutSummary } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/errors";
 import { PIN_ERRORS, type PinMode } from "./_components/PinModal";
@@ -39,53 +41,11 @@ import { PIN_ERRORS, type PinMode } from "./_components/PinModal";
 const WithdrawModal = dynamic(() => import("./_components/WithdrawModal").then((mod) => mod.WithdrawModal), { ssr: false });
 const PinModal = dynamic(() => import("./_components/PinModal").then((mod) => mod.PinModal), { ssr: false });
 const ApprovalModal = dynamic(() => import("./_components/ApprovalModal").then((mod) => mod.ApprovalModal), { ssr: false });
-const AddBeneficiaryModal = dynamic(() => import("./_components/AddBeneficiaryModal").then((mod) => mod.AddBeneficiaryModal), { ssr: false });
 
-/** API payout (kobo, ISO date) → history row. */
-function adaptPayout(p: ApiPayout): Payout {
-  return {
-    id: p.id,
-    amount: fromKobo(p.amount),
-    fee: fromKobo(p.fee),
-    net: fromKobo(p.net),
-    requestedAt: timeAgo(p.requestedAt),
-    reference: p.reference,
-    status: p.status,
-    requestedById: p.requestedById,
-    dueId: p.dueId ?? null,
-    account: p.account,
-    accountName: p.accountName ?? null,
-    failureReason: p.failureReason,
-    note: p.note ?? null,
-    timeline: {
-      requestedAt: p.requestedAt,
-      processingAt: p.processingAt,
-      settledAt: p.settledAt,
-      failedAt: p.failedAt,
-      reversedAt: p.reversedAt,
-      cancelledAt: p.cancelledAt ?? null,
-    },
-  };
-}
-
-/** API error code → what the rep should do about it. */
-const PAYOUT_ERRORS: Record<string, string> = {
-  KYC_NOT_VERIFIED: "Finish verification on the Verification page before withdrawing.",
-  BENEFICIARY_NOT_FOUND: "That beneficiary was removed. Pick another one.",
-  ACCOUNT_UNVERIFIABLE: "We couldn't verify that account. Check the bank and number.",
-  WITHDRAWAL_IN_PROGRESS: "Another withdrawal is still in progress. Try again once it settles.",
-  INSUFFICIENT_BALANCE: "That's more than your available balance.",
-  BELOW_MIN_PAYOUT: "That's below the minimum withdrawal.",
-  PAYOUTS_FROZEN: "Withdrawals for this space are paused. Contact support.",
-  WITHDRAWAL_PIN_NOT_SET: "Set a withdrawal security code first.",
-  WITHDRAWAL_PIN_LOCKED: "Too many wrong security codes. Try again in 30 minutes, or reset your code.",
-  WITHDRAWAL_PIN_HOLD: "Withdrawal security changed recently. Withdrawals reopen 24 hours after the change.",
-  LEAD_KYC_NOT_VERIFIED: "Your lead rep needs to finish verification before anyone can withdraw.",
-  DUE_REQUIRED: "Choose one of the dues assigned to you to withdraw from.",
-  DUE_NOT_ASSIGNED: "You can only withdraw from dues assigned to you.",
-  SIGNATORIES_INCOMPLETE: "Withdrawals need 3 signatories. Your lead rep must nominate two co-reps.",
-  FORBIDDEN: "You don't have permission to withdraw from this department.",
-};
+/** While a withdrawal is moving, re-read the summary and history this often. */
+const IN_FLIGHT_POLL_MS = 7_000;
+/** The withdrawal this tab just sent is polled a little faster, to confirm it promptly. */
+const TRACKED_POLL_MS = 5_000;
 
 const REJECT_ERRORS: Record<string, string> = {
   NOT_AWAITING_APPROVAL: "This withdrawal is no longer waiting for approval.",
@@ -94,24 +54,6 @@ const REJECT_ERRORS: Record<string, string> = {
 
 const fmtWhen = (iso: string) => new Date(iso).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
 
-const BENEFICIARY_ERRORS: Record<string, { title: string; description: string }> = {
-  ACCOUNT_UNVERIFIABLE: {
-    title: "We couldn't verify that account",
-    description: "Double-check the bank and account number and try again.",
-  },
-  TOO_MANY_BENEFICIARIES: {
-    title: "Too many beneficiaries",
-    description: "Remove one you no longer use, then try again.",
-  },
-  KYC_NOT_VERIFIED: {
-    title: "Verify your identity first",
-    description: "You can add beneficiaries once your NIN is verified.",
-  },
-  FORBIDDEN: {
-    title: "Only the lead rep can do this",
-    description: "Ask your department's lead rep to manage beneficiaries.",
-  },
-};
 
 /** The lead rep's withdrawal-code state when it needs action: not set yet, or locked. */
 function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onAction: (mode: PinMode) => void }) {
@@ -140,7 +82,8 @@ function PinStatusBanner({ summary, onAction }: { summary: PayoutSummary; onActi
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ink">Withdrawals are locked</p>
           <p className="mt-0.5 text-xs text-ink-soft">
-            Too many wrong security codes. Try again in 30 minutes, or reset your code.
+            Too many wrong security codes. Try again after {fmtWhen(summary.withdrawalPinLockedUntil)}, or reset your
+            code.
           </p>
         </div>
         <button type="button" onClick={() => onAction("reset")} className={link}>
@@ -187,126 +130,172 @@ function SecurityStatusBanner({ summary, isLead }: { summary: PayoutSummary; isL
   return null;
 }
 
+/** The withdrawal this tab just sent, until the bank confirms or refuses it. */
+function TrackedWithdrawalBanner({ payout }: { payout: ApiPayout }) {
+  return (
+    <div
+      role="status"
+      className="mt-4 flex items-center gap-3 rounded-3xl border border-sky-200 bg-sky-50 px-4 py-3.5 sm:mt-6 sm:px-5 sm:py-4"
+    >
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-sky-100 text-sky-700">
+        <HugeiconsIcon icon={Clock01Icon} size={17} className="motion-safe:animate-pulse" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink tabular-nums">
+          {nairaFromKobo(payout.amount)} to {payout.accountName ?? payout.account} is{" "}
+          {payout.status === "pending" ? "being prepared" : "with the bank"}
+        </p>
+        <p className="mt-0.5 text-xs text-ink-soft">
+          Usually takes a few minutes. This updates on its own; you&apos;ll see it here once the bank confirms.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function PayoutPage() {
   const repSpace = useRepSpace();
   const spaceId = repSpace?.id;
   const { user } = useAuth();
   const meId = user?.id;
+  const queryClient = useQueryClient();
   // Beneficiaries and the security code are lead-only; a co-rep can withdraw
   // from the dues assigned to them.
   const isLead = repSpace?.membership !== "co";
   const { data: reps = [] } = useSpaceReps(spaceId);
 
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
-  const [summary, setSummary] = useState<PayoutSummary | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
   const [pinMode, setPinMode] = useState<PinMode | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [dues, setDues] = useState<WithdrawableDue[]>([]);
-  // The withdrawal waiting for signatures, with who has signed.
-  const [pending, setPending] = useState<ApiPayout | null>(null);
   const [approving, setApproving] = useState<{ payout: ApiPayout; codeSent: boolean } | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  // The withdrawal this tab requested (or approved), watched until it settles.
+  const [trackedId, setTrackedId] = useState<string | null>(null);
 
-  async function refresh(id: string) {
-    const [nextSummary, list, history, withdrawable] = await Promise.all([
-      getPayoutSummary(id),
-      listBeneficiaries(id),
-      listPayouts(id),
-      listWithdrawableDues(id).catch(() => [] as WithdrawableDue[]),
-    ]);
-    setSummary(nextSummary);
-    setBeneficiaries(list);
-    setPayouts(history.map(adaptPayout));
-    setDues(withdrawable);
-    setPending(nextSummary.awaitingApprovalPayoutId ? await getPayout(id, nextSummary.awaitingApprovalPayoutId) : null);
-  }
+  // Poll only while something is moving; `pollMs` is derived from the last summary.
+  const [pollMs, setPollMs] = useState<number | false>(false);
+  const summaryQuery = usePayoutSummary(spaceId, { refetchInterval: pollMs });
+  const summary = summaryQuery.data ?? null;
+  const moving = !!summary && (summary.inFlight > 0 || !!summary.awaitingApprovalPayoutId);
+  const nextPoll = moving ? IN_FLIGHT_POLL_MS : false;
+  if (nextPoll !== pollMs) setPollMs(nextPoll);
 
+  const beneficiariesQuery = useBeneficiaries(spaceId);
+  const beneficiaries = useMemo(() => beneficiariesQuery.data ?? [], [beneficiariesQuery.data]);
+  const duesQuery = useWithdrawableDues(spaceId);
+  const dues = useMemo(() => duesQuery.data ?? [], [duesQuery.data]);
+  const withdrawableDues = useMemo(() => dues.filter((d) => d.available > 0), [dues]);
+
+  // The withdrawal waiting for signatures, with who has signed.
+  const awaitingId = summary?.awaitingApprovalPayoutId ?? null;
+  const pendingQuery = useQuery({
+    queryKey: queryKeys.payoutDetail(spaceId ?? "", awaitingId ?? ""),
+    queryFn: () => getPayout(spaceId!, awaitingId!),
+    enabled: !!spaceId && !!awaitingId,
+    refetchInterval: pollMs,
+  });
+  const pending = awaitingId && pendingQuery.data?.status === "awaiting_approval" ? pendingQuery.data : null;
+
+  const trackedQuery = useQuery({
+    queryKey: queryKeys.payoutDetail(spaceId ?? "", trackedId ?? ""),
+    queryFn: () => getPayout(spaceId!, trackedId!),
+    enabled: !!spaceId && !!trackedId,
+    refetchInterval: (q) => (q.state.data && !isPayoutInFlight(q.state.data.status) ? false : TRACKED_POLL_MS),
+  });
+  const tracked = trackedId ? trackedQuery.data ?? null : null;
+
+  // Announce the outcome once, when the API says it settled. Success is only ever
+  // claimed on `status: "success"`.
+  const announced = useRef<string | null>(null);
   useEffect(() => {
-    if (!spaceId) return;
-    refresh(spaceId)
-      .catch(() => toast.error("Couldn't load your payout details."))
-      .finally(() => setLoading(false));
-  }, [spaceId]);
+    if (!tracked || !spaceId || isPayoutInFlight(tracked.status) || announced.current === tracked.id) return;
+    announced.current = tracked.id;
+    if (tracked.status === "success") {
+      toast.success("Withdrawal paid out", {
+        description: `${nairaFromKobo(tracked.net)} reached ${tracked.accountName ?? tracked.account}.`,
+      });
+    } else if (tracked.status === "cancelled") {
+      toast("Withdrawal cancelled", { description: "The full amount is back in the balance." });
+    } else {
+      toast.error("The withdrawal didn't go through", {
+        description: `${tracked.failureReason ?? "The bank refused the transfer."} The full amount is back in the balance.`,
+      });
+    }
+    invalidateSpaceMoney(queryClient, spaceId);
+  }, [tracked, spaceId, queryClient]);
 
-  const handleWithdraw = async (amount: number, target: WithdrawTarget, auth: WithdrawAuth) => {
+  /** Show the result of a request/approval and keep watching it if it's still moving. */
+  const followPayout = (payout: ApiPayout) => {
     if (!spaceId) return;
-    let destination: { beneficiaryId: string } | { bankCode: string; accountNumber: string };
-    if ("beneficiaryId" in target) {
-      destination = target;
-    } else if (target.saveAsBeneficiary) {
-      try {
-        const saved = await addBeneficiary(spaceId, {
+    queryClient.setQueryData(queryKeys.payoutDetail(spaceId, payout.id), payout);
+    if (isPayoutInFlight(payout.status) && payout.status !== "awaiting_approval") {
+      announced.current = null;
+      setTrackedId(payout.id);
+    }
+  };
+
+  const withdrawMutation = useMutation({
+    mutationFn: async ({ amountKobo, target, auth, idempotencyKey }: WithdrawRequest) => {
+      const id = spaceId!;
+      let destination: { beneficiaryId: string } | { bankCode: string; accountNumber: string };
+      if ("beneficiaryId" in target) {
+        destination = target;
+      } else if (target.saveAsBeneficiary) {
+        // Saving twice returns the same beneficiary, so a retry is harmless.
+        const saved = await addBeneficiary(id, {
           bankCode: target.account.bankCode,
           accountNumber: target.account.accountNumber,
         });
         destination = { beneficiaryId: saved.id };
-      } catch (err) {
-        const known = err instanceof ApiError ? BENEFICIARY_ERRORS[err.code] : undefined;
-        toast.error(known?.title ?? "Couldn't save the beneficiary", {
-          description: known?.description ?? "Untick “Save as a beneficiary” to send without saving.",
-        });
-        return;
-      }
-    } else {
-      destination = { bankCode: target.account.bankCode, accountNumber: target.account.accountNumber };
-    }
-    try {
-      const payout = await requestPayout(spaceId, { amount: Math.round(amount * 100), ...auth, ...destination });
-      setWithdrawOpen(false);
-      if (payout.status === "awaiting_approval") {
-        // A signatory requester was emailed their code: let them sign straight away.
-        if (payout.approval?.otpSentToRequester) {
-          setApproving({ payout, codeSent: true });
-          toast.success("Withdrawal sent for approval", { description: "Enter the code we emailed you to add your approval." });
-        } else {
-          toast.success("Withdrawal sent for approval", {
-            description: "2 signatories must approve it before it's sent. They've been notified.",
-          });
-        }
-        await refresh(spaceId);
-        return;
-      }
-      // A 201 can already carry a provider refusal; the balance is restored then.
-      if (payout.status === "failed" || payout.status === "reversed") {
-        toast.error("The withdrawal didn't go through", {
-          description: payout.failureReason ?? "Your balance has been restored. Please try again later.",
-        });
       } else {
-        toast.success("Withdrawal requested", {
-          description: "We're processing it now — check the history below for status.",
+        destination = { bankCode: target.account.bankCode, accountNumber: target.account.accountNumber };
+      }
+      return requestPayout(id, { amount: amountKobo, ...auth, ...destination }, idempotencyKey);
+    },
+    onSettled: (_data, _error, request) => {
+      if (!spaceId) return;
+      // Whatever happened (sent, refused, locked), re-read the balance and limits.
+      invalidateSpaceMoney(queryClient, spaceId);
+      if (!("beneficiaryId" in request.target) && request.target.saveAsBeneficiary) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries(spaceId) });
+      }
+    },
+  });
+
+  const handleWithdraw = async (request: WithdrawRequest) => {
+    if (!spaceId) return;
+    // Errors propagate to the modal, which explains them in place.
+    const payout = await withdrawMutation.mutateAsync(request);
+    setWithdrawOpen(false);
+    followPayout(payout);
+    if (payout.status === "awaiting_approval") {
+      // A signatory requester was emailed their code: let them sign straight away.
+      if (payout.approval?.otpSentToRequester) {
+        setApproving({ payout, codeSent: true });
+        toast("Withdrawal sent for approval", { description: "Enter the code we emailed you to add your approval." });
+      } else {
+        toast("Withdrawal sent for approval", {
+          description: "2 signatories must approve it before it's sent. They've been notified.",
         });
       }
-      await refresh(spaceId);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "INVALID_WITHDRAWAL_PIN") {
-        // The modal stays open so the rep can try again; the server says how many tries are left.
-        const left = err.details?.find((d) => d.field === "pin")?.issue.match(/(\d+) attempt/)?.[1];
-        toast.error("Wrong security code", {
-          description: left ? `${left} attempt${left === "1" ? "" : "s"} left before withdrawals lock.` : "Check the code and try again.",
-        });
-        return;
-      }
-      toast.error("Couldn't request the withdrawal", {
-        description:
-          (err instanceof ApiError && PAYOUT_ERRORS[err.code]) || "Something went wrong. Please try again.",
+    } else if (payout.status === "success") {
+      toast.success("Withdrawal paid out", { description: `${nairaFromKobo(payout.net)} sent.` });
+    } else if (payout.status === "failed" || payout.status === "reversed" || payout.status === "cancelled") {
+      // A 201 can already carry a provider refusal; the balance is restored then.
+      announced.current = payout.id;
+      toast.error("The withdrawal didn't go through", {
+        description: payout.failureReason ?? "The full amount is back in the balance. Please try again later.",
       });
-      if (err instanceof ApiError && err.code === "WITHDRAWAL_PIN_LOCKED") {
-        setWithdrawOpen(false);
-        await refresh(spaceId).catch(() => {});
-      }
+    } else {
+      toast("Withdrawal requested", { description: "It's on its way. We'll confirm here once the bank does." });
     }
   };
 
-  const handleSavePin = async (payload: { pin: string; password: string; currentPin?: string }) => {
-    if (!spaceId || !pinMode) return;
-    try {
-      const res =
-        pinMode === "reset"
-          ? await resetWithdrawalPin(spaceId, { pin: payload.pin, password: payload.password })
-          : await setWithdrawalPin(spaceId, payload);
+  const pinMutation = useMutation({
+    mutationFn: (payload: { mode: PinMode; pin: string; password: string; currentPin?: string }) =>
+      payload.mode === "reset"
+        ? resetWithdrawalPin(spaceId!, { pin: payload.pin, password: payload.password })
+        : setWithdrawalPin(spaceId!, { pin: payload.pin, password: payload.password, currentPin: payload.currentPin }),
+    onSuccess: (res) => {
       setPinMode(null);
       if (res.change === "reset") {
         toast.success("Withdrawal code reset", {
@@ -317,130 +306,140 @@ export default function PayoutPage() {
           description: "You'll enter it every time you withdraw.",
         });
       }
-      await refresh(spaceId).catch(() => {});
-    } catch (err) {
+    },
+    onError: (err) => {
       toast.error("Couldn't save the code", {
         description: (err instanceof ApiError && PIN_ERRORS[err.code]) || "Something went wrong. Please try again.",
       });
-    }
+    },
+    onSettled: () => {
+      if (spaceId) void queryClient.invalidateQueries({ queryKey: queryKeys.payoutSummary(spaceId) });
+    },
+  });
+
+  const handleSavePin = async (payload: { pin: string; password: string; currentPin?: string }) => {
+    if (!spaceId || !pinMode || pinMutation.isPending) return;
+    await pinMutation.mutateAsync({ mode: pinMode, ...payload }).catch(() => {});
   };
 
-  const handleApproved = async (payout: ApiPayout) => {
+  const handleApproved = (payout: ApiPayout) => {
     setApproving(null);
+    followPayout(payout);
+    if (spaceId) invalidateSpaceMoney(queryClient, spaceId);
     if (payout.status === "awaiting_approval") {
       toast.success("Approval added", { description: "One more signatory needs to approve it." });
-    } else if (payout.status === "failed") {
+    } else if (payout.status === "failed" || payout.status === "reversed") {
+      announced.current = payout.id;
       toast.error("The withdrawal didn't go through", {
         description: payout.failureReason ?? "The balance has been restored. Please try again later.",
       });
+    } else if (payout.status === "success") {
+      toast.success("Withdrawal paid out", { description: `${nairaFromKobo(payout.net)} sent.` });
     } else {
-      toast.success("Withdrawal approved", { description: "It's on its way to the bank." });
+      toast("Withdrawal approved", { description: "It's on its way to the bank. We'll confirm once it lands." });
     }
-    if (spaceId) await refresh(spaceId).catch(() => {});
   };
 
-  const handleReject = async () => {
-    setRejecting(false);
-    if (!spaceId || !pending) return;
-    try {
-      await rejectPayout(spaceId, pending.id);
-      toast.success(pending.requestedById === meId ? "Withdrawal request cancelled" : "Withdrawal rejected", {
+  const rejectMutation = useMutation({
+    mutationFn: (payout: ApiPayout) => rejectPayout(spaceId!, payout.id),
+    onSuccess: (_res, payout) => {
+      toast.success(payout.requestedById === meId ? "Withdrawal request cancelled" : "Withdrawal rejected", {
         description: "The amount is back in the balance.",
       });
-    } catch (err) {
+    },
+    onError: (err) => {
       toast.error("Couldn't cancel the withdrawal", {
         description: (err instanceof ApiError && REJECT_ERRORS[err.code]) || "Something went wrong. Please try again.",
       });
-    }
-    await refresh(spaceId).catch(() => {});
+    },
+    onSettled: () => {
+      if (spaceId) invalidateSpaceMoney(queryClient, spaceId);
+    },
+  });
+
+  const handleReject = () => {
+    setRejecting(false);
+    if (pending && !rejectMutation.isPending) rejectMutation.mutate(pending);
   };
 
-  /** "Forgot code?" from the withdraw form or the change dialog. */
+  /** "Forgot code?" from the withdraw form. */
   const handleForgotPin = () => {
     setWithdrawOpen(false);
     setPinMode("reset");
   };
 
-  const handleAddBeneficiary = async (next: BeneficiaryDraft) => {
-    if (!spaceId) return;
-    try {
-      // The account name is resolved server-side via Bachs name-enquiry.
-      const added = await addBeneficiary(spaceId, {
-        bankCode: next.bankCode,
-        accountNumber: next.accountNumber,
-        label: next.label,
-      });
-      setAddOpen(false);
-      toast.success("Beneficiary added", {
-        description: `${added.accountName} · ${added.bankName} ${added.accountNumber}`,
-      });
-      await refresh(spaceId);
-    } catch (err) {
-      const known = err instanceof ApiError ? BENEFICIARY_ERRORS[err.code] : undefined;
-      toast.error(known?.title ?? "Couldn't add the beneficiary", {
-        description: known?.description ?? "Something went wrong. Please try again.",
-      });
-    }
-  };
-
-  const handleRemoveBeneficiary = async (b: Beneficiary) => {
-    if (!spaceId) return;
-    try {
-      await removeBeneficiary(spaceId, b.id);
-      setBeneficiaries((list) => list.filter((x) => x.id !== b.id));
-      toast.success("Beneficiary removed");
-    } catch {
-      toast.error("Couldn't remove the beneficiary. Please try again.");
-    }
-  };
-
-  const available = fromKobo(summary?.available ?? 0);
   const mode = summary?.withdrawalAuthMode ?? "pin";
   // A co-rep withdraws only from the dues the lead assigned them.
-  const canWithdraw = isLead || dues.length > 0;
+  const canWithdraw = isLead || withdrawableDues.length > 0;
   const withdrawBlockedReason = !summary
     ? null
     : !summary.kyc.canWithdraw
       ? "Withdrawals open once verification is complete."
-      : summary.withdrawalPinHoldUntil
-        ? `Withdrawals are paused after a security change until ${fmtWhen(summary.withdrawalPinHoldUntil)}.`
-        : mode === "multisig" && !summary.signatoriesComplete
-          ? "Withdrawals need 3 signatories."
-          : mode === "pin" && summary.withdrawalPinSet === false
-            ? isLead
-              ? "Set a withdrawal security code first."
-              : "Your lead rep needs to set a withdrawal security code."
-            : mode === "pin" && summary.withdrawalPinLockedUntil
-              ? "Too many wrong security codes. Try again in 30 minutes."
-              : summary.awaitingApprovalPayoutId
-                ? "A withdrawal is waiting for approval."
-                : summary.inFlight > 0
-                  ? "A withdrawal is still in progress."
-                  : null;
+      : summary.account === null
+        ? "Withdrawals open once the department account is ready."
+        : summary.withdrawalPinHoldUntil
+          ? `Withdrawals are paused after a security change until ${fmtWhen(summary.withdrawalPinHoldUntil)}.`
+          : mode === "multisig" && !summary.signatoriesComplete
+            ? "Withdrawals need 3 signatories."
+            : mode === "pin" && summary.withdrawalPinSet === false
+              ? isLead
+                ? "Set a withdrawal security code first."
+                : "Your lead rep needs to set a withdrawal security code."
+              : mode === "pin" && summary.withdrawalPinLockedUntil
+                ? `Too many wrong security codes. Try again after ${fmtWhen(summary.withdrawalPinLockedUntil)}.`
+                : summary.awaitingApprovalPayoutId
+                  ? "A withdrawal is waiting for approval."
+                  : summary.inFlight > 0
+                    ? "A withdrawal is still in progress. You can send another once it settles."
+                    : summary.funds && summary.funds.dailyRemainingKobo < summary.minPayout
+                      ? "Today's withdrawal limit has been reached. It resets at midnight, Lagos time."
+                      : null;
   const nameOf = (id: string | null) => reps.find((r) => r.id === id)?.name ?? null;
+  // Pending until the space resolves and its summary arrives (a disabled query stays pending).
+  const loading = summaryQuery.isPending;
 
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <span className="mb-2 hidden rounded-full bg-cloud sm:inline-block px-3 py-1 text-[11px] font-semibold text-brand">
+        <span className="mb-2 hidden rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand sm:inline-block">
           Rep tools
         </span>
-        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-          Payout
-        </h1>
-        <p className="mt-1 text-[13px] text-ink-soft max-sm:hidden">
-          Send the funds your department has collected to any bank account: yours, a lecturer&apos;s or a vendor&apos;s.
-        </p>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">Payout</h1>
+        </div>
       </header>
 
       {loading ? (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <Skeleton className="h-48 rounded-3xl" />
-          <Skeleton className="h-48 rounded-3xl" />
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]" aria-busy="true">
+          <Skeleton className="h-60 rounded-3xl" />
+          <div className="flex flex-col gap-6">
+            <Skeleton className="h-40 rounded-3xl" />
+            <Skeleton className="h-36 rounded-3xl" />
+          </div>
+          <Skeleton className="h-64 rounded-3xl lg:col-span-2" />
+        </div>
+      ) : !summary ? (
+        <div className="mt-6 rounded-3xl border border-cloud bg-canvas">
+          <EmptyState
+            icon={Alert01Icon}
+            title="Couldn't load your payout details"
+            description="Something went wrong reaching the server."
+            action={
+              spaceId && (
+                <button
+                  type="button"
+                  onClick={() => void summaryQuery.refetch()}
+                  className="rounded-full border border-cloud px-4 py-2 text-xs font-semibold text-brand transition-colors hover:bg-paper cursor-pointer"
+                >
+                  Try again
+                </button>
+              )
+            }
+          />
         </div>
       ) : (
         <>
-          {summary && !summary.kyc.canWithdraw && (
+          {!summary.kyc.canWithdraw && (
             <Link
               href="/dashboard/kyc"
               className="mt-4 flex flex-col gap-2 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3.5 transition-colors hover:bg-amber-100/60 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4"
@@ -449,18 +448,21 @@ export default function PayoutPage() {
                 <p className="text-sm font-semibold text-ink">Finish verification to withdraw</p>
                 <p className="mt-0.5 text-xs text-ink-soft">
                   {isLead
-                    ? "Verify your identity and student ID on the Verification page."
+                    ? "Complete your verification on the Verification page."
                     : "Your lead rep needs to finish verification."}
                 </p>
               </div>
               <span className="shrink-0 text-[13px] font-semibold text-brand">Go to verification →</span>
             </Link>
           )}
-          {summary && <SecurityStatusBanner summary={summary} isLead={isLead} />}
-          {isLead && summary?.kyc.canWithdraw && mode === "pin" && !summary.withdrawalPinHoldUntil && (
+          <SecurityStatusBanner summary={summary} isLead={isLead} />
+          {isLead && summary.kyc.canWithdraw && mode === "pin" && !summary.withdrawalPinHoldUntil && (
             <PinStatusBanner summary={summary} onAction={setPinMode} />
           )}
-          {pending && summary && (
+          {tracked && isPayoutInFlight(tracked.status) && tracked.status !== "awaiting_approval" && (
+            <TrackedWithdrawalBanner payout={tracked} />
+          )}
+          {pending && (
             <PendingApprovalCard
               payout={pending}
               signatories={summary.signatories ?? []}
@@ -471,43 +473,34 @@ export default function PayoutPage() {
               onReject={() => setRejecting(true)}
             />
           )}
-          {/* Desktop: balance | beneficiaries, history full width below.
-              Mobile: balance → history → beneficiaries. The minmax(0, …)
-              tracks stop long (truncated) text widening the page. */}
-          <div className="mt-4 grid grid-cols-1 gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-            <PayoutBalanceCard
-              available={available}
-              collected={fromKobo(summary?.collected ?? 0)}
-              inFlight={fromKobo(summary?.inFlight ?? 0)}
-              canWithdraw={canWithdraw}
-              blockedReason={withdrawBlockedReason}
-              onWithdraw={() => setWithdrawOpen(true)}
-            />
-            <div className="grid min-w-0 grid-cols-1 max-lg:order-last">
-              <BeneficiariesCard
-                beneficiaries={beneficiaries}
-                canManage={isLead}
-                onAdd={() => setAddOpen(true)}
-                onRemove={handleRemoveBeneficiary}
+          {/* Desktop: balance | department account on one row (same height), then the
+              withdrawal history full width. Mobile stacks them in that order. minmax(0, …)
+              stops truncated text widening the page. */}
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+            <div className="min-w-0">
+              <PayoutBalanceCard
+                summary={summary}
+                canWithdraw={canWithdraw}
+                blockedReason={withdrawBlockedReason}
+                onWithdraw={() => setWithdrawOpen(true)}
               />
             </div>
+            <div className="min-w-0">
+              <SpaceAccountCard account={summary.account} />
+            </div>
             <div className="min-w-0 lg:col-span-2">
-              <PayoutHistory payouts={payouts} />
+              <PayoutHistory spaceId={spaceId} pollMs={pollMs} />
             </div>
           </div>
         </>
       )}
 
-      {loading && <Skeleton className="mt-5 h-64 rounded-3xl sm:mt-6" />}
-
-      {withdrawOpen && (
+      {withdrawOpen && summary && spaceId && (
         <WithdrawModal
-          spaceId={spaceId ?? ""}
-          available={available}
-          minPayout={fromKobo(summary?.minPayout ?? 0)}
+          spaceId={spaceId}
+          summary={summary}
           beneficiaries={beneficiaries}
-          mode={mode}
-          dues={dues.filter((d) => d.available > 0)}
+          dues={withdrawableDues}
           spaceWide={isLead}
           onClose={() => setWithdrawOpen(false)}
           onConfirm={handleWithdraw}
@@ -540,13 +533,6 @@ export default function PayoutPage() {
         onConfirm={handleReject}
         onClose={() => setRejecting(false)}
       />
-      {addOpen && (
-        <AddBeneficiaryModal
-          spaceId={spaceId ?? ""}
-          onClose={() => setAddOpen(false)}
-          onSave={handleAddBeneficiary}
-        />
-      )}
     </div>
   );
 }

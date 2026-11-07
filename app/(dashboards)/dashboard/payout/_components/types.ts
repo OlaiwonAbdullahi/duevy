@@ -32,5 +32,7 @@ export type Payout = {
     failedAt: string | null;
     reversedAt: string | null;
     cancelledAt: string | null;
+    /** awaiting_approval only: when it is cancelled if not yet approved. */
+    approvalExpiresAt: string | null;
   };
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, SignatureIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
@@ -13,8 +13,8 @@ import { Skeleton } from "../../_components/Skeleton";
 import { BRAND_INPUT } from "../../_components/form-styles";
 import { SettingsCard } from "../../settings/_components/SettingsCard";
 import { useRepSpace } from "../../_components/use-rep-space";
-import { getPayoutSummary, setSignatories, setWithdrawalSecurity } from "@/lib/api/payouts";
-import { queryKeys, useSpaceReps } from "@/lib/api/queries";
+import { setSignatories, setWithdrawalSecurity } from "@/lib/api/payouts";
+import { invalidateSpaceMoney, queryKeys, usePayoutSummary, useSpaceReps } from "@/lib/api/queries";
 import { ApiError } from "@/lib/api/errors";
 import type { WithdrawalAuthMode } from "@/lib/api/types";
 
@@ -34,8 +34,6 @@ const MODES: { id: WithdrawalAuthMode; title: string; body: string }[] = [
   },
 ];
 
-const summaryKey = (spaceId: string) => ["space", spaceId, "payout-summary"] as const;
-
 /**
  * How the department's withdrawals are authorised: the lead's security code,
  * or 2 of 3 signatories (the lead + two nominated co-reps) with emailed codes.
@@ -47,11 +45,8 @@ export function WithdrawalApprovalsCard() {
   const isLead = repSpace?.membership !== "co";
   const queryClient = useQueryClient();
   const { data: reps = [] } = useSpaceReps(spaceId);
-  const { data: summary, isPending } = useQuery({
-    queryKey: summaryKey(spaceId ?? ""),
-    queryFn: () => getPayoutSummary(spaceId!),
-    enabled: !!spaceId,
-  });
+  // Shared with the payout page (queryKeys.payoutSummary), so both stay in step.
+  const { data: summary, isPending } = usePayoutSummary(spaceId);
 
   const savedMode = summary?.withdrawalAuthMode ?? "pin";
   const savedIds = (summary?.signatories ?? []).filter((s) => s.role === "co").map((s) => s.id);
@@ -103,7 +98,8 @@ export function WithdrawalApprovalsCard() {
         description: (err instanceof ApiError && SAVE_ERRORS[err.code]) || "Something went wrong. Please try again.",
       });
     } finally {
-      void queryClient.invalidateQueries({ queryKey: summaryKey(spaceId) });
+      // A security change can hold withdrawals: refresh the summary and everything money-related.
+      invalidateSpaceMoney(queryClient, spaceId);
       void queryClient.invalidateQueries({ queryKey: queryKeys.spaceReps(spaceId) });
     }
   };

@@ -17,6 +17,6 @@ export const faqs = [
   },
   {
     q: "What does it cost?",
-    a: "2% + ₦20 per dues payment, capped at ₦2,020. Withdrawals cost ₦100 under ₦50,000 and ₦200 from ₦50,000.",
+    a: "A 1.5% processing fee per dues payment, paid by the student on top. Withdrawals cost 9jaPay's transfer charge, passed on at cost: ₦10 under ₦5,000, ₦15 under ₦100,000 and ₦20 from ₦100,000.",
   },
 ];

@@ -3,7 +3,7 @@ import type { GuestDue } from "@/lib/api/guest";
 import type { DueType } from "@/lib/api/types";
 import { store } from "@/lib/demo/fixtures";
 
-/** What a pay link's preview shows. Amount in kobo, before the service fee. */
+/** What a pay link's preview shows. Amount in kobo, before the processing fee. */
 export type ShareDue = {
   title: string;
   type: DueType;

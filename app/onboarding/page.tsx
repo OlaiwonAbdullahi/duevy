@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useKycStatus } from "@/lib/api/queries";
+import { kycRequirements } from "@/lib/api/types";
 import { ONBOARDING_PATH, isRepApplicant, kycOutstanding, skipOnboarding } from "@/lib/auth/onboarding";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckmarkCircle02Icon, Logout01Icon } from "@hugeicons/core-free-icons";
@@ -13,10 +14,11 @@ import { cn } from "@/lib/utils";
 import { KycCard } from "@/app/(dashboards)/dashboard/kyc/_components/KycCard";
 
 /**
- * Where a rep applicant lands once their email is verified: verify NIN +
- * student ID and add a payout account before anything else. "Skip for now"
- * lets them look around the dashboard; they're brought back here on their next
- * sign-in until all three are submitted (and reminded by email meanwhile).
+ * Where a rep applicant lands once their email is verified: send the checks
+ * the KYC policy requires (student ID, face capture, and NIN + date of birth
+ * when on) before anything else. "Skip for now" lets them look around the
+ * dashboard; they're brought back here on their next sign-in until every
+ * required check is submitted (and reminded by email meanwhile).
  */
 export default function OnboardingPage() {
   const { user, status, logout } = useAuth();
@@ -49,6 +51,14 @@ export default function OnboardingPage() {
       </div>
     );
   }
+
+  const requirements = kycRequirements(kycQuery.data?.mine);
+  const asks = [
+    "your student ID",
+    ...(requirements.liveness ? ["a quick photo of your face"] : []),
+    ...(requirements.nin ? ["your NIN"] : []),
+  ];
+  const askText = asks.length > 1 ? `${asks.slice(0, -1).join(", ")} and ${asks[asks.length - 1]}` : asks[0];
 
   const signOut = async () => {
     await logout();
@@ -93,8 +103,8 @@ export default function OnboardingPage() {
             Hi {user.name.split(" ")[0]}, let&apos;s verify you
           </h1>
           <p className="mt-2 text-[13px] leading-relaxed text-white/80 sm:text-sm">
-            Your NIN, student ID and a payout account in your name. It takes about three minutes,
-            then an admin approves your department.
+            {askText.charAt(0).toUpperCase() + askText.slice(1)}. It takes about two minutes, then
+            an admin approves your department.
           </p>
 
           <ol className="mt-5 grid grid-cols-3 gap-2">
@@ -143,7 +153,11 @@ export default function OnboardingPage() {
         </div>
 
         <p className="mt-5 text-center text-[11px] leading-relaxed text-ink-soft">
-          Your details go straight to our payment partner for checks. Need help?{" "}
+          {requirements.nin
+            ? "Your NIN is checked against the national register and never stored. "
+            : ""}
+          Your student ID{requirements.liveness ? " and face capture are" : " is"} kept privately for
+          Duevy&apos;s review team. Need help?{" "}
           <a href="mailto:support@duevy.app" className="font-semibold text-brand">
             support@duevy.app
           </a>

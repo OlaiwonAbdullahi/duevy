@@ -2,6 +2,12 @@ import { toast } from "sonner";
 import { ApiError } from "@/lib/api/errors";
 
 /**
+ * The student's dues wall (spaces + dues), cached by the Dues page. Invalidate
+ * it once a payment settles so paid dues stop showing as unpaid.
+ */
+export const DUES_PAGE_KEY = ["me", "dues-page"] as const;
+
+/**
  * The dedicated bank-transfer page for a checkout. `params` (e.g. `dueId`,
  * `from`, `conversationId`) ride along so the page can link a receipt and send
  * the student back where they came from.

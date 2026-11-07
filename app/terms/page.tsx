@@ -24,13 +24,13 @@ const sections: LegalSection[] = [
   {
     heading: "Collecting and paying dues",
     body: [
-      "Duevy is a tool for collecting dues, levies, and payments transparently. Collected funds can only be withdrawn by the department's verified lead rep, to a bank account in their own name. You're responsible for the accuracy of what you collect and how funds are used.",
+      "Duevy is a tool for collecting dues, levies, and payments transparently. Collected funds belong to the space and can only be withdrawn by its verified reps, to bank accounts the space has added and that have been name-checked with the bank. You're responsible for the accuracy of what you collect and how funds are used.",
     ],
   },
   {
     heading: "Fees",
     body: [
-      "Duevy charges 2% + ₦20 on every dues payment, with the fee capped at ₦2,020. Withdrawals cost ₦100 for amounts under ₦50,000 and ₦200 for ₦50,000 or more. There are no setup fees or monthly subscriptions. The exact fee is shown before each payment is confirmed.",
+      "Duevy charges a 1.5% processing fee on every dues payment, paid by the payer on top of the due, so the department receives the full amount. Withdrawals cost our payment partner's transfer charge, passed on at cost: ₦10 for amounts under ₦5,000, ₦15 under ₦100,000, and ₦20 for ₦100,000 or more. There are no setup fees or monthly subscriptions. The exact fee is shown before each payment is confirmed.",
     ],
   },
   {

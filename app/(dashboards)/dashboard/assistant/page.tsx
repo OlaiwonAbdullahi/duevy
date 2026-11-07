@@ -281,8 +281,7 @@ export default function AssistantPage() {
     setPayPending(true);
     try {
       const checkout = await payDueApi(due.id);
-      if (checkout.checkoutUrl) window.location.href = checkout.checkoutUrl;
-      else goToPayment(checkout.reference);
+      goToPayment(checkout.reference);
     } catch (err) {
       toastCheckoutError(err, goToPayment);
     } finally {

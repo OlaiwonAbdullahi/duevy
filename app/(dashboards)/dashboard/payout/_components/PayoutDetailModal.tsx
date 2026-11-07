@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -20,28 +21,46 @@ import { useRepSpace } from "../../_components/use-rep-space";
 import { formatDateTime } from "../../transactions/_components/data";
 import type { HugeIcon } from "../../_components/nav-config";
 import { BankLogo } from "./BankLogo";
-import { naira, PAYOUT_STATUS_META } from "./data";
+import { adaptPayout, isPayoutInFlight, naira, PAYOUT_STATUS_META } from "./data";
 import { printPayoutReceipt } from "./payout-receipt";
 import { getPayout } from "@/lib/api/payouts";
-import type { PayoutApproval } from "@/lib/api/types";
+import { queryKeys } from "@/lib/api/queries";
 import type { Payout, PayoutStatus } from "./types";
 
 /** Status dot colour on the doodle header. */
 const STATUS_DOT: Record<PayoutStatus, string> = {
   awaiting_approval: "bg-amber-300",
   pending: "bg-amber-300",
-  processing: "bg-amber-300",
+  processing: "bg-sky-300",
   success: "bg-emerald-300",
   failed: "bg-rose-300",
   reversed: "bg-white/70",
   cancelled: "bg-white/70",
 };
 
-type Step = { label: string; at: string; icon: HugeIcon; tone: "brand" | "amber" | "danger" };
+/** What an unsettled withdrawal is waiting on — the open last step of the timeline. */
+const WAITING_LABEL: Partial<Record<PayoutStatus, string>> = {
+  awaiting_approval: "Waiting for signatories",
+  pending: "Getting the funds ready",
+  processing: "With the bank",
+};
+
+/** Poll an open withdrawal this often until it settles. */
+const DETAIL_POLL_MS = 5_000;
+
+type Step = {
+  label: string;
+  /** Omitted for a step that hasn't happened yet. */
+  at?: string;
+  /** Shown under the label instead of a time, for upcoming steps. */
+  hint?: string;
+  icon: HugeIcon;
+  tone: "brand" | "amber" | "danger" | "muted";
+};
 
 /** One withdrawal in full: amounts, destination, reference and its status trail. */
 export function PayoutDetailModal({
-  payout,
+  payout: listed,
   onClose,
 }: {
   payout: Payout;
@@ -49,25 +68,25 @@ export function PayoutDetailModal({
 }) {
   const repSpace = useRepSpace();
   const [copied, setCopied] = useState(false);
+  const spaceId = repSpace?.id;
+
+  // The full record (with who signed it), kept fresh while it's still moving.
+  const detail = useQuery({
+    queryKey: queryKeys.payoutDetail(spaceId ?? "", listed.id),
+    queryFn: () => getPayout(spaceId!, listed.id),
+    enabled: !!spaceId,
+    refetchInterval: (q) => {
+      const status = q.state.data?.status ?? listed.status;
+      return isPayoutInFlight(status) ? DETAIL_POLL_MS : false;
+    },
+  });
+  const payout = detail.data ? adaptPayout(detail.data) : listed;
+  const approval = detail.data?.approval ?? null;
+
   const meta = PAYOUT_STATUS_META[payout.status];
   const failed = payout.status === "failed" || payout.status === "reversed" || payout.status === "cancelled";
   const t = payout.timeline;
-
-  // Who signed it — only withdrawals made under signatory approval have any.
-  const [approval, setApproval] = useState<PayoutApproval | null>(null);
-  const spaceId = repSpace?.id;
-  useEffect(() => {
-    if (!spaceId) return;
-    let cancelled = false;
-    getPayout(spaceId, payout.id)
-      .then((p) => {
-        if (!cancelled) setApproval(p.approval ?? null);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [spaceId, payout.id]);
+  const waiting = WAITING_LABEL[payout.status];
 
   // `account` arrives masked as "<Bank name> •••• 1234".
   const [bankName, masked] = (() => {
@@ -89,9 +108,12 @@ export function PayoutDetailModal({
   // Only the steps that actually happened, in order.
   const steps: Step[] = [
     { label: "Requested", at: t.requestedAt, icon: MoneySend01Icon, tone: "brand" },
-    ...(approval?.approvals ?? [])
-      .filter((a) => a.decision === "approved")
-      .map((a) => ({ label: `Approved by ${a.name}`, at: a.decidedAt, icon: SignatureIcon, tone: "brand" }) as Step),
+    ...(approval?.approvals ?? []).map(
+      (a) =>
+        (a.decision === "approved"
+          ? { label: `Approved by ${a.name}`, at: a.decidedAt, icon: SignatureIcon, tone: "brand" }
+          : { label: `Rejected by ${a.name}`, at: a.decidedAt, icon: Cancel01Icon, tone: "danger" }) as Step,
+    ),
     ...(t.processingAt
       ? [{ label: "Processing", at: t.processingAt, icon: Clock01Icon, tone: "amber" } as Step]
       : []),
@@ -105,12 +127,26 @@ export function PayoutDetailModal({
     ...(t.cancelledAt
       ? [{ label: "Cancelled · balance restored", at: t.cancelledAt, icon: Cancel01Icon, tone: "danger" } as Step]
       : []),
+    ...(waiting
+      ? [
+          {
+            label: waiting,
+            hint:
+              payout.status === "awaiting_approval" && t.approvalExpiresAt
+                ? `Cancelled automatically if not approved by ${formatDateTime(t.approvalExpiresAt)}`
+                : "Updating automatically",
+            icon: Clock01Icon,
+            tone: "muted",
+          } as Step,
+        ]
+      : []),
   ];
 
   const toneClass = {
     brand: "bg-cloud text-brand",
     amber: "bg-amber-100 text-amber-700",
     danger: "bg-rose-100 text-rose-600",
+    muted: "border border-dashed border-ink-soft/40 bg-canvas text-ink-soft motion-safe:animate-pulse",
   } as const;
 
   return (
@@ -132,10 +168,12 @@ export function PayoutDetailModal({
         </p>
       </section>
 
-      {failed && payout.failureReason && (
+      {failed && (payout.failureReason || payout.status !== "cancelled") && (
         <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
           <HugeiconsIcon icon={Alert01Icon} size={15} className="mt-px shrink-0" />
-          <span>{payout.failureReason}</span>
+          <span>
+            {payout.failureReason ?? "The transfer didn't go through."} The full amount is back in the balance.
+          </span>
         </div>
       )}
 
@@ -210,16 +248,21 @@ export function PayoutDetailModal({
                 <HugeiconsIcon icon={step.icon} size={15} />
               </span>
               <div className="min-w-0 pt-0.5">
-                <p className={`text-sm font-semibold ${step.tone === "danger" ? "text-rose-600" : "text-ink"}`}>
+                <p
+                  className={`text-sm font-semibold ${
+                    step.tone === "danger" ? "text-rose-600" : step.tone === "muted" ? "text-ink-soft" : "text-ink"
+                  }`}
+                >
                   {step.label}
                 </p>
-                <p className="text-xs text-ink-soft">{formatDateTime(step.at)}</p>
+                <p className="text-xs text-ink-soft">{step.at ? formatDateTime(step.at) : step.hint}</p>
               </div>
             </li>
           ))}
         </ol>
       </section>
 
+      {payout.status === "success" && (
       <button
         type="button"
         onClick={() => printPayoutReceipt(payout, repSpace?.name ?? "Your department")}
@@ -228,6 +271,7 @@ export function PayoutDetailModal({
         <HugeiconsIcon icon={Download04Icon} size={16} />
         Download receipt
       </button>
+      )}
     </Modal>
   );
 }

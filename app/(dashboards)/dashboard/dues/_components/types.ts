@@ -37,7 +37,7 @@ export type Due = {
   amount: number;
   /** Face amount the rep set (naira). */
   faceAmount: number;
-  /** Processing fee for this due on its own (naira). A basket charges the ₦20 once. */
+  /** Processing fee for this due on its own (naira): 1.5%, rounded up to the kobo. A basket's fee can differ by a kobo. */
   fee: number;
   /** ISO date the due is expected by. */
   dueDate: string;

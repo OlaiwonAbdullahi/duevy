@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
 
 /** Signed-in app areas: nothing there is useful in search, and it's all behind auth. */
-const PRIVATE_PATHS = ["/dashboard", "/admin", "/onboarding", "/api/"];
+const PRIVATE_PATHS = ["/dashboard", "/admin", "/onboarding", "/deposit", "/api/"];
 
 export default function robots(): MetadataRoute.Robots {
   // Vercel preview/staging deployments must never compete with duevy.app.

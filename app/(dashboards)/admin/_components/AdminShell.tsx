@@ -3,12 +3,28 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Notification02Icon } from "@hugeicons/core-free-icons";
+import { Menu01Icon, Notification02Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth/auth-context";
+import { FEATURES } from "@/lib/features";
 import { ShellSkeleton } from "../../dashboard/_components/Skeleton";
 import Sidebar from "../../dashboard/_components/Sidebar";
-import { ADMIN_GROUPS } from "../../dashboard/_components/nav-config";
+import { ADMIN_LINKS, type NavGroup } from "../../dashboard/_components/nav-config";
 import { ThemeToggle } from "../../dashboard/_components/ThemeToggle";
+
+/**
+ * The admin sidebar: the shared admin links, minus Partners while the feature
+ * is off (its endpoints were removed with the 9jaPay release), plus the rep
+ * verification queues right after Reps.
+ */
+const ADMIN_NAV: NavGroup[] = [
+  {
+    links: ADMIN_LINKS.filter((l) => FEATURES.partners || l.href !== "/admin/partners").flatMap((l) =>
+      l.href === "/admin/reps" && !ADMIN_LINKS.some((x) => x.href === "/admin/verification")
+        ? [l, { label: "Rep verification", href: "/admin/verification", icon: UserCheck01Icon }]
+        : [l],
+    ),
+  },
+];
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const { user, status } = useAuth();
@@ -33,7 +49,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-canvas">
       <Sidebar
-        groups={ADMIN_GROUPS}
+        groups={ADMIN_NAV}
         subtitle="Admin console"
         open={open}
         onClose={() => setOpen(false)}

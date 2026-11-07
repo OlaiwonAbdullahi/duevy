@@ -15,7 +15,7 @@ const included = [
   {
     icon: BankIcon,
     title: "Flat withdrawal fee",
-    body: "₦100 to withdraw under ₦50,000, and ₦200 for ₦50,000 or more — no percentage taken from your payout.",
+    body: "₦10 to ₦20 per withdrawal — the bank transfer charge, passed on at cost. No percentage taken from your payout.",
   },
   {
     icon: EyeIcon,
@@ -25,10 +25,10 @@ const included = [
 ];
 
 const examples = [
-  { due: "₦2,000", fee: "₦60" },
-  { due: "₦10,000", fee: "₦220" },
-  { due: "₦50,000", fee: "₦1,020" },
-  { due: "₦100,000+", fee: "₦2,020" },
+  { due: "₦2,000", fee: "₦30" },
+  { due: "₦10,000", fee: "₦150" },
+  { due: "₦50,000", fee: "₦750" },
+  { due: "₦100,000", fee: "₦1,500" },
 ];
 
 export default function Pricing() {
@@ -43,7 +43,8 @@ export default function Pricing() {
             Simple fees. Nothing hidden.
           </h2>
           <p className="text-[#7a847f] text-base md:text-lg leading-relaxed">
-            Duevy charges 2% + ₦20 on every dues payment, capped at ₦2,020. No
+            Duevy adds a 1.5% processing fee to every dues payment, paid by the
+            student on top, so the department receives the full amount. No
             signup cost and no monthly subscription. You only ever pay when a
             payment actually goes through, so it scales with what you collect
             instead of billing you for sitting still.
@@ -81,10 +82,10 @@ export default function Pricing() {
               </span>
               <div className="flex items-start gap-1 mb-3">
                 <span className="text-white font-semibold tracking-tight text-6xl md:text-7xl leading-none">
-                  2
+                  1.5
                 </span>
                 <span className="text-white/80 font-semibold text-3xl md:text-4xl leading-none mt-1">
-                  % + ₦20
+                  %
                 </span>
               </div>
               <p className="text-white/80 text-lg font-medium">
@@ -93,7 +94,7 @@ export default function Pricing() {
             </div>
 
             <p className="relative text-white/70 text-sm leading-relaxed mt-8 max-w-xs">
-              Capped at ₦2,020, however big the payment. Covers collecting,
+              Paid by bank transfer through 9jaPay. Covers collecting,
               tracking and receipts. If no money moves, you owe nothing.
             </p>
           </div>

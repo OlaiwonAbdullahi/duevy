@@ -310,21 +310,21 @@ function payout(
 }
 
 const payouts: Payout[] = [
-  payout("demo-po-3", 12000000, 5000, 6, 1, "T-shirt vendor — balance"),
-  payout("demo-po-2", 5000000, 5000, 15, 1, "Retry: T-shirt vendor", "failed"),
-  payout("demo-po-1", 30000000, 5000, 22, 0, "T-shirt vendor deposit"),
+  payout("demo-po-3", 12000000, 2000, 6, 1, "T-shirt vendor — balance"),
+  payout("demo-po-2", 5000000, 1500, 15, 1, "Retry: T-shirt vendor", "failed"),
+  payout("demo-po-1", 30000000, 2000, 22, 0, "T-shirt vendor deposit"),
 ];
 
 const transactions: Transaction[] = [
-  { id: "demo-txn-1", type: "due", method: "Bank transfer", title: "Departmental dues 2026/27", detail: "Department of Computer Science", amount: -512000, status: "completed", reference: "DVY-8K2M4Q", createdAt: daysAgo(28, 13) },
-  { id: "demo-txn-2", type: "due", method: "Bank transfer", title: "Departmental week T-shirt", detail: "Department of Computer Science", amount: -767000, status: "completed", reference: "DVY-7H1P9Z", createdAt: daysAgo(55, 16) },
-  { id: "demo-txn-3", type: "due", method: "Bank transfer", title: "CSC 301 handout", detail: "Department of Computer Science", amount: -257000, status: "completed", reference: "DVY-3T6B2W", createdAt: daysAgo(16, 9) },
-  { id: "demo-txn-4", type: "due", method: "Bank transfer", title: "Faculty of Science levy", detail: "Faculty of Science", amount: -1022000, status: "completed", reference: "DVY-5R8C1N", createdAt: daysAgo(64, 15) },
+  { id: "demo-txn-1", type: "due", method: "Bank transfer", title: "Departmental dues 2026/27", detail: "Department of Computer Science", amount: -507500, status: "completed", reference: "DVY-8K2M4Q", createdAt: daysAgo(28, 13) },
+  { id: "demo-txn-2", type: "due", method: "Bank transfer", title: "Departmental week T-shirt", detail: "Department of Computer Science", amount: -761250, status: "completed", reference: "DVY-7H1P9Z", createdAt: daysAgo(55, 16) },
+  { id: "demo-txn-3", type: "due", method: "Bank transfer", title: "CSC 301 handout", detail: "Department of Computer Science", amount: -253750, status: "completed", reference: "DVY-3T6B2W", createdAt: daysAgo(16, 9) },
+  { id: "demo-txn-4", type: "due", method: "Bank transfer", title: "Faculty of Science levy", detail: "Faculty of Science", amount: -1015000, status: "completed", reference: "DVY-5R8C1N", createdAt: daysAgo(64, 15) },
 ];
 
 const notifications: NotificationItem[] = [
   { id: "demo-n-1", kind: "payment", tone: "brand", title: "Adaeze Okonkwo paid", detail: "Departmental dues 2026/27 · ₦5,000", href: "/dashboard/collections", read: false, createdAt: daysAgo(0, 9) },
-  { id: "demo-n-2", kind: "payout", tone: "brand", title: "Withdrawal paid out", detail: "₦119,950 sent to Access Bank •••• 7713", href: "/dashboard/payout", read: false, createdAt: daysAgo(6, 12) },
+  { id: "demo-n-2", kind: "payout", tone: "brand", title: "Withdrawal paid out", detail: "₦119,980 sent to Access Bank •••• 7713", href: "/dashboard/payout", read: false, createdAt: daysAgo(6, 12) },
   { id: "demo-n-3", kind: "member", tone: "brand", title: "3 new students joined", detail: "Department of Computer Science", href: "/dashboard/circle", read: false, createdAt: daysAgo(2, 18) },
   { id: "demo-n-4", kind: "due", tone: "amber", title: "CSC 301 handout closes in 5 days", detail: "17 students haven't paid yet", href: "/dashboard/collections", read: true, createdAt: daysAgo(3, 8) },
   { id: "demo-n-5", kind: "payout", tone: "rose", title: "Withdrawal failed", detail: "₦50,000 is back in your balance", href: "/dashboard/payout", read: true, createdAt: daysAgo(15, 12) },
@@ -341,24 +341,18 @@ const audit: AuditEntry[] = [
 
 const verifiedKyc: KycState = {
   kycStatus: "verified",
-  payoutsActive: true,
   canCollect: true,
   canWithdraw: true,
-  providerReference: "bachs_acct_demo",
-  requirementsDue: [],
-  governmentIdSubmittedAt: null,
-  payoutDestination: {
-    bankCode: "058",
-    bankName: "Guaranty Trust Bank",
-    accountNumber: "•••• 4021",
-    accountName: "ADEBAYO TOLUWALASE",
-    submittedAt: daysAgo(86),
-  },
+  requirements: { nin: false, studentId: true, liveness: true },
+  nin: { outcome: null, reviewStatus: null, reviewNote: null },
   studentId: { status: "approved", uploadedAt: daysAgo(87), reviewedAt: daysAgo(86), reviewNote: null },
+  liveness: { status: "approved", uploadedAt: daysAgo(87), reviewedAt: daysAgo(86), reviewNote: null },
   rejectionReason: null,
   retryLockedUntil: null,
   submittedAt: daysAgo(87),
   resolvedAt: daysAgo(86),
+  payoutsActive: true,
+  requirementsDue: [],
 };
 
 const sessions: Session[] = [

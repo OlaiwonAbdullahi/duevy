@@ -125,17 +125,13 @@ export function relativeDue(iso: string): { text: string; past: boolean } {
 }
 
 /**
- * Service fee for one checkout covering `dues`, in naira. Mirrors the backend's
- * `checkoutFee`: 2% of the basket's face value (rounded half-up to the kobo)
- * plus ₦20, charged once per checkout rather than per due.
+ * A preview of the processing fee on a face value in naira — e.g. what one
+ * guest payer adds on top of a due on a share card, where the API doesn't
+ * return a fee. Mirrors the backend's `checkoutFee`: 1.5% of the face value,
+ * rounded up to the kobo. Checkouts always show the server's own figures.
  */
-export function basketFee(dues: Due[]): number {
-  return checkoutFee(dues.reduce((sum, d) => sum + d.faceAmount, 0));
-}
-
-/** The same fee for a face value in naira — e.g. what one payer adds on top of a due. */
 export function checkoutFee(faceNaira: number): number {
   const faceKobo = Math.round(faceNaira * 100);
-  if (faceKobo === 0) return 0;
-  return (Math.floor((faceKobo * 2 * 2 + 100) / 200) + 2_000) / 100;
+  if (faceKobo <= 0) return 0;
+  return Math.ceil((faceKobo * 150) / 10_000) / 100;
 }

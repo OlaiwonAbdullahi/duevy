@@ -2,7 +2,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, InvoiceIcon } from "@hugeicons/core-free-icons";
 import { Modal } from "../../_components/Modal";
 import type { Due, Space } from "./types";
-import { naira, basketFee, CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
+import { CATEGORY_LABEL, SPACE_KIND_LABEL } from "./data";
+
+/** Naira with kobo, e.g. 50.75 → "₦50.75" — fees rarely land on whole naira. */
+const exact = (n: number) =>
+  `₦${n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function PayDueModal({
   dues,
@@ -17,10 +21,12 @@ export function PayDueModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  // The service fee (2% + ₦20) is charged once for the whole checkout, so
-  // several dues together cost less in fees than paying them one by one.
+  // Fees come from the server: each due's own `processingFee` (1.5%, rounded
+  // up to the kobo). A basket's fee is 1.5% of its total, so it can differ from
+  // the sum by a kobo or two — the next step shows the exact amount to send.
   const face = dues.reduce((sum, d) => sum + d.faceAmount, 0);
-  const fee = basketFee(dues);
+  const fee = dues.reduce((sum, d) => sum + d.fee, 0);
+  const total = dues.reduce((sum, d) => sum + d.amount, 0);
   const multi = dues.length > 1;
 
   const title = multi ? `Pay ${dues.length} dues` : "Confirm payment";
@@ -46,7 +52,7 @@ export function PayDueModal({
                   </p>
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-ink">
-                  {naira(d.faceAmount)}
+                  {exact(d.faceAmount)}
                 </p>
               </li>
             ))}
@@ -62,7 +68,7 @@ export function PayDueModal({
               </p>
             </div>
             <p className="shrink-0 text-lg font-semibold tracking-tight text-ink">
-              {naira(dues[0].faceAmount)}
+              {exact(dues[0].faceAmount)}
             </p>
           </div>
         )}
@@ -70,20 +76,27 @@ export function PayDueModal({
         <div className="mt-3 flex flex-col gap-1.5 border-t border-cloud pt-3">
           <div className="flex items-center justify-between text-xs text-ink-soft">
             <span>{multi ? "Dues total" : "Due amount"}</span>
-            <span className="font-medium text-ink">{naira(face)}</span>
+            <span className="font-medium tabular-nums text-ink">{exact(face)}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-ink-soft">
-            <span>Service fee{multi ? " (charged once)" : ""}</span>
-            <span className="font-medium text-ink">{naira(fee)}</span>
+            <span>Processing fee (1.5%)</span>
+            <span className="font-medium tabular-nums text-ink">{exact(fee)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-ink-soft">Total to transfer</span>
-            <span className="text-lg font-semibold tracking-tight text-ink">
-              {naira(face + fee)}
+            <span className="text-xs font-medium text-ink-soft">
+              {multi ? "Estimated total" : "Total to transfer"}
+            </span>
+            <span className="text-lg font-semibold tracking-tight tabular-nums text-ink">
+              {exact(total)}
             </span>
           </div>
         </div>
       </div>
+
+      <p className="mt-3 text-[11px] leading-relaxed text-ink-soft">
+        You&apos;ll get a one-time 9jaPay account to transfer into from any bank app.
+        {multi ? " The exact amount to send is shown on the next step." : ""}
+      </p>
 
       <button
         type="button"
@@ -91,7 +104,7 @@ export function PayDueModal({
         onClick={onConfirm}
         className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
-        {pending ? "Setting up…" : "Pay"}
+        {pending ? "Setting up…" : "Continue to transfer"}
         {!pending && <HugeiconsIcon icon={ArrowRight01Icon} size={16} />}
       </button>
     </Modal>

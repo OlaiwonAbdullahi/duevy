@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert01Icon,
@@ -13,24 +14,16 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AdminModal, ModalField } from "../../_components/AdminModal";
 import StatusBadge from "../../_components/StatusBadge";
+import { KycMedia, ReasonForm, Spinner, formatMatchScore } from "../../_components/review";
 import {
   applicationKycReady,
   type ApplicationKyc,
+  type KycPolicy,
   type RepApplication,
   type StudentIdReviewRow,
 } from "@/lib/api/admin";
 
 type CheckState = "done" | "waiting" | "failed" | "todo";
-
-/** Inline spinner for a button whose request is in flight. */
-function Spinner({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn("h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-current/30 border-t-current", className)}
-    />
-  );
-}
 
 const CHECK_STYLE: Record<CheckState, { icon: typeof Clock01Icon; className: string }> = {
   done: { icon: CheckmarkCircle02Icon, className: "bg-emerald-500/10 text-emerald-700" },
@@ -49,8 +42,8 @@ function Check({
   step: number;
   title: string;
   state: CheckState;
-  detail: string;
-  children?: React.ReactNode;
+  detail: ReactNode;
+  children?: ReactNode;
 }) {
   const style = CHECK_STYLE[state];
   return (
@@ -63,7 +56,7 @@ function Check({
           <p className="text-sm font-semibold text-ink">
             <span className="text-ink-soft">{step}.</span> {title}
           </p>
-          <p className="mt-0.5 text-xs text-ink-soft">{detail}</p>
+          <div className="mt-0.5 text-xs text-ink-soft">{detail}</div>
         </div>
       </div>
       {children && <div className="mt-3 sm:pl-11">{children}</div>}
@@ -71,94 +64,53 @@ function Check({
   );
 }
 
-/** A student ID image (or PDF) behind a signed, short-lived link. */
-function StudentIdPreview({ url, mimeType, name }: { url: string; mimeType: string | null; name: string }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-cloud bg-white">
-      {mimeType === "application/pdf" ? (
-        <iframe src={url} title={`Student ID card for ${name}`} className="h-72 w-full" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived private URL
-        <img src={url} alt={`Student ID card for ${name}`} className="max-h-72 w-full object-contain" />
-      )}
-      <div className="border-t border-cloud px-3 py-2">
-        <a href={url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand hover:underline">
-          Open full size
-        </a>
-      </div>
-    </div>
-  );
-}
-
-/** Inline "write a reason, then confirm" form — replaces window.prompt. */
-function ReasonForm({
-  label,
-  placeholder,
-  confirmLabel,
-  busyLabel,
-  busy,
-  loading = false,
-  onCancel,
-  onConfirm,
-}: {
-  label: string;
-  placeholder: string;
-  confirmLabel: string;
-  /** Shown on the confirm button while this form's request runs, e.g. "Rejecting…". */
-  busyLabel: string;
-  /** Any request on the modal is running — locks the form. */
-  busy: boolean;
-  /** This form's own request is running — spinner on its confirm button. */
-  loading?: boolean;
-  onCancel: () => void;
-  onConfirm: (reason: string) => void;
-}) {
-  const [reason, setReason] = useState("");
-  return (
-    <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3">
-      <label className="text-xs font-medium text-ink">{label}</label>
-      <textarea
-        autoFocus
-        value={reason}
-        onChange={(e) => setReason(e.target.value.slice(0, 500))}
-        rows={3}
-        disabled={busy}
-        placeholder={placeholder}
-        className="mt-1.5 w-full rounded-xl border border-cloud bg-canvas px-3.5 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft/60 focus:border-brand focus:ring-2 focus:ring-brand/15"
-      />
-      <div className="mt-2 flex justify-end gap-2">
-        <Button variant="brand-outline" size="pill" disabled={busy} onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="danger-outline"
-          size="pill"
-          disabled={busy || !reason.trim()}
-          aria-busy={loading || undefined}
-          onClick={() => onConfirm(reason.trim())}
-        >
-          {loading && <Spinner />}
-          {loading ? busyLabel : confirmLabel}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ninCheck(kyc: ApplicationKyc | null): { state: CheckState; detail: string } {
-  const s = kyc?.identity.status ?? "unverified";
-  if (s === "verified") return { state: "done", detail: "Bachs confirmed the NIN and date of birth." };
+/** The NIN check (Didit → NIMC); only shown while the policy requires it. */
+function ninCheck(kyc: ApplicationKyc | null): { state: CheckState; detail: ReactNode } {
+  const identity = kyc?.identity;
+  const s = identity?.status ?? "unverified";
+  if (s === "verified") return { state: "done", detail: "NIMC confirmed the NIN and date of birth (checked through Didit)." };
   if (s === "rejected")
-    return { state: "failed", detail: kyc?.identity.rejectionReason ?? "Bachs couldn't verify these details. The applicant can retry." };
-  if (s === "pending")
+    return {
+      state: "failed",
+      detail:
+        identity?.ninReviewNote ??
+        identity?.rejectionReason ??
+        "The NIN and date of birth didn't match the national register. The applicant can retry.",
+    };
+  if (s === "pending" && identity?.ninReviewStatus === "pending")
     return {
       state: "waiting",
-      detail:
-        kyc && kyc.identity.requirementsDue.length > 0
-          ? `Waiting on Bachs — it asked for: ${kyc.identity.requirementsDue.join(", ")}.`
-          : "Submitted — waiting for Bachs's result. This updates automatically.",
+      detail: (
+        <>
+          Only a partial match
+          {identity.nameMatchScore !== null && identity.nameMatchScore !== undefined
+            ? ` (name match ${formatMatchScore(identity.nameMatchScore)})`
+            : ""}
+          . An admin decides it in the{" "}
+          <Link href="/admin/verification?tab=nin" className="font-semibold text-brand hover:underline">
+            NIN queue
+          </Link>
+          .
+        </>
+      ),
     };
+  if (s === "pending") return { state: "waiting", detail: "Submitted — waiting for the result." };
   return { state: "todo", detail: "The applicant hasn't submitted their NIN yet." };
+}
+
+/** The face capture; shown while the policy requires it (or one is on file). */
+function livenessCheck(kyc: ApplicationKyc | null): { state: CheckState; detail: string } {
+  const l = kyc?.liveness;
+  const s = l?.status ?? null;
+  if (s === "approved")
+    return {
+      state: "done",
+      detail: l?.viewUrl ? "Approved." : l?.reviewNote ?? "Approved (verified before face capture existed).",
+    };
+  if (s === "pending")
+    return { state: "waiting", detail: "Check it's a live person and the same face as on the student ID card." };
+  if (s === "rejected") return { state: "failed", detail: `Retake requested: ${l?.reviewNote ?? "waiting for a new capture."}` };
+  return { state: "todo", detail: "No face capture yet." };
 }
 
 function idCheck(kyc: ApplicationKyc | null): { state: CheckState; detail: string } {
@@ -171,20 +123,27 @@ function idCheck(kyc: ApplicationKyc | null): { state: CheckState; detail: strin
 }
 
 /**
- * Review one rep application: the requested department, then the three checks
- * (email, NIN via Bachs, student ID), then final approval. Approving also
- * approves the student ID and creates the department.
+ * Review one rep application: the requested space, then the checks the
+ * verification policy requires (email; NIN only while required; student ID;
+ * face capture while required), then final approval. Approving also approves
+ * the student ID and creates the space. The face capture is decided on its
+ * own (here or in the queue); the space can't collect until it's approved.
  */
 export function ApplicationReviewModal({
   app,
+  policy,
   loading,
   busy,
   onClose,
   onApprove,
   onReject,
   onRejectId,
+  onReviewLiveness,
+  onRefreshLinks,
 }: {
   app: RepApplication | null;
+  /** `null` while loading or unavailable — the NIN is then treated as required, as before. */
+  policy: KycPolicy | null;
   loading: boolean;
   busy: boolean;
   onClose: () => void;
@@ -192,23 +151,40 @@ export function ApplicationReviewModal({
   onReject: (app: RepApplication, reason: string) => void;
   /** Resolves `true` once the ID was sent back, so the note form can close. */
   onRejectId: (app: RepApplication, note: string) => Promise<boolean>;
+  /** Resolves `true` once saved. */
+  onReviewLiveness: (app: RepApplication, decision: "approved" | "rejected", note?: string) => Promise<boolean>;
+  /** Re-fetches the application, for fresh signed links. */
+  onRefreshLinks: () => void;
 }) {
-  const [mode, setMode] = useState<"review" | "reject-app" | "reject-id">("review");
+  const [mode, setMode] = useState<"review" | "reject-app" | "reject-id" | "reject-liveness">("review");
   // Which button started the running request, so only that one shows a spinner.
-  const [action, setAction] = useState<"approve" | "reject" | "reject-id" | null>(null);
+  const [action, setAction] = useState<
+    "approve" | "reject" | "reject-id" | "approve-liveness" | "reject-liveness" | null
+  >(null);
   const running = busy ? action : null;
   const pending = app?.status === "pending";
   const kyc = app?.kyc ?? null;
-  const ready = applicationKycReady(kyc);
+  const ready = applicationKycReady(kyc, policy);
+
+  // Without a policy (older API, or it failed to load) assume the NIN is required.
+  const ninRequired = policy ? policy.ninRequired : true;
+  const livenessRequired = policy ? policy.livenessRequired : !!kyc?.liveness?.status;
+  const showLiveness = livenessRequired || !!kyc?.liveness?.status;
 
   const email = app?.applicant?.emailVerified;
   const nin = ninCheck(kyc);
   const id = idCheck(kyc);
+  const liveness = livenessCheck(kyc);
   const waitingOn = [
     !email && "email verification",
-    nin.state !== "done" && "NIN verification",
+    ninRequired && nin.state !== "done" && "the NIN check",
     (id.state === "todo" || id.state === "failed") && "a student ID",
   ].filter(Boolean) as string[];
+  const livenessOutstanding = livenessRequired && liveness.state !== "done";
+  const name = app?.applicant?.name ?? "applicant";
+
+  let step = 0;
+  const nextStep = () => ++step;
 
   return (
     <AdminModal
@@ -269,19 +245,24 @@ export function ApplicationReviewModal({
             </div>
           </div>
 
-          {/* The checks, in the order they happen. */}
+          {/* The checks the policy requires, in the order they happen. */}
           <ol className="space-y-3">
             <Check
-              step={1}
+              step={nextStep()}
               title="Email verified"
               state={email ? "done" : "todo"}
               detail={email ? "The applicant confirmed their email address." : "Waiting for the applicant to open the verification link."}
             />
-            <Check step={2} title="NIN verified by Bachs" state={nin.state} detail={nin.detail} />
-            <Check step={3} title="Student ID card" state={id.state} detail={id.detail}>
+            {ninRequired && <Check step={nextStep()} title="NIN check (NIMC)" state={nin.state} detail={nin.detail} />}
+            <Check step={nextStep()} title="Student ID card" state={id.state} detail={id.detail}>
               {kyc?.studentId.viewUrl && (
                 <div className="space-y-3">
-                  <StudentIdPreview url={kyc.studentId.viewUrl} mimeType={kyc.studentId.mimeType} name={app.applicant?.name ?? "applicant"} />
+                  <KycMedia
+                    url={kyc.studentId.viewUrl}
+                    mimeType={kyc.studentId.mimeType}
+                    label={`Student ID card for ${name}`}
+                    onRefresh={onRefreshLinks}
+                  />
                   {pending && kyc.studentId.status === "pending" && mode === "review" && (
                     <button
                       type="button"
@@ -310,6 +291,76 @@ export function ApplicationReviewModal({
                 </div>
               )}
             </Check>
+            {showLiveness && (
+              <Check
+                step={nextStep()}
+                title={livenessRequired ? "Face capture" : "Face capture (not required)"}
+                state={liveness.state}
+                detail={liveness.detail}
+              >
+                {kyc?.liveness?.viewUrl && (
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <KycMedia
+                        url={kyc.liveness.viewUrl}
+                        mimeType={kyc.liveness.mimeType}
+                        kind={kyc.liveness.kind}
+                        label={`Face capture for ${name}`}
+                        onRefresh={onRefreshLinks}
+                      />
+                      {kyc.studentId.viewUrl && (
+                        <KycMedia
+                          url={kyc.studentId.viewUrl}
+                          mimeType={kyc.studentId.mimeType}
+                          label={`Student ID card for ${name}, to compare`}
+                          onRefresh={onRefreshLinks}
+                        />
+                      )}
+                    </div>
+                    {kyc.liveness.status === "pending" && mode === "review" && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="brand-outline"
+                          size="pill"
+                          disabled={busy}
+                          aria-busy={running === "approve-liveness" || undefined}
+                          onClick={() => {
+                            setAction("approve-liveness");
+                            void onReviewLiveness(app, "approved");
+                          }}
+                        >
+                          {running === "approve-liveness" && <Spinner />}
+                          {running === "approve-liveness" ? "Approving…" : "Approve face capture"}
+                        </Button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setMode("reject-liveness")}
+                          className="cursor-pointer text-xs font-semibold text-rose-600 hover:underline disabled:opacity-50"
+                        >
+                          Not a match? Ask for a retake
+                        </button>
+                      </div>
+                    )}
+                    {mode === "reject-liveness" && (
+                      <ReasonForm
+                        label="Why isn't it acceptable? They'll see this."
+                        placeholder="e.g. Your face isn't clearly visible — retake it facing the camera in good light."
+                        confirmLabel="Ask for a retake"
+                        busyLabel="Sending…"
+                        busy={busy}
+                        loading={running === "reject-liveness"}
+                        onCancel={() => setMode("review")}
+                        onConfirm={async (note) => {
+                          setAction("reject-liveness");
+                          if (await onReviewLiveness(app, "rejected", note)) setMode("review");
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </Check>
+            )}
           </ol>
 
           {pending &&
@@ -343,6 +394,8 @@ export function ApplicationReviewModal({
                   <span>
                     Ready to approve. Approving also approves the student ID and creates{" "}
                     <span className="font-semibold">{app.requestedSpace.name}</span>.
+                    {livenessOutstanding &&
+                      " It can't collect payments until the face capture is approved too."}
                   </span>
                 )}
               </p>
@@ -419,7 +472,7 @@ export function IdReuploadModal({
           This rep uploaded a new student ID. Their department can collect again once it&apos;s approved.
         </p>
         {row.studentId.viewUrl ? (
-          <StudentIdPreview url={row.studentId.viewUrl} mimeType={row.studentId.mimeType} name={row.name} />
+          <KycMedia url={row.studentId.viewUrl} mimeType={row.studentId.mimeType} label={`Student ID card for ${row.name}`} />
         ) : (
           <p className="rounded-2xl bg-paper p-6 text-center text-sm text-ink-soft">No file on record.</p>
         )}

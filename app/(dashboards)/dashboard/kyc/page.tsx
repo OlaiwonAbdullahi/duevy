@@ -8,10 +8,11 @@ import { useRole } from "../_components/role-context";
 import { EmptyState } from "../_components/EmptyState";
 
 /**
- * Rep verification (KYC). Identity is checked by Bachs (NIN + date of birth)
- * and the student ID card by a Duevy admin. Rep applicants do this before
- * their department exists (it's part of the application); approved reps can
- * come back here when something needs attention.
+ * Rep verification (KYC). Which checks apply is the admin's policy: the student
+ * ID card (always) and a face capture, both reviewed by a Duevy admin, and
+ * NIN + date of birth checked against NIMC when it's turned on. Rep applicants
+ * do this before their department exists (it's part of the application);
+ * approved reps come back here when something needs attention.
  */
 export default function KycPage() {
   const repSpace = useRepSpace();
@@ -26,8 +27,8 @@ export default function KycPage() {
         <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">Verification</h1>
         <p className="mt-1 text-[13px] text-ink-soft">
           {isPendingRep
-            ? "Verify your identity and student ID. Once both pass, an admin reviews your application."
-            : "Verify your identity and student ID so your department can collect dues and withdraw."}
+            ? "Verify who you are. Once your checks pass, an admin reviews your application."
+            : "Verify who you are so your department can collect dues and withdraw."}
         </p>
       </header>
 

@@ -13,6 +13,8 @@ export const FEATURES = {
   referrals: process.env.NEXT_PUBLIC_FEATURE_REFERRALS === "true",
   cards: process.env.NEXT_PUBLIC_FEATURE_CARDS === "true",
   themes: process.env.NEXT_PUBLIC_FEATURE_THEMES === "true",
+  /** Partner codes (withdrawal-fee discounts). Removed from the API with the 9jaPay release. */
+  partners: process.env.NEXT_PUBLIC_FEATURE_PARTNERS === "true",
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURES;

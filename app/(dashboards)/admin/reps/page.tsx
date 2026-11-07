@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UserGroup03Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
@@ -29,15 +30,18 @@ import {
   verifyRep,
   rejectRep,
   reviewStudentId,
+  reviewLiveness,
   listStudentIdsForReview,
   applicationKycReady,
   type AdminRep,
   type ApplicationKyc,
+  type KycPolicy,
   type RepApplication,
   type RepApplicationStatus,
   type StudentIdReviewRow,
 } from "@/lib/api/admin";
 import { ApplicationReviewModal, IdReuploadModal } from "./_components/RepReview";
+import { useKycPolicy } from "../_components/kycPolicy";
 
 const STATUS_TONES: Record<AdminRep["status"], StatusTone> = {
   active: "ok",
@@ -51,13 +55,29 @@ const VERIFICATION_TONES: Record<string, StatusTone> = {
   unverified: "neutral",
 };
 
-/** NIN (Bachs) verdict → badge. */
+/** NIN check (Didit → NIMC) verdict → badge. Only meaningful while the policy requires it. */
 const NIN_META: Record<ApplicationKyc["identity"]["status"], { tone: StatusTone; label: string }> = {
   unverified: { tone: "neutral", label: "NIN not submitted" },
   pending: { tone: "warn", label: "NIN pending" },
   verified: { tone: "ok", label: "NIN verified" },
   rejected: { tone: "bad", label: "NIN failed" },
 };
+
+function ninMeta(
+  status: ApplicationKyc["identity"]["status"],
+  reviewStatus?: ApplicationKyc["identity"]["ninReviewStatus"],
+): { tone: StatusTone; label: string } {
+  if (status === "pending" && reviewStatus === "pending") return { tone: "warn", label: "NIN partial match" };
+  return NIN_META[status];
+}
+
+/** Face capture review state → badge. */
+function livenessMeta(status: "pending" | "approved" | "rejected" | null | undefined): { tone: StatusTone; label: string } {
+  if (status === "approved") return { tone: "ok", label: "Face approved" };
+  if (status === "pending") return { tone: "warn", label: "Face to review" };
+  if (status === "rejected") return { tone: "bad", label: "Face rejected" };
+  return { tone: "neutral", label: "No face capture" };
+}
 
 /** Student ID review state → badge. */
 function studentIdMeta(status: ApplicationKyc["studentId"]["status"]): { tone: StatusTone; label: string } {
@@ -67,14 +87,19 @@ function studentIdMeta(status: ApplicationKyc["studentId"]["status"]): { tone: S
   return { tone: "neutral", label: "No ID yet" };
 }
 
-function KycBadges({ kyc }: { kyc: ApplicationKyc | null }) {
+/** The checks the policy requires (the NIN is assumed required while the policy is unknown). */
+function KycBadges({ kyc, policy }: { kyc: ApplicationKyc | null; policy: KycPolicy | null }) {
   if (!kyc) return <span className="text-xs text-ink-soft">—</span>;
-  const nin = NIN_META[kyc.identity.status];
+  const showNin = policy ? policy.ninRequired : true;
+  const showFace = policy ? policy.livenessRequired : !!kyc.liveness?.status;
+  const nin = ninMeta(kyc.identity.status, kyc.identity.ninReviewStatus);
   const id = studentIdMeta(kyc.studentId.status);
+  const face = livenessMeta(kyc.liveness?.status);
   return (
     <div className="flex flex-wrap gap-1.5">
-      <StatusBadge tone={nin.tone}>{nin.label}</StatusBadge>
+      {showNin && <StatusBadge tone={nin.tone}>{nin.label}</StatusBadge>}
       <StatusBadge tone={id.tone}>{id.label}</StatusBadge>
+      {showFace && <StatusBadge tone={face.tone}>{face.label}</StatusBadge>}
     </div>
   );
 }
@@ -147,6 +172,8 @@ export default function AdminRepsPage() {
   };
 
   const [tab, setTab] = useState<"directory" | "applications">("directory");
+  // Which checks reps must pass — decides which steps an application shows.
+  const policy = useKycPolicy().data ?? null;
 
   // ---- Directory (active/suspended reps) -----------------------------------
   const [reps, setReps] = useState<AdminRep[]>([]);
@@ -327,6 +354,7 @@ export default function AdminRepsPage() {
       await reviewStudentId(idRow.userId, { decision, note });
       toast.success(decision === "approved" ? `${idRow.name}'s student ID approved.` : `Sent back to ${idRow.name}.`);
       setIdReuploads((list) => list.filter((r) => r.userId !== idRow.userId));
+      queryClient.removeQueries({ queryKey: ["admin", "kyc-queue", "student-ids"] });
       setIdRow(null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't save the review.");
@@ -359,6 +387,7 @@ export default function AdminRepsPage() {
       await reviewStudentId(app.userId, { decision: "rejected", note });
       toast.success("Asked the applicant for a new student ID.");
       forgetApplication(app.userId);
+      queryClient.removeQueries({ queryKey: ["admin", "kyc-queue", "student-ids"] });
       const fresh = await getRepApplication(app.userId).catch(() => null);
       if (fresh) {
         setAppDetail(fresh);
@@ -371,6 +400,42 @@ export default function AdminRepsPage() {
     } finally {
       setAppBusy(false);
     }
+  };
+
+  // Decide the face capture from inside the application (same as the queue).
+  const decideLiveness = async (
+    app: RepApplication,
+    decision: "approved" | "rejected",
+    note?: string,
+  ): Promise<boolean> => {
+    if (appBusy) return false;
+    setAppBusy(true);
+    try {
+      await reviewLiveness(app.userId, { decision, note });
+      toast.success(decision === "approved" ? "Face capture approved." : "Asked the applicant for a new face capture.");
+      forgetApplication(app.userId);
+      queryClient.removeQueries({ queryKey: ["admin", "kyc-queue", "liveness"] });
+      const fresh = await getRepApplication(app.userId).catch(() => null);
+      if (fresh) {
+        setAppDetail(fresh);
+        setApplications((prev) => prev.map((a) => (a.userId === app.userId ? fresh : a)));
+      }
+      return true;
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't save the face capture review.");
+      return false;
+    } finally {
+      setAppBusy(false);
+    }
+  };
+
+  // Signed links in an application are short-lived — fetch a fresh copy.
+  const refreshAppLinks = (id: string) => {
+    queryClient.removeQueries({ queryKey: ["admin", "rep-application", id] });
+    queryClient
+      .fetchQuery(applicationQuery(id))
+      .then(setAppDetail)
+      .catch(() => toast.error("Couldn't load fresh links. Try again."));
   };
 
   const verify = async (app: RepApplication) => {
@@ -441,7 +506,11 @@ export default function AdminRepsPage() {
                 {idReuploads.length} rep{idReuploads.length === 1 ? "" : "s"} uploaded a new student ID
               </p>
               <p className="mt-0.5 text-xs text-ink-soft">
-                Their departments can&apos;t collect until you approve it.
+                Their spaces can&apos;t collect until you approve it. Face captures and NIN partial matches are in{" "}
+                <Link href="/admin/verification" className="font-semibold text-brand hover:underline">
+                  Rep verification
+                </Link>
+                .
               </p>
               <ul className="mt-3 flex flex-col gap-2">
                 {idReuploads.map((row) => (
@@ -639,30 +708,30 @@ export default function AdminRepsPage() {
               )}
 
               {selected.kyc && (
-                <RepDetailSection title="Verification & payouts">
-                  <ModalField label="Identity (NIN)">
-                    <StatusBadge tone={NIN_META[selected.kyc.status].tone}>
-                      {NIN_META[selected.kyc.status].label}
-                    </StatusBadge>
-                  </ModalField>
+                <RepDetailSection title="Verification">
+                  {(policy?.ninRequired ?? true) || selected.kyc.status === "verified" ? (
+                    <ModalField label="Identity (NIN)">
+                      <StatusBadge tone={ninMeta(selected.kyc.status, selected.kyc.ninReviewStatus).tone}>
+                        {ninMeta(selected.kyc.status, selected.kyc.ninReviewStatus).label}
+                      </StatusBadge>
+                    </ModalField>
+                  ) : (
+                    <ModalField label="Identity (NIN)">
+                      <span className="text-ink-soft">Not required by the current policy</span>
+                    </ModalField>
+                  )}
                   <ModalField label="Student ID">
                     <StatusBadge tone={studentIdMeta(selected.kyc.studentIdStatus).tone}>
                       {studentIdMeta(selected.kyc.studentIdStatus).label}
                     </StatusBadge>
                   </ModalField>
-                  <ModalField label="Payout account">
-                    {selected.kyc.payoutAccount
-                      ? `${selected.kyc.payoutAccount.bankName ?? "Bank"} ${selected.kyc.payoutAccount.accountMasked}${
-                          selected.kyc.payoutAccount.accountName
-                            ? ` · ${selected.kyc.payoutAccount.accountName}`
-                            : ""
-                        }`
-                      : "Not added"}
+                  <ModalField label="Submitted">
+                    {selected.kyc.submittedAt ? formatDate(selected.kyc.submittedAt) : "—"}
                   </ModalField>
-                  <ModalField label="Payouts">
-                    <StatusBadge tone={selected.kyc.payoutsActive ? "ok" : "neutral"}>
-                      {selected.kyc.payoutsActive ? "enabled" : "not enabled"}
-                    </StatusBadge>
+                  <ModalField label="Face capture & reviews">
+                    <Link href="/admin/verification?tab=liveness" className="text-brand hover:underline">
+                      Open rep verification
+                    </Link>
                   </ModalField>
                 </RepDetailSection>
               )}
@@ -782,7 +851,7 @@ export default function AdminRepsPage() {
                     </td>
                     <td className="p-4 font-medium">{app.requestedSpace.school}</td>
                     <td className="p-4">
-                      <KycBadges kyc={app.kyc} />
+                      <KycBadges kyc={app.kyc} policy={policy} />
                     </td>
                     <td className="p-4 text-ink-soft">{formatDate(app.submittedAt)}</td>
                     <td className="p-4">
@@ -793,7 +862,7 @@ export default function AdminRepsPage() {
                         <RowActions
                           actions={[
                             // Final approval only once KYC is in; open the row to review the ID.
-                            ...(applicationKycReady(app.kyc)
+                            ...(applicationKycReady(app.kyc, policy)
                               ? [{ label: "Approve rep", onSelect: () => verify(app) }]
                               : []),
                             { label: "Review", onSelect: () => openApplication(app.userId) },
@@ -811,12 +880,15 @@ export default function AdminRepsPage() {
             <ApplicationReviewModal
               key={selectedAppId}
               app={appDetail}
+              policy={policy}
               loading={appDetailLoading}
               busy={appBusy}
               onClose={() => setSelectedAppId(null)}
               onApprove={verify}
               onReject={reject}
               onRejectId={rejectStudentId}
+              onReviewLiveness={decideLiveness}
+              onRefreshLinks={() => refreshAppLinks(selectedAppId)}
             />
           )}
         </>

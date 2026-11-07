@@ -32,8 +32,7 @@ export function PayVoteModal({
           <HugeiconsIcon icon={BankIcon} size={18} />
         </span>
         <p className="text-xs leading-relaxed text-ink-soft">
-          You&apos;ll get a secure <span className="font-semibold text-ink">Bachs</span> checkout
-          link, right here in the app.
+          You&apos;ll get secure payment details to complete your vote, right here in the app.
         </p>
       </div>
 

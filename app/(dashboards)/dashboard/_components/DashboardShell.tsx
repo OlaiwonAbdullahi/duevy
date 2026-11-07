@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { OverviewSkeleton, ShellSkeleton } from "./Skeleton";
 import { useKycStatus } from "@/lib/api/queries";
 import { ONBOARDING_PATH, isRepApplicant, kycOutstanding, onboardingSkipped } from "@/lib/auth/onboarding";
+import { joinNouns, kycChecks } from "@/lib/kyc";
 import { isDemoMode } from "@/lib/demo/mode";
 import { RoleProvider, useRole } from "./role-context";
 import { SpaceThemeProvider } from "./space-theme";
@@ -30,7 +31,8 @@ const CommandPalette = dynamic(() => import("./CommandPalette").then((mod) => mo
 
 /**
  * Shown across the dashboard while a rep application is open. KYC comes first
- * (NIN via Bachs + student ID), then an admin gives final approval.
+ * (the checks the admin policy requires: student ID, face capture, maybe NIN),
+ * then an admin gives final approval.
  */
 function PendingRepBanner() {
   const pathname = usePathname();
@@ -56,7 +58,11 @@ function PendingRepBanner() {
   const kyc = useKycStatus().data?.mine ?? null;
 
   const notStarted = !!kyc && kycOutstanding(kyc);
-  const kycPassed = !!kyc && kyc.kycStatus === "verified" && kyc.studentId.status !== null;
+  const kycPassed = !!kyc && kyc.canCollect;
+  const checks = kyc ? kycChecks(kyc) : [];
+  const rejected = checks.find((c) => c.state === "rejected");
+  const todo = checks.filter((c) => c.state === "todo");
+  const pending = checks.filter((c) => c.state === "pending");
 
   const title = !kyc
     ? "Your rep application is under review"
@@ -64,18 +70,18 @@ function PendingRepBanner() {
       ? "Complete verification to continue your application"
       : kycPassed
         ? "Your application is with an admin for final approval"
-        : "Your verification is pending";
+        : "Your verification is in review";
   const body = notStarted
-    ? kyc?.kycStatus === "rejected"
+    ? rejected?.key === "nin"
       ? "Your NIN couldn't be verified. Check your details and try again."
-      : kyc?.studentId.status === "rejected"
+      : rejected?.key === "studentId"
         ? "Your student ID wasn't accepted. Upload a clearer photo."
-        : kyc?.providerReference && kyc.studentId.status !== null
-          ? "Add a payout bank account in your name so an admin can approve your department."
-          : "Verify your NIN, upload your student ID and add a payout account so an admin can approve your department."
+        : rejected?.key === "liveness"
+          ? "Your face capture wasn't accepted. Take a new one in good light."
+          : `Send ${joinNouns(todo)} so an admin can approve your department.`
     : kycPassed
       ? "Your identity is verified. We'll email you once your department is approved — then your rep tools unlock."
-      : "We're checking your NIN and student ID. You can use Duevy as a student in the meantime; we'll email you once you're approved.";
+      : `We're reviewing ${pending.length ? joinNouns(pending) : "your verification"}. You can use Duevy as a student in the meantime; we'll email you once you're approved.`;
 
   return (
     <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center">

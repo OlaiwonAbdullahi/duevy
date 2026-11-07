@@ -27,7 +27,7 @@ export default function ManageDeptPage() {
 
       <div className="mt-4 flex flex-col gap-4 sm:mt-6 sm:gap-5">
         <DepartmentProfileCard />
-        <PartnerCard />
+        {FEATURES.partners && <PartnerCard />}
         {FEATURES.themes && <SpaceThemeCard />}
         <ReceiptDesignCard />
         <RepsCard />

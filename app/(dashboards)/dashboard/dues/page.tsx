@@ -18,7 +18,7 @@ import { SpaceRow } from "./_components/SpaceRow";
 import { InlineStat } from "../_components/overview/OverviewUI";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import { JoinDepartmentCard } from "./_components/JoinDepartmentCard";
-import { payPageHref, toastCheckoutError } from "./_components/checkout";
+import { DUES_PAGE_KEY, payPageHref, toastCheckoutError } from "./_components/checkout";
 import { listSpaces, joinSpace } from "@/lib/api/spaces";
 import { listDues, payDue, payDues as payDuesApi } from "@/lib/api/dues";
 import { queryKeys } from "@/lib/api/queries";
@@ -26,7 +26,6 @@ import { queryKeys } from "@/lib/api/queries";
 const PayDueModal = dynamic(() => import("./_components/PayDueModal").then((mod) => mod.PayDueModal), { ssr: false });
 
 type DuesPageData = { spaces: Space[]; dues: Due[] };
-const DUES_PAGE_KEY = ["me", "dues-page"] as const;
 const EMPTY_SPACES: Space[] = [];
 const EMPTY_DUES: Due[] = [];
 
@@ -155,9 +154,7 @@ export default function DuesPage() {
         targetDues.length === 1
           ? await payDue(targetDues[0].id)
           : await payDuesApi(targetDues.map((d) => d.id));
-      // Hosted checkout: pay on the provider's page, which returns to the pay page.
-      if (checkout.checkoutUrl) window.location.href = checkout.checkoutUrl;
-      else goToPayment(checkout.reference);
+      goToPayment(checkout.reference);
     } catch (err) {
       setPendingIds([]);
       toastCheckoutError(err, (reference) => {

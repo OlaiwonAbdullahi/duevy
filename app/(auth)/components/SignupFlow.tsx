@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth/signup-partner";
 import { ApiError } from "@/lib/api/errors";
 import { PARTNER_ERRORS, normalizePartnerCode } from "@/lib/api/partners";
+import { FEATURES } from "@/lib/features";
 import AuthField from "./AuthField";
 import RoleSelect, { type SignupRole } from "./RoleSelect";
 import SpaceDetailsStep, { type SpaceDetails } from "./SpaceDetailsStep";
@@ -76,8 +77,9 @@ export default function SignupFlow() {
   // as a rep — skip the role picker entirely and go straight to account details.
   const joinFlow = next?.startsWith("/join/") ?? false;
   // A partner's signup link (`?partner=NACOS`) is for reps — read it once, like `next`.
+  // Ignored while partner codes are switched off (they were removed from the API).
   const [partnerParam] = useState(() =>
-    typeof window === "undefined"
+    typeof window === "undefined" || !FEATURES.partners
       ? null
       : normalizePartnerCode(new URLSearchParams(window.location.search).get("partner") ?? "") ||
         null,
@@ -189,13 +191,13 @@ export default function SignupFlow() {
           school: data.school,
           faculty: data.faculty || undefined,
         },
-        ...(data.partnerCode ? { partnerCode: data.partnerCode } : {}),
+        ...(FEATURES.partners && data.partnerCode ? { partnerCode: data.partnerCode } : {}),
       });
       clearSignupPartner();
       setSubmittedEmail(account.email);
     } catch (err) {
       // A bad partner code is fixable on this step — flag the field and stay here.
-      if (err instanceof ApiError && err.code in PARTNER_ERRORS) {
+      if (FEATURES.partners && err instanceof ApiError && err.code in PARTNER_ERRORS) {
         const message = PARTNER_ERRORS[err.code];
         setPartnerError(message);
         toast.error(message);

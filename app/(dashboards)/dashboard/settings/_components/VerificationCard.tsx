@@ -7,6 +7,7 @@ import { SettingsCard } from "./SettingsCard";
 import { useRole } from "../../_components/role-context";
 import { useRepSpace } from "../../_components/use-rep-space";
 import { useKycStatus } from "@/lib/api/queries";
+import { joinNouns, kycChecks, kycOwesSomething } from "@/lib/kyc";
 
 /** Rep-only: where the department's verification (KYC) stands, linking to /dashboard/kyc. */
 export function VerificationCard() {
@@ -16,22 +17,32 @@ export function VerificationCard() {
 
   if (!isRep || !repSpace) return null;
 
-  const summary = !status
+  const mine = status?.mine ?? null;
+  const pending = mine ? kycChecks(mine).filter((c) => c.state === "pending") : [];
+  const required = mine ? kycChecks(mine) : [];
+
+  const summary = !status || !mine
     ? "Checking your verification status…"
-    : status.canWithdraw
-      ? "Verified — your department can collect dues and withdraw."
-      : status.canCollect
-        ? "Your department can collect dues. Withdrawals open once the last checks finish."
-        : "Not complete — students can't pay your dues until you're verified.";
+    : mine.canCollect
+      ? status.canCollect
+        ? "Verified — your department can collect dues and withdraw."
+        : "You're verified. Your department can collect once its lead rep is verified too."
+      : kycOwesSomething(mine)
+        ? "Not complete — students can't pay your dues until you're verified."
+        : `In review — a Duevy admin is checking ${joinNouns(pending)}.`;
+
+  const description = required.length
+    ? `${joinNouns(required).replace(/^your /, "Your ")}, required to collect dues and withdraw.`
+    : "Your student ID and face capture, required to collect dues and withdraw.";
 
   return (
     <SettingsCard
       icon={IdIcon}
       title="Verification"
-      description="Your identity (NIN) and student ID, required to collect dues and withdraw."
+      description={description}
       action={
         <Button variant="brand-outline" size="pill" asChild>
-          <Link href="/dashboard/kyc">{status?.canWithdraw ? "View" : "Verify"}</Link>
+          <Link href="/dashboard/kyc">{mine?.canCollect ? "View" : "Verify"}</Link>
         </Button>
       }
     >

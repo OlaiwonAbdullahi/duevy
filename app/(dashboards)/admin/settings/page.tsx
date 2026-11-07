@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  BankIcon,
-  LinkSquare01Icon,
-  LockIcon,
-  Shield01Icon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { LockIcon, Shield01Icon } from "@hugeicons/core-free-icons";
 import { EmptyState } from "../../dashboard/_components/EmptyState";
 import PageHeader from "../_components/PageHeader";
 import TableCard from "../_components/TableCard";
@@ -17,15 +12,12 @@ import { DataTable } from "../_components/DataTable";
 import { Toolbar, SearchInput, FilterSelect } from "../_components/Toolbar";
 import { AdminModal, ModalField } from "../_components/AdminModal";
 import { Tabs } from "../_components/Tabs";
+import { KycPolicyCard } from "./_components/KycPolicyCard";
 import { ApiError } from "@/lib/api/errors";
 import {
   getAdminRoles,
   updateAdminRole,
   listAuditLogs,
-  getPaymentSettings,
-  updatePaymentSettings,
-  type CheckoutMode,
-  type PaymentSettings,
   type AdminRoleInfo,
   type AdminAuditLog,
   type AdminPermissions,
@@ -52,28 +44,6 @@ const SEVERITY_TONES: Record<string, StatusTone> = {
   critical: "bad",
 };
 
-const CHECKOUT_MODES: {
-  value: CheckoutMode;
-  title: string;
-  description: string;
-  icon: typeof BankIcon;
-}[] = [
-  {
-    value: "hosted",
-    title: "Redirect to Bachs checkout",
-    description:
-      "Students are sent to Bachs's hosted payment page, then brought back to Duevy once they finish.",
-    icon: LinkSquare01Icon,
-  },
-  {
-    value: "custom",
-    title: "Bank transfer on Duevy",
-    description:
-      "Students stay on Duevy and see a one-time account number to transfer the exact amount into.",
-    icon: BankIcon,
-  },
-];
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("en-NG", {
     day: "numeric",
@@ -83,12 +53,20 @@ function formatDate(iso: string) {
   });
 }
 
-export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<"roles" | "payments" | "audit">("roles");
+type SettingsTab = "roles" | "verification" | "audit";
+const SETTINGS_TABS: SettingsTab[] = ["roles", "verification", "audit"];
 
-  const [payments, setPayments] = useState<PaymentSettings | null>(null);
-  const [paymentsLoading, setPaymentsLoading] = useState(true);
-  const [savingMode, setSavingMode] = useState<CheckoutMode | null>(null);
+function AdminSettings() {
+  // The tab lives in the URL so other pages can link to it (?tab=verification).
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const rawTab = params.get("tab");
+  const activeTab: SettingsTab = SETTINGS_TABS.includes(rawTab as SettingsTab)
+    ? (rawTab as SettingsTab)
+    : "roles";
+  const setActiveTab = (next: SettingsTab) =>
+    router.replace(`${pathname}?tab=${next}`, { scroll: false });
 
   const [roles, setRoles] = useState<AdminRoleInfo[]>([]);
   const [rolesLoading, setRolesLoading] = useState(true);
@@ -105,13 +83,6 @@ export default function AdminSettingsPage() {
       .then(setRoles)
       .catch(() => toast.error("Couldn't load admin roles."))
       .finally(() => setRolesLoading(false));
-  }, []);
-
-  useEffect(() => {
-    getPaymentSettings()
-      .then(setPayments)
-      .catch(() => toast.error("Couldn't load payment settings."))
-      .finally(() => setPaymentsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -138,23 +109,6 @@ export default function AdminSettingsPage() {
 
   const selectedLog = logs.find((log) => log.id === selectedLogId) ?? null;
 
-  async function changeCheckoutMode(mode: CheckoutMode) {
-    if (!payments || payments.checkoutMode === mode || savingMode) return;
-    setSavingMode(mode);
-    try {
-      setPayments(await updatePaymentSettings(mode));
-      toast.success(
-        mode === "hosted"
-          ? "New payments will redirect to Bachs checkout."
-          : "New payments will use bank transfer on Duevy.",
-      );
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn't change the checkout mode.");
-    } finally {
-      setSavingMode(null);
-    }
-  }
-
   async function togglePermission(roleInfo: AdminRoleInfo, key: PermissionKey) {
     const nextPermissions: AdminPermissions = {
       userManagement: roleInfo.userManagement,
@@ -179,7 +133,7 @@ export default function AdminSettingsPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Settings"
-        description="Admin roles, payment settings and the platform-wide audit trail."
+        description="Admin roles, the rep verification policy and the platform-wide audit trail."
       />
 
       <Tabs
@@ -187,7 +141,7 @@ export default function AdminSettingsPage() {
         onChange={setActiveTab}
         items={[
           { value: "roles", label: "Roles" },
-          { value: "payments", label: "Payments" },
+          { value: "verification", label: "Rep verification" },
           { value: "audit", label: "Audit log" },
         ]}
       />
@@ -237,75 +191,7 @@ export default function AdminSettingsPage() {
         </TableCard>
       )}
 
-      {activeTab === "payments" && (
-        <TableCard
-          title="Checkout mode"
-          subtitle="How students pay their dues. Applies to new payments; open ones keep their mode."
-        >
-          {paymentsLoading ? (
-            <div className="grid gap-3 p-4 sm:grid-cols-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="h-32 animate-pulse rounded-2xl bg-paper" />
-              ))}
-            </div>
-          ) : !payments ? (
-            <EmptyState
-              icon={BankIcon}
-              title="Payment settings unavailable"
-              description="Reload the page to try again."
-            />
-          ) : (
-            <div className="p-4">
-              <div role="radiogroup" aria-label="Checkout mode" className="grid gap-3 sm:grid-cols-2">
-                {CHECKOUT_MODES.map((mode) => {
-                  const active = payments.checkoutMode === mode.value;
-                  const saving = savingMode === mode.value;
-                  return (
-                    <button
-                      key={mode.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      disabled={!!savingMode}
-                      onClick={() => void changeCheckoutMode(mode.value)}
-                      className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors duration-300 disabled:cursor-wait cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                        active
-                          ? "border-brand bg-brand/5"
-                          : "border-cloud hover:border-brand/40"
-                      }`}
-                    >
-                      <span
-                        className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
-                          active ? "bg-brand text-white" : "bg-paper text-ink-soft"
-                        }`}
-                      >
-                        <HugeiconsIcon icon={mode.icon} size={18} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-ink">{mode.title}</span>
-                          {saving ? (
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-                          ) : (
-                            active && <StatusBadge tone="ok">Active</StatusBadge>
-                          )}
-                        </span>
-                        <span className="mt-1 block text-sm text-ink-soft">
-                          {mode.description}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-4 text-xs text-ink-soft">
-                Only a super admin can change this. Every change is recorded in the audit log.
-                {payments.updatedAt && <> Last changed {formatDate(payments.updatedAt)}.</>}
-              </p>
-            </div>
-          )}
-        </TableCard>
-      )}
+      {activeTab === "verification" && <KycPolicyCard />}
 
       {activeTab === "audit" && (
         <TableCard
@@ -402,5 +288,13 @@ export default function AdminSettingsPage() {
         </AdminModal>
       )}
     </div>
+  );
+}
+
+export default function AdminSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminSettings />
+    </Suspense>
   );
 }

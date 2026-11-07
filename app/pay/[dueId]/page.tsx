@@ -1,16 +1,15 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert01Icon,
-  BankIcon,
   CheckmarkCircle02Icon,
   Clock01Icon,
-  Copy01Icon,
   Download04Icon,
   Mail01Icon,
   SecurityCheckIcon,
@@ -32,8 +31,14 @@ import { ApiError } from "@/lib/api/errors";
 import { apiClient } from "@/lib/api/client";
 import { isDemoMode } from "@/lib/demo/mode";
 import { useAuth } from "@/lib/auth/auth-context";
-import { closeBachsCheckout, openBachsCheckout, preloadBachs, type BachsCheckoutEvent } from "@/lib/bachs/overlay";
 import type { GuestField } from "@/lib/api/types";
+import type { CheckoutStatus as CheckoutStatusValue } from "@/lib/api/dues";
+import {
+  BankTransferPanel,
+  PaymentBreakdown,
+  PaymentStatusAnnouncer,
+  exactNaira,
+} from "@/components/payments/BankTransferPanel";
 import {
   getGuestCheckout,
   getGuestDue,
@@ -47,39 +52,30 @@ import {
 } from "@/lib/api/guest";
 import { BRAND_INPUT } from "../../(dashboards)/dashboard/_components/form-styles";
 import { SpaceEmblem } from "../../(dashboards)/dashboard/dues/_components/SpaceEmblem";
-import { KIND_GLYPH, SPACE_KIND_LABEL } from "../../(dashboards)/dashboard/dues/_components/data";
+import { KIND_GLYPH } from "../../(dashboards)/dashboard/dues/_components/data";
 
 const POLL_MS = 5000;
-/** Right after the overlay says it's done, check sooner — the webhook is usually seconds behind. */
-const CONFIRM_POLL_MS = 2000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Exact naira with kobo — what the payer must send. */
-const exactNaira = (kobo: number) =>
-  `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const statusHref = (dueId: string, reference: string, token: string) =>
+  `/pay/${encodeURIComponent(dueId)}?ref=${encodeURIComponent(reference)}&t=${encodeURIComponent(token)}`;
 
-function formatCountdown(ms: number) {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
-
-const statusHref = (dueId: string, reference: string, token: string, completed = false) =>
-  `/pay/${encodeURIComponent(dueId)}?ref=${encodeURIComponent(reference)}&t=${encodeURIComponent(token)}${completed ? "&c=1" : ""}`;
+const ANNOUNCE: Record<CheckoutStatusValue, string> = {
+  pending: "Waiting for your transfer.",
+  paid: "Payment confirmed.",
+  expired: "This payment expired. Nothing was charged.",
+  underpaid: "Less than the total arrived. Nothing was marked paid.",
+};
 
 /**
  * Public pay page for a guest-enabled due: `/pay/<dueId>`. The payer fills in
- * the form the rep configured, can opt into a free Duevy account, and pays in
- * the Bachs overlay without leaving the page (or, when the platform is on
- * bank-transfer mode, into a one-time account shown here). No sign-in needed;
+ * the form the rep configured, can opt into a free Duevy account, and pays by
+ * bank transfer into a one-time 9jaPay account shown here. No sign-in needed;
  * someone already signed in pays as themselves.
  *
  * Once a checkout is under way its reference and token ride in the URL
  * (`?ref=&t=`), so a refresh lands on the same payment. Only the API decides
- * it's paid — never an overlay event.
+ * it's paid — the page polls it until the status is final.
  */
 export default function GuestPayPage() {
   return (
@@ -96,111 +92,17 @@ function GuestPay() {
   const token = searchParams.get("t");
 
   return reference && token ? (
-    <CheckoutStatus dueId={dueId} reference={reference} token={token} completed={searchParams.get("c") === "1"} />
+    <CheckoutStatus dueId={dueId} reference={reference} token={token} />
   ) : (
     <PayForm dueId={dueId} />
   );
 }
 
 // ---------------------------------------------------------------------------
-// The Bachs overlay, as UI state
-// ---------------------------------------------------------------------------
-
-/**
- * Opens checkout sessions in the Bachs overlay and reports its outcomes as
- * toasts. `onCompleted` fires on the browser's `checkout.completed`, which
- * only means "go and wait for the API to confirm it". `onEnded` fires on
- * failed / expired, so the page can have the API re-check the session before
- * a retry. `attempted` is set once a try ended without paying, for a "Try
- * again" label.
- */
-function useOverlayCheckout({ onCompleted, onEnded }: { onCompleted: () => void; onEnded?: () => void }) {
-  const [phase, setPhase] = useState<"idle" | "opening" | "open">("idle");
-  const [attempted, setAttempted] = useState(false);
-  const completed = useRef(false);
-  // Set when failed / expired / error already told the payer, so closing doesn't toast twice.
-  const told = useRef(false);
-  const handlers = useRef({ onCompleted, onEnded });
-  useEffect(() => {
-    handlers.current = { onCompleted, onEnded };
-  });
-
-  // Fetch the SDK while the payer is still typing, and never leave an overlay
-  // open behind a page that's gone.
-  useEffect(() => {
-    if (!isDemoMode()) preloadBachs().catch(() => {});
-    return () => closeBachsCheckout();
-  }, []);
-
-  const onEvent = useCallback((event: BachsCheckoutEvent) => {
-    switch (event.type) {
-      case "checkout.ready":
-        // Only while opening: a late `ready` after a quick close mustn't lock the button.
-        setPhase((p) => (p === "opening" ? "open" : p));
-        return;
-      case "checkout.completed":
-        completed.current = true;
-        handlers.current.onCompleted();
-        return;
-      case "checkout.failed":
-        told.current = true;
-        setAttempted(true);
-        toast.error("Payment didn't go through", { description: "Nothing was charged. Your details are saved — try again." });
-        handlers.current.onEnded?.();
-        return;
-      case "checkout.expired":
-        told.current = true;
-        setAttempted(true);
-        toast.warning("Checkout timed out", { description: "Nothing was charged. Tap pay again for a fresh one." });
-        handlers.current.onEnded?.();
-        return;
-      case "checkout.closed":
-        setPhase("idle");
-        if (!completed.current && !told.current) {
-          setAttempted(true);
-          toast.info("Payment not finished", { description: "Your details are saved — pick up where you left off." });
-        }
-        return;
-      case "checkout.error":
-        console.error("Bachs checkout error", event.data);
-        told.current = true;
-        setAttempted(true);
-        setPhase("idle");
-        toast.error("Checkout hit a problem", { description: "Nothing was charged. Please try again in a moment." });
-        return;
-      default:
-        // opened / loaded: nothing to show.
-        return;
-    }
-  }, []);
-
-  const open = useCallback(
-    async (checkoutUrl: string) => {
-      completed.current = false;
-      told.current = false;
-      setPhase("opening");
-      try {
-        await openBachsCheckout(checkoutUrl, onEvent);
-      } catch (err) {
-        console.error("Couldn't open the Bachs checkout", err);
-        setPhase("idle");
-        setAttempted(true);
-        toast.error("Couldn't open the secure checkout", {
-          description: "Check your connection (and any content blocker), then try again. Nothing was charged.",
-        });
-      }
-    },
-    [onEvent],
-  );
-
-  return { phase, attempted, open };
-}
-
-// ---------------------------------------------------------------------------
 // Step 1 — who's paying
 // ---------------------------------------------------------------------------
 
-const TRUST = ["Secure checkout", "No account needed", "Receipt by email"];
+const TRUST = ["Pay by bank transfer", "No account needed", "Receipt by email"];
 
 /** "17 Nov" from a yyyy-mm-dd date. */
 function shortDate(ymd: string) {
@@ -222,20 +124,6 @@ function PayForm({ dueId }: { dueId: string }) {
   // Field ids the API rejected — outlined red; the reason comes as a toast.
   const [invalid, setInvalid] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  // The checkout the overlay is showing, so its completion can open the status page.
-  const active = useRef<{ reference: string; token: string } | null>(null);
-
-  const overlay = useOverlayCheckout({
-    onCompleted: () => {
-      const c = active.current;
-      if (c) router.replace(statusHref(dueId, c.reference, c.token, true), { scroll: false });
-    },
-    // Have the API check the session with Bachs now, so a retry doesn't reuse a dead one.
-    onEnded: () => {
-      const c = active.current;
-      if (c) getGuestCheckout(c.reference, c.token).catch(() => {});
-    },
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -274,7 +162,7 @@ function PayForm({ dueId }: { dueId: string }) {
   const signedIn = authStatus === "authenticated" && !!user;
   const profileMatric = signedIn ? user.matricNo : null;
   const fields = due.fields ?? [];
-  const busy = submitting || overlay.phase !== "idle";
+  const busy = submitting;
   const valid =
     due.canCollect &&
     (signedIn || (name.trim().length >= 2 && EMAIL_RE.test(email.trim()))) &&
@@ -301,14 +189,8 @@ function PayForm({ dueId }: { dueId: string }) {
         ...(fields.length ? { answers } : {}),
         ...(!signedIn && createAccount ? { createAccount: true } : {}),
       });
-      active.current = { reference: checkout.reference, token: checkout.token };
-      if (checkout.checkoutUrl && !checkout.bankTransfer) {
-        // Pay in the overlay, right here; the form stays as it is underneath.
-        await overlay.open(checkout.checkoutUrl);
-      } else {
-        // Bank-transfer mode: the one-time account is shown on the status page.
-        router.replace(statusHref(dueId, checkout.reference, checkout.token), { scroll: false });
-      }
+      // The one-time transfer account is shown on the status step.
+      router.replace(statusHref(dueId, checkout.reference, checkout.token), { scroll: false });
     } catch (err) {
       const details = err instanceof ApiError ? (err.details ?? []) : [];
       if (err instanceof ApiError && err.code === "EMAIL_HAS_ACCOUNT") {
@@ -347,11 +229,7 @@ function PayForm({ dueId }: { dueId: string }) {
     ? "Not taking payments yet"
     : submitting
       ? "Setting up…"
-      : overlay.phase !== "idle"
-        ? "Opening secure checkout…"
-        : overlay.attempted
-          ? `Try again · ${exactNaira(due.total)}`
-          : `Pay ${exactNaira(due.total)}`;
+      : `Pay ${exactNaira(due.total)}`;
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-cloud bg-canvas">
@@ -372,7 +250,7 @@ function PayForm({ dueId }: { dueId: string }) {
           <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">Amount to pay</p>
           <p className="mt-1 text-[34px] font-semibold leading-none tracking-tight tabular-nums">{exactNaira(due.total)}</p>
           <p className="mt-2 text-xs text-white/75">
-            {exactNaira(due.amount)} + {exactNaira(due.fee)} service fee · Due {shortDate(due.dueDate)}
+            {exactNaira(due.amount)} + {exactNaira(due.fee)} processing fee · Due {shortDate(due.dueDate)}
           </p>
         </div>
       </div>
@@ -380,7 +258,7 @@ function PayForm({ dueId }: { dueId: string }) {
       <form onSubmit={submit} className="flex flex-col gap-5 p-6 sm:p-8" noValidate>
         {due.note && <p className="-mt-1 text-sm leading-relaxed text-ink-soft">{due.note}</p>}
 
-        {/* Disabled while the overlay is up, so nothing changes under an open payment. */}
+        {/* Disabled while the checkout is being set up, so nothing changes under it. */}
         <fieldset disabled={busy} className="flex min-w-0 flex-col gap-4">
           <legend className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Your details</legend>
           {signedIn ? (
@@ -626,97 +504,55 @@ function AnswerField({
 // Step 2 — pay, then the outcome
 // ---------------------------------------------------------------------------
 
-function CheckoutStatus({
-  dueId,
-  reference,
-  token,
-  completed,
-}: {
-  dueId: string;
-  reference: string;
-  token: string;
-  /** The overlay just reported completion: show "confirming" while the API catches up. */
-  completed: boolean;
-}) {
+const guestCheckoutKey = (reference: string, token: string) => ["guest-checkout", reference, token] as const;
+
+function CheckoutStatus({ dueId, reference, token }: { dueId: string; reference: string; token: string }) {
   const router = useRouter();
-  const [checkout, setCheckout] = useState<GuestCheckoutStatus | null>(null);
-  const [missing, setMissing] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [confirming, setConfirming] = useState(completed);
-  const [copied, setCopied] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  const settled = useRef(false);
-  // Seen pending on this visit: a change to paid / expired is news, so it gets a toast.
-  const sawPending = useRef(false);
-  const status = checkout?.status ?? "pending";
-
-  const overlay = useOverlayCheckout({
-    onCompleted: () => {
-      setConfirming(true);
-      void check(false);
-    },
-    onEnded: () => void check(false),
+  const queryClient = useQueryClient();
+  const queryKey = guestCheckoutKey(reference, token);
+  // Polls while pending (and the tab is visible); stops once the status is final.
+  const query = useQuery({
+    queryKey,
+    queryFn: () => getGuestCheckout(reference, token),
+    staleTime: 0,
+    refetchInterval: (q) => (q.state.data?.status === "pending" ? POLL_MS : false),
+    refetchIntervalInBackground: false,
   });
+  const checkout = query.data;
+  const status = checkout?.status;
+  const [checking, setChecking] = useState(false);
 
-  const check = async (manual: boolean) => {
-    if (settled.current) return;
-    if (manual) setChecking(true);
+  // A change seen on this visit (pending → final) is news, so it gets a toast.
+  const lastStatus = useRef<CheckoutStatusValue | undefined>(undefined);
+  useEffect(() => {
+    if (!status) return;
+    const prev = lastStatus.current;
+    lastStatus.current = status;
+    if (prev !== "pending" || status === "pending") return;
+    if (status === "paid") toast.success("Payment confirmed", { description: "Your receipt is ready." });
+    else if (status === "expired") toast.error("This payment expired", { description: "Nothing was charged." });
+    else toast.warning("Less than the total arrived", { description: "Nothing was marked paid. Support will follow up." });
+  }, [status]);
+
+  const check = async () => {
+    setChecking(true);
     try {
-      const res = await getGuestCheckout(reference, token);
-      setCheckout(res);
-      if (res.status === "pending") {
-        sawPending.current = true;
-        if (manual) toast.info("Still waiting for your payment", { description: "It usually lands within a minute or two." });
-      } else {
-        settled.current = true;
-        if (sawPending.current && res.status === "paid") toast.success("Payment confirmed", { description: "Your receipt is ready." });
-        if (sawPending.current && res.status === "expired") toast.error("This payment expired", { description: "Nothing was charged." });
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        settled.current = true;
-        setMissing(true);
-      } else if (manual) {
-        toast.error("Couldn't check the payment. Please try again.");
-      }
+      const res = await query.refetch();
+      if (res.error) toast.error("Couldn't check the payment. Please try again.");
+      else if (res.data?.status === "pending")
+        toast.info("Still waiting for your payment", { description: "It usually lands within a minute or two." });
     } finally {
-      if (manual) setChecking(false);
-    }
-  };
-
-  useEffect(() => {
-    const first = setTimeout(() => void check(false), 0);
-    return () => clearTimeout(first);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reference, token]);
-
-  // Poll while visible and still pending.
-  useEffect(() => {
-    if (status !== "pending" || missing) return;
-    const poll = setInterval(() => !document.hidden && void check(false), confirming ? CONFIRM_POLL_MS : POLL_MS);
-    const tick = setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      clearInterval(poll);
-      clearInterval(tick);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, missing, confirming]);
-
-  const copy = async (key: string, value: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(key);
-      toast.success(`${label} copied`);
-      setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000);
-    } catch {
-      toast.error("Couldn't copy — select it and copy manually.");
+      setChecking(false);
     }
   };
 
   const startOver = () => router.replace(`/pay/${encodeURIComponent(dueId)}`);
 
-  if (missing) {
-    return (
+  if (query.isPending) return <CardSkeleton />;
+
+  if (!checkout) {
+    const missing = query.error instanceof ApiError && query.error.status === 404;
+    return missing ? (
       <Notice
         tone="rose"
         icon={Alert01Icon}
@@ -724,171 +560,60 @@ function CheckoutStatus({
         body="This payment link is incomplete or has been changed."
         action={{ label: "Start again", onClick: startOver }}
       />
+    ) : (
+      <Notice
+        tone="rose"
+        icon={Alert01Icon}
+        title="Couldn't load this payment"
+        body="Check your connection and try again. If you've already sent the money, it's safe — this page will catch up."
+        action={{ label: "Try again", onClick: () => void query.refetch() }}
+      />
     );
   }
-  if (!checkout) return <CardSkeleton />;
 
   const { breakdown } = checkout;
 
-  if (status === "paid") {
-    return <PaidReceipt checkout={checkout} reference={reference} token={token} onAccount={(account) => setCheckout({ ...checkout, account })} />;
-  }
-
-  if (status === "expired") {
-    return (
-      <Notice
-        tone="rose"
-        icon={Clock01Icon}
-        title="This payment expired"
-        body={`It closed before any money arrived, so nothing was charged. Already paid? Contact support with reference ${reference}.`}
-        action={{ label: "Start a new payment", onClick: startOver }}
-      />
-    );
-  }
-
-  if (status === "underpaid") {
-    return (
-      <Notice
-        tone="amber"
-        icon={Alert01Icon}
-        title="Less than the total arrived"
-        body={`${checkout.receivedKobo != null ? `We received ${exactNaira(checkout.receivedKobo)} of ${exactNaira(breakdown.total)}. ` : ""}Support will contact you by email to sort out the difference — don't pay again. Reference ${reference}.`}
-      />
-    );
-  }
-
-  const bank = checkout.bankTransfer;
-  const hostedUrl = !bank ? checkout.checkoutUrl : null;
-  const expiresAt = bank?.expiresAt ?? checkout.expiresAt;
-  const msLeft = new Date(expiresAt).getTime() - now;
-
-  // The overlay finished: the payment is with Bachs, and we're waiting on the API.
-  if (confirming && !bank) {
-    return (
-      <div className="rounded-3xl border border-cloud bg-canvas p-6 text-center sm:p-8">
-        <span className="mx-auto block h-12 w-12 animate-spin rounded-full border-[3px] border-brand/20 border-t-brand" />
-        <h1 className="mt-4 text-lg font-semibold text-ink">Confirming your payment…</h1>
-        <p className="mx-auto mt-1 max-w-xs text-sm leading-relaxed text-ink-soft">
-          We&apos;re checking with the payment provider. This usually takes a few seconds — please keep this
-          page open.
-        </p>
-        <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
-        <p className="mt-4 text-[11px] text-ink-soft">
-          Reference <span className="font-semibold text-ink">{reference}</span>
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-3xl border border-cloud bg-canvas p-6 sm:p-8">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <span className="grid h-12 w-12 place-items-center rounded-full bg-brand/10 text-brand">
-          <HugeiconsIcon icon={hostedUrl ? SecurityCheckIcon : BankIcon} size={22} />
-        </span>
-        <h1 className="text-lg font-semibold text-ink">{hostedUrl ? "Complete your payment" : "Pay by bank transfer"}</h1>
-        <p className="text-sm text-ink-soft">
-          {hostedUrl ? (
-            "Your payment is ready. Open the secure checkout to finish — you won't leave this page."
-          ) : (
-            <>
-              Send the <span className="font-semibold text-ink">exact amount</span> to this one-time
-              account from any bank app. We confirm it automatically.
-            </>
-          )}
-        </p>
-      </div>
-
-      {hostedUrl ? (
-        <div className="mt-5 flex flex-col gap-3">
-          <button
-            type="button"
-            disabled={overlay.phase !== "idle" || msLeft <= 0}
-            onClick={() => void overlay.open(hostedUrl)}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer"
-          >
-            {overlay.phase !== "idle" ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-            ) : (
-              <HugeiconsIcon icon={SecurityCheckIcon} size={16} />
-            )}
-            {overlay.phase !== "idle"
-              ? "Opening secure checkout…"
-              : `${overlay.attempted ? "Try again" : "Pay"} ${exactNaira(breakdown.total)}`}
-          </button>
-        </div>
-      ) : bank ? (
-        <div className="mt-5 flex flex-col gap-3">
-          <div className="rounded-2xl border border-brand/20 bg-cloud/60 p-4">
-            <p className="text-[11px] font-medium text-ink-soft">Amount to send</p>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <p className="text-2xl font-semibold tracking-tight text-ink">{exactNaira(bank.amountKobo)}</p>
-              <CopyButton done={copied === "amount"} label="Copy amount" onClick={() => void copy("amount", (bank.amountKobo / 100).toFixed(2), "Amount")} />
-            </div>
-          </div>
-          <div className="rounded-2xl border border-cloud bg-paper/50 p-4">
-            <p className="text-[11px] font-medium text-ink-soft">Account number</p>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <p className="font-mono text-xl font-semibold tracking-wider text-ink">{bank.accountNumber}</p>
-              <CopyButton done={copied === "account"} label="Copy account number" onClick={() => void copy("account", bank.accountNumber, "Account number")} />
-            </div>
-            <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-cloud pt-3 text-sm">
-              <div className="min-w-0">
-                <dt className="text-[11px] font-medium text-ink-soft">Bank</dt>
-                <dd className="truncate font-medium text-ink">{bank.bankName || "—"}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-[11px] font-medium text-ink-soft">Account name</dt>
-                <dd className="truncate font-medium text-ink">{bank.accountName || "—"}</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
+    <>
+      <PaymentStatusAnnouncer message={status ? ANNOUNCE[status] : ""} />
+      {status === "paid" ? (
+        <PaidReceipt
+          checkout={checkout}
+          reference={reference}
+          token={token}
+          onAccount={(account) =>
+            queryClient.setQueryData<GuestCheckoutStatus>(queryKey, (c) => (c ? { ...c, account } : c))
+          }
+        />
+      ) : status === "expired" ? (
+        <Notice
+          tone="rose"
+          icon={Clock01Icon}
+          title="This payment expired"
+          body={`The transfer account closed before any money arrived, so nothing was charged. Already sent money to it? Contact support with reference ${reference}.`}
+          action={{ label: "Start a new payment", onClick: startOver }}
+        />
+      ) : status === "underpaid" ? (
+        <Notice
+          tone="amber"
+          icon={Alert01Icon}
+          title="Less than the total arrived"
+          body={`${checkout.receivedKobo != null ? `We received ${exactNaira(checkout.receivedKobo)} of ${exactNaira(breakdown.total)}. ` : ""}Nothing has been marked paid. Support will contact you by email to sort out the difference — please don't pay again. Reference ${reference}.`}
+        />
       ) : (
-        <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-cloud bg-paper/50 p-5 text-center">
-          <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-          <p className="text-sm text-ink-soft">Setting up your payment…</p>
-        </div>
+        <BankTransferPanel
+          reference={reference}
+          bankTransfer={checkout.bankTransfer}
+          expiresAt={checkout.expiresAt}
+          breakdown={breakdown}
+          items={checkout.items}
+          checking={checking}
+          onCheck={() => void check()}
+          onRefresh={() => query.refetch()}
+          secondaryAction={{ label: "Edit my details", onClick: startOver }}
+        />
       )}
-
-      <p className={cn("mt-3 inline-flex w-full items-center justify-center gap-1.5 text-xs", msLeft > 0 ? "text-ink-soft" : "text-rose-600")}>
-        <HugeiconsIcon icon={Clock01Icon} size={13} />
-        {msLeft > 0 ? (
-          <>
-            Expires in <span className="font-semibold tabular-nums">{formatCountdown(msLeft)}</span>
-          </>
-        ) : hostedUrl ? (
-          "This checkout has expired. Checking for a final update…"
-        ) : (
-          "Expired — don't send money to it. Checking for a final update…"
-        )}
-      </p>
-
-      <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
-
-      {hostedUrl ? (
-        <button
-          type="button"
-          onClick={startOver}
-          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full border border-cloud text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand cursor-pointer"
-        >
-          Edit my details
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled={checking}
-          onClick={() => void check(true)}
-          className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-cloud text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand disabled:opacity-60 cursor-pointer"
-        >
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
-          {checking ? "Checking…" : "I've sent the money"}
-        </button>
-      )}
-      <p className="mt-3 text-center text-[11px] text-ink-soft">
-        This page updates on its own. Reference <span className="font-semibold text-ink">{reference}</span>
-      </p>
-    </div>
+    </>
   );
 }
 
@@ -971,7 +696,7 @@ function PaidReceipt({
           {checkout.receiptNumber && <Row label="Receipt no." value={checkout.receiptNumber} mono />}
         </dl>
 
-        <Breakdown face={breakdown.face} fee={breakdown.fee} total={breakdown.total} />
+        <PaymentBreakdown {...breakdown} items={items} className="mt-5" />
 
         <div className="mt-5 flex flex-col items-center gap-2">
           {checkout.receiptNumber ? (
@@ -1115,25 +840,6 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   );
 }
 
-function Breakdown({ face, fee, total }: { face: number; fee: number; total: number }) {
-  return (
-    <div className="mt-5 rounded-2xl border border-cloud bg-paper/50 p-4 text-left">
-      <div className="flex items-center justify-between text-xs text-ink-soft">
-        <span>Amount</span>
-        <span className="font-medium text-ink">{exactNaira(face)}</span>
-      </div>
-      <div className="mt-1.5 flex items-center justify-between text-xs text-ink-soft">
-        <span>Service fee (2% + ₦20)</span>
-        <span className="font-medium text-ink">{exactNaira(fee)}</span>
-      </div>
-      <div className="mt-2 flex items-center justify-between border-t border-cloud pt-2">
-        <span className="text-xs font-medium text-ink-soft">Total</span>
-        <span className="text-base font-semibold tracking-tight text-ink">{exactNaira(total)}</span>
-      </div>
-    </div>
-  );
-}
-
 function Notice({
   tone,
   icon,
@@ -1242,20 +948,6 @@ function ReceiptButton({ reference, token }: { reference: string; token: string 
     <button type="button" onClick={() => void download()} disabled={busy} className={className}>
       <HugeiconsIcon icon={Download04Icon} size={15} />
       {busy ? "Preparing…" : "Download receipt"}
-    </button>
-  );
-}
-
-function CopyButton({ done, label, onClick }: { done: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-cloud bg-canvas px-3 text-xs font-semibold text-brand transition-colors duration-300 hover:bg-cloud cursor-pointer"
-    >
-      <HugeiconsIcon icon={done ? Tick02Icon : Copy01Icon} size={14} />
-      {done ? "Copied" : "Copy"}
     </button>
   );
 }

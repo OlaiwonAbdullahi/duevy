@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/seo";
+import { QueryProvider } from "@/app/components/QueryProvider";
 import { loadShareDue, shareDate, shareNaira } from "./share";
 
 /**
@@ -55,9 +56,12 @@ export default async function GuestPayLayout({
           Sign in
         </Link>
       </header>
-      <main className="relative mx-auto max-w-lg px-4 pb-10 pt-2 sm:px-5">{children}</main>
+      <main className="relative mx-auto max-w-lg px-4 pb-10 pt-2 sm:px-5">
+        {/* The pay step polls the checkout's status through TanStack Query. */}
+        <QueryProvider>{children}</QueryProvider>
+      </main>
       <footer className="relative pb-8 text-center text-[11px] text-ink-soft">
-        Payments are processed securely · {SITE_NAME}
+        Bank transfers processed securely by 9jaPay · {SITE_NAME}
       </footer>
     </div>
   );

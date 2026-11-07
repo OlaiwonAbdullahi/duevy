@@ -2,54 +2,53 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowLeft02Icon,
-  BankIcon,
-  CheckmarkCircle02Icon,
   Alert01Icon,
+  ArrowLeft02Icon,
+  CheckmarkCircle02Icon,
   Clock01Icon,
-  Copy01Icon,
   Download04Icon,
-  LinkSquare01Icon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import {
-  getPaymentStatus,
   dueReceiptPath,
+  payDue,
+  payDues,
   receiptPdfPath,
-  type PaymentStatus,
+  type CheckoutStatus,
 } from "@/lib/api/dues";
 import { apiClient } from "@/lib/api/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/errors";
-import { nairaFromKobo } from "../../_components/format";
+import { queryKeys, usePaymentStatus } from "@/lib/api/queries";
+import {
+  BankTransferPanel,
+  PaymentBreakdown,
+  PaymentStatusAnnouncer,
+  exactNaira,
+} from "@/components/payments/BankTransferPanel";
+import { DUES_PAGE_KEY, payPageHref, toastCheckoutError } from "../../dues/_components/checkout";
 
-const BACKGROUND_POLL_MS = 5000;
+const ANNOUNCE: Record<CheckoutStatus, string> = {
+  pending: "Waiting for your transfer.",
+  paid: "Payment confirmed.",
+  expired: "This payment expired. Nothing was charged.",
+  underpaid: "Less than the total arrived. Nothing was marked paid.",
+};
 
-/** Exact naira with kobo, e.g. 665038 → "₦6,650.38" — what the student must send. */
-const exactNaira = (kobo: number) =>
-  `₦${(kobo / 100).toLocaleString("en-NG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-function formatCountdown(ms: number) {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
+const PRIMARY =
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40";
+const SECONDARY =
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-cloud px-4 text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40";
 
 /**
  * Dedicated page for a bank-transfer checkout — a real URL to sit on
  * (bookmark, reload, come back to). Needs only the reference: GET
- * /payments/:reference/status returns the checkout with its one-time account,
- * so this works on a cold load too. Polling only reads; the provider's webhook
- * is what moves the status to paid / expired / underpaid.
+ * /payments/:reference/status returns the checkout with its one-time 9jaPay
+ * account, so this works on a cold load too. `usePaymentStatus` polls while
+ * pending; polling only reads, and the provider's webhook is what moves the
+ * status to paid / expired / underpaid.
  */
 export default function PaymentPage() {
   const params = useParams<{ reference: string }>();
@@ -67,101 +66,41 @@ export default function PaymentPage() {
       : "/dashboard/dues";
   const backLabel = from === "assistant" ? "Back to Duey" : "Back to my dues";
 
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [checkout, setCheckout] = useState<PaymentStatus | null>(null);
+  const query = usePaymentStatus(reference);
+  const checkout = query.data;
+  const status = checkout?.status;
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  const settled = useRef(false);
+  const [restarting, setRestarting] = useState(false);
 
-  const status = checkout?.status ?? "pending";
+  // Once the status is final, everything it touched comes back from the
+  // server; a change seen on this visit also gets a toast.
+  const lastStatus = useRef<CheckoutStatus | undefined>(undefined);
+  useEffect(() => {
+    if (!status) return;
+    const prev = lastStatus.current;
+    lastStatus.current = status;
+    if (status === "pending" || prev === status) return;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.transactionsRoot });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.studentOverview });
+    void queryClient.invalidateQueries({ queryKey: DUES_PAGE_KEY });
+    if (prev !== "pending") return;
+    if (status === "paid") toast.success("Payment confirmed", { description: "Your receipt is ready." });
+    else if (status === "expired") toast.error("This payment expired", { description: "Nothing was charged." });
+    else toast.warning("Less than the total arrived", { description: "Nothing was marked paid. Support will follow up." });
+  }, [status, queryClient]);
 
-  const check = async (manual: boolean) => {
-    if (settled.current) return;
-    if (manual) setChecking(true);
+  const check = async () => {
+    setChecking(true);
     try {
-      const res = await getPaymentStatus(reference);
-      if (settled.current) return;
-      setCheckout(res);
-      if (res.status !== "pending") {
-        settled.current = true;
-        // Balances, dues and history all changed; refetch them on next view.
-        void queryClient.invalidateQueries();
-        return;
-      }
-      if (manual) {
+      const res = await query.refetch();
+      if (res.error) toast.error(res.error instanceof ApiError ? res.error.message : "Couldn't check payment status.");
+      else if (res.data?.status === "pending")
         toast.info("Still waiting for your transfer", {
-          description:
-            "Transfers usually land within a minute or two. We'll keep checking automatically.",
+          description: "Transfers usually land within a minute or two. We'll keep checking automatically.",
         });
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        settled.current = true;
-        setNotFound(true);
-        return;
-      }
-      if (manual) {
-        toast.error(err instanceof ApiError ? err.message : "Couldn't check payment status.");
-      }
     } finally {
-      if (manual) setChecking(false);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const first = setTimeout(() => void check(false), 0);
-    return () => clearTimeout(first);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reference]);
-
-  // Poll while the tab is visible; a hidden tab stops hitting the API and
-  // checks again the moment it's back in view.
-  useEffect(() => {
-    if (status !== "pending" || notFound) return;
-    let interval: ReturnType<typeof setInterval> | undefined;
-    const start = () => {
-      if (interval) return;
-      interval = setInterval(() => check(false), BACKGROUND_POLL_MS);
-    };
-    const stop = () => {
-      clearInterval(interval);
-      interval = undefined;
-    };
-    const onVisibility = () => {
-      if (document.hidden) stop();
-      else {
-        void check(false);
-        start();
-      }
-    };
-    if (!document.hidden) start();
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, notFound]);
-
-  // Expiry countdown.
-  useEffect(() => {
-    if (status !== "pending") return;
-    const tick = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(tick);
-  }, [status]);
-
-  const copy = async (key: string, value: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(key);
-      toast.success(`${label} copied`);
-      setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000);
-    } catch {
-      toast.error("Couldn't copy — select it and copy manually.");
+      setChecking(false);
     }
   };
 
@@ -188,121 +127,99 @@ export default function PaymentPage() {
     }
   };
 
-  if (loading) {
+  const payHref = (ref: string, ids: string[]) =>
+    payPageHref(ref, { dueId: ids.length === 1 ? ids[0] : null, from, conversationId });
+
+  // A fresh checkout for the same dues, after this one expired.
+  const startAgain = async () => {
+    const ids = (checkout?.items ?? []).map((i) => i.dueId);
+    if (ids.length === 0) {
+      router.push(backHref);
+      return;
+    }
+    setRestarting(true);
+    try {
+      const next = ids.length === 1 ? await payDue(ids[0]!) : await payDues(ids);
+      router.replace(payHref(next.reference, ids));
+    } catch (err) {
+      setRestarting(false);
+      toastCheckoutError(err, (ref) => router.replace(payHref(ref, ids)));
+    }
+  };
+
+  const backLink = (
+    <button
+      type="button"
+      onClick={() => router.push(backHref)}
+      className="inline-flex items-center gap-1.5 rounded-full text-sm font-medium text-ink-soft transition-colors duration-300 hover:text-brand cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+    >
+      <HugeiconsIcon icon={ArrowLeft02Icon} size={15} aria-hidden />
+      {backLabel}
+    </button>
+  );
+
+  if (query.isPending) {
     return (
-      <div className="mx-auto max-w-lg animate-pulse">
+      <div className="mx-auto max-w-lg animate-pulse" aria-busy aria-label="Loading payment">
         <div className="h-6 w-32 rounded-full bg-cloud" />
-        <div className="mt-6 h-64 rounded-3xl border border-cloud bg-canvas" />
+        <div className="mt-6 h-[28rem] rounded-3xl border border-cloud bg-canvas" />
       </div>
     );
   }
 
-  if (notFound) {
+  if (!checkout) {
+    const notFound = query.error instanceof ApiError && query.error.status === 404;
     return (
       <div className="mx-auto max-w-lg text-center">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rose-50 text-rose-600">
           <HugeiconsIcon icon={Alert01Icon} size={24} />
         </span>
-        <h1 className="mt-4 text-lg font-semibold text-ink">Payment not found</h1>
+        <h1 className="mt-4 text-lg font-semibold text-ink">
+          {notFound ? "Payment not found" : "Couldn't load this payment"}
+        </h1>
         <p className="mt-1 text-sm text-ink-soft">
-          This payment link is invalid or belongs to a different account.
+          {notFound
+            ? "This payment link is invalid or belongs to a different account."
+            : "Check your connection and try again."}
         </p>
-        <a
-          href={backHref}
-          className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
-        >
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={15} />
-          {backLabel}
-        </a>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {!notFound && (
+            <button type="button" onClick={() => void query.refetch()} className={PRIMARY}>
+              Try again
+            </button>
+          )}
+          {backLink}
+        </div>
       </div>
     );
   }
 
-  const breakdown = checkout?.breakdown;
-  const total = breakdown?.total ?? checkout?.amount ?? null;
-  const bank = checkout?.bankTransfer ?? null;
-  const expiresAt = bank?.expiresAt ?? checkout?.expiresAt ?? null;
-  const msLeft = expiresAt ? new Date(expiresAt).getTime() - now : null;
-  const items = checkout?.items ?? [];
-  const canDownload = !!checkout?.receiptNumber || !!dueId;
-  // Hosted checkout: the student pays on the provider's page, not to an account shown here.
-  const hostedUrl = !bank ? checkout?.checkoutUrl ?? null : null;
-  // The provider appends ?checkout_id= when it sends the student back.
-  const returned = !!searchParams.get("checkout_id");
-
-  const backButton = (
-    <button
-      type="button"
-      onClick={() => router.push(backHref)}
-      className="mt-2 inline-flex h-10 items-center rounded-full bg-brand px-4 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
-    >
-      {backLabel}
-    </button>
-  );
-
-  const breakdownCard = breakdown && (
-    <div className="mt-5 rounded-2xl border border-cloud bg-paper/50 p-4 text-left">
-      {items.length > 0 && (
-        <ul className="mb-3 flex flex-col gap-1.5 border-b border-cloud pb-3">
-          {items.map((item) => (
-            <li key={item.dueId} className="flex items-center justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate text-ink">{item.title}</span>
-              <span className="shrink-0 font-medium text-ink">{nairaFromKobo(item.amount)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="flex items-center justify-between text-xs text-ink-soft">
-        <span>{items.length > 1 ? "Dues total" : "Due amount"}</span>
-        <span className="font-medium text-ink">{exactNaira(breakdown.face)}</span>
-      </div>
-      <div className="mt-1.5 flex items-center justify-between text-xs text-ink-soft">
-        <span>Service fee (2% + ₦20)</span>
-        <span className="font-medium text-ink">{exactNaira(breakdown.fee)}</span>
-      </div>
-      <div className="mt-2 flex items-center justify-between border-t border-cloud pt-2">
-        <span className="text-xs font-medium text-ink-soft">Total</span>
-        <span className="text-base font-semibold tracking-tight text-ink">
-          {exactNaira(breakdown.total)}
-        </span>
-      </div>
-    </div>
-  );
+  const breakdown = checkout.breakdown;
+  const total = breakdown?.total ?? checkout.amount ?? null;
+  const items = checkout.items ?? [];
+  const canDownload = !!checkout.receiptNumber || !!dueId;
 
   return (
     <div className="mx-auto max-w-lg">
-      <button
-        type="button"
-        onClick={() => router.push(backHref)}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors duration-300 hover:text-brand cursor-pointer"
-      >
-        <HugeiconsIcon icon={ArrowLeft02Icon} size={15} />
-        {backLabel}
-      </button>
+      {backLink}
+      <PaymentStatusAnnouncer message={status ? ANNOUNCE[status] : ""} />
 
-      <div className="mt-6 rounded-3xl border border-cloud bg-canvas p-6 sm:p-8">
+      <div className="mt-6">
         {status === "paid" ? (
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-full bg-brand/10 text-brand">
-              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={26} />
-            </span>
-            <h1 className="text-lg font-semibold text-ink">Payment confirmed</h1>
+          <Outcome tone="brand" icon={CheckmarkCircle02Icon} title="Payment confirmed">
             <p className="text-sm text-ink-soft">
-              {total !== null ? `${exactNaira(total)} received. ` : ""}
-              {items.length > 1
-                ? `All ${items.length} dues are settled.`
-                : "Your due is settled."}
+              {total !== null ? `${exactNaira(checkout.receivedKobo ?? total)} received. ` : ""}
+              {items.length > 1 ? `All ${items.length} dues are settled.` : "Your due is settled."}
             </p>
-            {!!checkout?.overpaidKobo && checkout.overpaidKobo > 0 && (
+            {checkout.overpaidKobo > 0 && (
               <p className="text-xs text-ink-soft">
-                You sent {exactNaira(checkout.overpaidKobo)} more than needed. Our support team
-                has been notified and will follow up.
+                You sent {exactNaira(checkout.overpaidKobo)} more than needed. Our support team has been
+                notified and will follow up.
               </p>
             )}
-            {/* What was paid for — the same lines as the receipt. */}
-            <div className="w-full">{breakdownCard}</div>
+            {breakdown && <PaymentBreakdown {...breakdown} items={items} className="mt-2 w-full" />}
             <dl className="flex w-full flex-col gap-1.5 text-xs">
-              {checkout?.receiptNumber && (
+              {checkout.receiptNumber && (
                 <div className="flex justify-between gap-3 text-ink-soft">
                   <dt>Receipt no.</dt>
                   <dd className="font-medium text-ink">{checkout.receiptNumber}</dd>
@@ -312,7 +229,7 @@ export default function PaymentPage() {
                 <dt>Reference</dt>
                 <dd className="min-w-0 truncate font-medium text-ink">{reference}</dd>
               </div>
-              {checkout?.paidAt && (
+              {checkout.paidAt && (
                 <div className="flex justify-between gap-3 text-ink-soft">
                   <dt>Paid</dt>
                   <dd className="font-medium text-ink">
@@ -333,247 +250,100 @@ export default function PaymentPage() {
                   type="button"
                   disabled={downloading}
                   onClick={() => void downloadReceipt()}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-full border border-cloud px-4 text-sm font-semibold text-ink transition-colors duration-300 hover:border-brand/40 hover:text-brand disabled:opacity-60 cursor-pointer"
+                  className={SECONDARY}
                 >
-                  <HugeiconsIcon icon={Download04Icon} size={15} />
+                  <HugeiconsIcon icon={Download04Icon} size={15} aria-hidden />
                   {downloading ? "Downloading…" : "Download receipt"}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => router.push(backHref)}
-                className="inline-flex h-10 items-center rounded-full bg-brand px-4 text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright cursor-pointer"
-              >
+              <button type="button" onClick={() => router.push(backHref)} className={PRIMARY}>
                 {backLabel}
               </button>
             </div>
-          </div>
+          </Outcome>
         ) : status === "expired" ? (
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-full bg-rose-50 text-rose-600">
-              <HugeiconsIcon icon={Clock01Icon} size={24} />
-            </span>
-            <h1 className="text-lg font-semibold text-ink">This payment expired</h1>
+          <Outcome tone="rose" icon={Clock01Icon} title="This payment expired">
             <p className="text-sm text-ink-soft">
-              This payment closed before any money arrived, so nothing was charged. Go back and
-              start a new payment.
+              The transfer account closed before any money arrived, so nothing was charged. Start a new payment
+              to get a fresh account.
             </p>
             <p className="text-xs text-ink-soft">
               Already sent money to this account? Contact support with reference{" "}
               <span className="font-semibold text-ink">{reference}</span>.
             </p>
-            {backButton}
-          </div>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              {items.length > 0 && (
+                <button type="button" disabled={restarting} onClick={() => void startAgain()} className={PRIMARY}>
+                  {restarting && (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />
+                  )}
+                  {restarting ? "Starting…" : "Start a new payment"}
+                </button>
+              )}
+              <button type="button" onClick={() => router.push(backHref)} className={items.length > 0 ? SECONDARY : PRIMARY}>
+                {backLabel}
+              </button>
+            </div>
+          </Outcome>
         ) : status === "underpaid" ? (
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-full bg-amber-50 text-amber-600">
-              <HugeiconsIcon icon={Alert01Icon} size={24} />
-            </span>
-            <h1 className="text-lg font-semibold text-ink">Less than the total arrived</h1>
+          <Outcome tone="amber" icon={Alert01Icon} title="Less than the total arrived">
             <p className="text-sm text-ink-soft">
-              {checkout?.receivedKobo != null && total !== null
+              {checkout.receivedKobo != null && total !== null
                 ? `We received ${exactNaira(checkout.receivedKobo)} of the ${exactNaira(total)} due. `
                 : "The amount received was less than the total. "}
-              Your dues haven&apos;t been marked paid yet. Our support team will reach out to
-              sort out the difference — there&apos;s no need to pay again in the meantime.
+              Nothing has been marked paid. Our support team will contact you to sort out the difference —
+              please don&apos;t pay again in the meantime.
             </p>
             <p className="text-xs text-ink-soft">
               Reference <span className="font-semibold text-ink">{reference}</span>
             </p>
-            {backButton}
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col items-center gap-2 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-brand/10 text-brand">
-                <HugeiconsIcon icon={BankIcon} size={22} />
-              </span>
-              {hostedUrl ? (
-                <>
-                  <h1 className="text-lg font-semibold text-ink">
-                    {returned ? "Confirming your payment" : "Complete your payment"}
-                  </h1>
-                  <p className="text-sm text-ink-soft">
-                    {returned
-                      ? "Finished on the checkout page? We'll confirm it here automatically — usually within a minute."
-                      : "You'll pay on our secure checkout page, then come back here. We'll confirm it automatically."}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h1 className="text-lg font-semibold text-ink">Pay by bank transfer</h1>
-                  <p className="text-sm text-ink-soft">
-                    Send the <span className="font-semibold text-ink">exact amount</span> below to
-                    this one-time account from any bank app. We&apos;ll confirm it automatically.
-                  </p>
-                </>
-              )}
-            </div>
-
-            {hostedUrl ? (
-              <div className="mt-5 flex flex-col gap-3">
-                <div className="rounded-2xl border border-brand/20 bg-cloud/60 p-4 text-center">
-                  <p className="text-[11px] font-medium text-ink-soft">Amount to pay</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-                    {total !== null ? exactNaira(total) : "—"}
-                  </p>
-                </div>
-
-                <a
-                  href={hostedUrl}
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-white transition-colors duration-300 hover:bg-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                >
-                  <HugeiconsIcon icon={LinkSquare01Icon} size={16} />
-                  {returned ? "Back to the checkout page" : "Continue to payment"}
-                </a>
-
-                {msLeft !== null && (
-                  <p
-                    className={`inline-flex items-center justify-center gap-1.5 text-xs ${
-                      msLeft > 0 ? "text-ink-soft" : "text-rose-600"
-                    }`}
-                  >
-                    <HugeiconsIcon icon={Clock01Icon} size={13} />
-                    {msLeft > 0 ? (
-                      <>
-                        Payment link expires in{" "}
-                        <span className="font-semibold tabular-nums">
-                          {formatCountdown(msLeft)}
-                        </span>
-                      </>
-                    ) : (
-                      "This payment link has expired. Checking for a final update…"
-                    )}
-                  </p>
-                )}
-              </div>
-            ) : bank ? (
-              <div className="mt-5 flex flex-col gap-3">
-                <div className="rounded-2xl border border-brand/20 bg-cloud/60 p-4">
-                  <p className="text-[11px] font-medium text-ink-soft">Amount to send</p>
-                  <div className="mt-1 flex items-center justify-between gap-3">
-                    <p className="text-2xl font-semibold tracking-tight text-ink">
-                      {exactNaira(bank.amountKobo)}
-                    </p>
-                    <CopyButton
-                      done={copied === "amount"}
-                      label="Copy amount"
-                      onClick={() =>
-                        void copy("amount", (bank.amountKobo / 100).toFixed(2), "Amount")
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-cloud bg-paper/50 p-4">
-                  <p className="text-[11px] font-medium text-ink-soft">Account number</p>
-                  <div className="mt-1 flex items-center justify-between gap-3">
-                    <p className="font-mono text-xl font-semibold tracking-wider text-ink">
-                      {bank.accountNumber}
-                    </p>
-                    <CopyButton
-                      done={copied === "account"}
-                      label="Copy account number"
-                      onClick={() => void copy("account", bank.accountNumber, "Account number")}
-                    />
-                  </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-cloud pt-3 text-sm">
-                    <div className="min-w-0">
-                      <dt className="text-[11px] font-medium text-ink-soft">Bank</dt>
-                      <dd className="truncate font-medium text-ink">{bank.bankName || "—"}</dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-[11px] font-medium text-ink-soft">Account name</dt>
-                      <dd className="truncate font-medium text-ink">{bank.accountName || "—"}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                {msLeft !== null && (
-                  <p
-                    className={`inline-flex items-center justify-center gap-1.5 text-xs ${
-                      msLeft > 0 ? "text-ink-soft" : "text-rose-600"
-                    }`}
-                  >
-                    <HugeiconsIcon icon={Clock01Icon} size={13} />
-                    {msLeft > 0 ? (
-                      <>
-                        Account expires in{" "}
-                        <span className="font-semibold tabular-nums">
-                          {formatCountdown(msLeft)}
-                        </span>
-                      </>
-                    ) : (
-                      "This account has expired — don't send money to it. Checking for a final update…"
-                    )}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-cloud bg-paper/50 p-5 text-center">
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-                <p className="text-sm text-ink-soft">Setting up your transfer account…</p>
-              </div>
-            )}
-
-            {breakdownCard}
-
-            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-ink-soft">
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-              {hostedUrl
-                ? "Waiting for confirmation — this page updates on its own."
-                : "Waiting for your transfer — this page updates on its own."}
-            </div>
-
-            <button
-              type="button"
-              disabled={checking}
-              onClick={() => check(true)}
-              className={`mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors duration-300 disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                hostedUrl
-                  ? "border border-cloud text-ink hover:border-brand/40 hover:text-brand"
-                  : "bg-brand text-white hover:bg-brand-bright"
-              }`}
-            >
-              {checking ? (
-                <span
-                  className={`h-4 w-4 animate-spin rounded-full border-2 ${
-                    hostedUrl ? "border-brand/30 border-t-brand" : "border-white/40 border-t-white"
-                  }`}
-                />
-              ) : (
-                <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
-              )}
-              {checking ? "Checking…" : hostedUrl ? "I've paid — check now" : "I've sent the money"}
+            <button type="button" onClick={() => router.push(backHref)} className={`mt-2 ${PRIMARY}`}>
+              {backLabel}
             </button>
-            <p className="mt-3 text-center text-[11px] text-ink-soft">
-              Reference <span className="font-semibold text-ink">{reference}</span>
-            </p>
-          </>
+          </Outcome>
+        ) : (
+          <BankTransferPanel
+            reference={reference}
+            bankTransfer={checkout.bankTransfer ?? null}
+            expiresAt={checkout.expiresAt}
+            breakdown={breakdown}
+            items={items}
+            checking={checking}
+            onCheck={() => void check()}
+            onRefresh={() => query.refetch()}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function CopyButton({
-  done,
-  label,
-  onClick,
+const TONE = {
+  brand: "bg-brand/10 text-brand",
+  rose: "bg-rose-50 text-rose-600",
+  amber: "bg-amber-50 text-amber-600",
+} as const;
+
+function Outcome({
+  tone,
+  icon,
+  title,
+  children,
 }: {
-  done: boolean;
-  label: string;
-  onClick: () => void;
+  tone: keyof typeof TONE;
+  icon: typeof Alert01Icon;
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-cloud bg-canvas px-3 text-xs font-semibold text-brand transition-colors duration-300 hover:bg-cloud cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-    >
-      <HugeiconsIcon icon={done ? Tick02Icon : Copy01Icon} size={14} />
-      {done ? "Copied" : "Copy"}
-    </button>
+    <div className="rounded-3xl border border-cloud bg-canvas p-5 sm:p-8">
+      <div className="flex flex-col items-center gap-3 py-2 text-center">
+        <span className={`grid h-14 w-14 place-items-center rounded-full ${TONE[tone]}`}>
+          <HugeiconsIcon icon={icon} size={26} aria-hidden />
+        </span>
+        <h1 className="text-lg font-semibold text-ink">{title}</h1>
+        {children}
+      </div>
+    </div>
   );
 }

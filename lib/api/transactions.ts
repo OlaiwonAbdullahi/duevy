@@ -1,9 +1,18 @@
 import { apiClient, type Page } from "./client";
 import type { Transaction, TxnStatus, TxnType } from "./types";
 
+export type TxnDirection = "all" | "in" | "out";
+
+/** All filters are applied server-side; nothing is filtered in the browser. */
 export type TransactionsQuery = {
+  direction?: TxnDirection;
   type?: TxnType;
   status?: TxnStatus;
+  /** Matches the title or reference. */
+  q?: string;
+  /** ISO date or datetime, inclusive. */
+  from?: string;
+  to?: string;
   page?: number;
   perPage?: number;
 };

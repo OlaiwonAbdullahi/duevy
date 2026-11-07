@@ -1,5 +1,5 @@
 import type { Transaction } from "./types";
-import { naira, TXN_META, formatDateTime } from "./data";
+import { STATUS_META, TXN_META, exactNaira, formatDateTime } from "./data";
 
 function esc(value: string) {
   return value.replace(/[&<>"]/g, (c) =>
@@ -7,9 +7,9 @@ function esc(value: string) {
   );
 }
 
-/** The signed, human-readable amount for a receipt, e.g. "−₦7,500". */
+/** The signed, exact amount for a receipt, e.g. "−₦7,500.00". */
 export function signedAmount(txn: Transaction) {
-  return `${txn.amount < 0 ? "−" : "+"}${naira(txn.amount)}`;
+  return `${txn.amount < 0 ? "−" : "+"}${exactNaira(txn.amount)}`;
 }
 
 /**
@@ -22,11 +22,11 @@ export function printReceipt(txn: Transaction) {
   const rows: [string, string][] = [
     ["Reference", txn.reference],
     ["Description", txn.title],
-    ["Details", txn.detail],
+    ["Details", txn.detail ?? TXN_META[txn.type].label],
     ["Type", TXN_META[txn.type].label],
-    ["Payment method", txn.method],
+    ["Payment method", txn.method ?? "—"],
     ["Date", formatDateTime(txn.date)],
-    ["Status", txn.status.charAt(0).toUpperCase() + txn.status.slice(1)],
+    ["Status", STATUS_META[txn.status].label],
   ];
 
   const rowsHtml = rows

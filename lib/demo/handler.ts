@@ -28,11 +28,20 @@ type Ctx = { params: string[]; query: URLSearchParams; body: Body };
 type Handler = (ctx: Ctx) => unknown;
 
 const MIN_PAYOUT = 100000;
-const FEE_THRESHOLD = 500000;
-const fees = { below: { thresholdKobo: FEE_THRESHOLD, feeKobo: 1000 }, atOrAbove: { thresholdKobo: FEE_THRESHOLD, feeKobo: 5000 } };
-const withdrawalFee = (amount: number) => (amount >= FEE_THRESHOLD ? fees.atOrAbove.feeKobo : fees.below.feeKobo);
-/** What a student pays on top of a due: 2% + ₦20. */
-const processingFee = (amount: number) => Math.round(amount * 0.02) + 2000;
+const MAX_PAYOUT = 50000000;
+const DAILY_LIMIT = 500000000;
+/** 9jaPay's transfer charge, as `GET /payout/summary` documents it. */
+const fees = {
+  bands: [
+    { fromKobo: 0, toKobo: 500000, feeKobo: 1000 },
+    { fromKobo: 500000, toKobo: 10000000, feeKobo: 1500 },
+    { fromKobo: 10000000, toKobo: null, feeKobo: 2000 },
+  ],
+};
+const withdrawalFee = (amount: number) =>
+  fees.bands.find((b) => amount >= b.fromKobo && (b.toKobo === null || amount < b.toKobo))!.feeKobo;
+/** What a student pays on top of a due: 1.5%, rounded up to the kobo. */
+const processingFee = (amount: number) => Math.ceil(amount * 0.015);
 
 const now = () => new Date().toISOString();
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -101,9 +110,24 @@ function payoutSummary(): PayoutSummary {
     signatoriesComplete: signatories.length >= 3,
     awaitingApprovalPayoutId: null,
     minPayout: MIN_PAYOUT,
+    maxPayout: MAX_PAYOUT,
+    account: { accountNumber: "9000002133", accountName: `DUEVY/${store.space.name}`, bankName: "9jaPay" },
+    funds: {
+      inSpaceAccountKobo: Math.max(0, balance - inFlight),
+      awaitingSweepKobo: 0,
+      dailyLimitKobo: DAILY_LIMIT,
+      dailyRemainingKobo: Math.max(0, DAILY_LIMIT - withdrawnToday()),
+    },
     fees,
-    partner: null,
   };
+}
+
+/** Gross withdrawn today (not failed/cancelled), for the daily limit. */
+function withdrawnToday() {
+  const today = new Date().toDateString();
+  return store.payouts
+    .filter((p) => new Date(p.requestedAt).toDateString() === today && !["failed", "reversed", "cancelled"].includes(p.status))
+    .reduce((s, p) => s + p.amount, 0);
 }
 
 function ledger(): LedgerEntry[] {
@@ -401,7 +425,25 @@ const routes: [string, string, Handler][] = [
   ["GET", "/transactions", ({ query }) => {
     const type = query.get("type");
     const status = query.get("status");
-    return paginate(store.transactions.filter((t) => (!type || t.type === type) && (!status || t.status === status)), query);
+    const direction = query.get("direction");
+    const from = query.get("from") ? Date.parse(query.get("from")!) : null;
+    const to = query.get("to") ? Date.parse(query.get("to")!) : null;
+    const q = query.get("q");
+    return paginate(
+      store.transactions.filter((t) => {
+        const at = Date.parse(t.createdAt);
+        return (
+          (!type || t.type === type) &&
+          (!status || t.status === status) &&
+          (direction !== "in" || t.amount > 0) &&
+          (direction !== "out" || t.amount < 0) &&
+          (from === null || at >= from) &&
+          (to === null || at <= to) &&
+          matches(q, t.title, t.reference)
+        );
+      }),
+      query,
+    );
   }],
   ["GET", "/transactions/([^/]+)", ({ params: [id] }) => store.transactions.find((t) => t.id === id) ?? notFound()],
   ["GET", "/notifications", ({ query }) => {
@@ -586,7 +628,7 @@ const routes: [string, string, Handler][] = [
 
   // ---- Payouts ---------------------------------------------------------------
   ["GET", `${S}/payout/summary`, payoutSummary],
-  ["GET", `${S}/ledger`, ledger],
+  ["GET", `${S}/ledger`, ({ query }) => paginate(ledger(), query)],
   ["GET", `${S}/payouts`, ({ query }) => paginate(store.payouts, query)],
   ["GET", `${S}/payout/beneficiaries`, () => store.beneficiaries],
   ["POST", `${S}/payout/beneficiaries/lookup`, ({ body }) => {
@@ -619,7 +661,8 @@ const routes: [string, string, Handler][] = [
   ["GET", `${S}/payout/quote`, ({ query }) => {
     const amount = Number(query.get("amount")) || 0;
     const fee = withdrawalFee(amount);
-    return { amount, fee, net: Math.max(0, amount - fee), minPayout: MIN_PAYOUT, belowMinimum: amount < MIN_PAYOUT, feeBeforeDiscount: fee, discount: 0, discountPercent: 0 };
+    const dailyRemaining = Math.max(0, DAILY_LIMIT - withdrawnToday());
+    return { amount, fee, net: Math.max(0, amount - fee), minPayout: MIN_PAYOUT, maxPayout: MAX_PAYOUT, belowMinimum: amount < MIN_PAYOUT, aboveMaximum: amount > MAX_PAYOUT, dailyRemaining };
   }],
   ["POST", `${S}/payout/request`, ({ body }) => {
     const p = createPayout(json(body));

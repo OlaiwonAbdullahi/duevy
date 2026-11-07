@@ -118,7 +118,7 @@ export type Due = {
   note?: string | null;
   /** Face amount the rep set (kobo). */
   amount: number;
-  /** Processing fee (2% + ₦20) added on top for the payer (kobo). */
+  /** 1.5% processing fee (rounded up to the kobo) added on top for the payer. Server-computed (kobo). */
   processingFee?: number;
   /** What the payer is actually charged — `amount + processingFee` (kobo). */
   payableAmount?: number;
@@ -323,6 +323,8 @@ export type RepOverview = {
 export type LedgerEntryType =
   | "due_payment"
   | "manual_credit"
+  /** Money sent straight to the space's 9jaPay account number; `description` names the sender. */
+  | "direct_deposit"
   | "payout"
   | "payout_fee"
   | "payout_reversal"
@@ -344,7 +346,11 @@ export type LedgerEntry = {
 
 // ---- Payouts (§10) --------------------------------------------------------
 
-/** `pending → processing → success | failed | reversed`. Failed/reversed amounts go back to the balance. */
+/**
+ * `[awaiting_approval →] pending → processing → success | failed | reversed`;
+ * `awaiting_approval → cancelled`. Failed, reversed and cancelled amounts go
+ * back to the balance (and to their due).
+ */
 export type PayoutStatus =
   | "awaiting_approval"
   | "pending"
@@ -403,7 +409,26 @@ export type Payout = {
   feeDiscount?: number;
 };
 
+/** 9jaPay's transfer charge for withdrawals of `fromKobo` up to (not including) `toKobo`; `null` = no upper bound. */
+export type WithdrawalFeeBand = { fromKobo: number; toKobo: number | null; feeKobo: number };
+
+/** @deprecated Bachs-era fee tier, kept only so old cached payloads still type-check. */
 export type WithdrawalFeeTier = { thresholdKobo: number; feeKobo: number };
+
+/** The space's own 9jaPay account. Money is the space's, never the rep's. */
+export type SpaceAccount = { accountNumber: string; accountName: string | null; bankName: string | null };
+
+/** Where the balance sits (kobo). Withdrawals sweep what they need first, so all of it is withdrawable. */
+export type SpaceFunds = {
+  /** Already swept into the space's own account. */
+  inSpaceAccountKobo: number;
+  /** Still in Duevy's collection account, waiting for the daily sweep. */
+  awaitingSweepKobo: number;
+  /** Max the space can withdraw per Lagos day. */
+  dailyLimitKobo: number;
+  /** What it can still withdraw today. */
+  dailyRemainingKobo: number;
+};
 
 /** All amounts in kobo, derived from the space's ledger. */
 export type PayoutSummary = {
@@ -432,22 +457,32 @@ export type PayoutSummary = {
   /** The withdrawal waiting for signatures, if any. */
   awaitingApprovalPayoutId?: string | null;
   minPayout: number;
-  /** Tier fees already have any partner discount applied. */
-  fees: { below: WithdrawalFeeTier; atOrAbove: WithdrawalFeeTier };
-  /** The space's active partner discount, when one is applied. */
+  /** Per-withdrawal ceiling (₦500,000); larger amounts are split. */
+  maxPayout?: number;
+  /** The space's own 9jaPay account; `null` while it's still being opened (withdrawals wait). */
+  account?: SpaceAccount | null;
+  /** Where the balance sits, plus today's withdrawal limit. */
+  funds?: SpaceFunds;
+  /** 9jaPay's transfer charge by amount. `below`/`atOrAbove` only on Bachs-era APIs. */
+  fees: { bands?: WithdrawalFeeBand[]; below?: WithdrawalFeeTier; atOrAbove?: WithdrawalFeeTier };
+  /** Bachs-era partner discount; no longer sent. */
   partner?: SpacePartner | null;
 };
 
+/** `GET /payout/quote` — the server's fee and net for a withdrawal amount (kobo). Never computed client-side. */
 export type PayoutQuote = {
   amount: number;
-  /** Already net of any partner discount. */
+  /** 9jaPay's transfer charge, deducted from the amount. */
   fee: number;
   net: number;
   minPayout: number;
+  maxPayout?: number;
   belowMinimum: boolean;
-  /** The fee before the partner discount (kobo). Optional until every API serves it. */
+  aboveMaximum?: boolean;
+  /** Kobo the space can still withdraw today. */
+  dailyRemaining?: number;
+  /** Bachs-era partner discount fields; no longer sent. */
   feeBeforeDiscount?: number;
-  /** Partner discount taken off the fee (kobo); 0 when none. */
   discount?: number;
   discountPercent?: number;
 };
@@ -501,42 +536,52 @@ export type Beneficiary = {
 };
 
 // ---- Rep KYC ----------------------------------------------------------------
-// Two checks, both required before a space can collect: Bachs verifies the
-// rep's identity (NIN + date of birth), a Duevy admin verifies their student ID.
+// Which checks a rep must pass is set by an admin (`requirements`). The student
+// ID is always required and reviewed by a Duevy admin; the face capture
+// (liveness) is on by default and also admin-reviewed; the NIN check (Didit →
+// NIMC) is off by default. A space collects only when every required check passes.
 
 export type StudentIdStatus = "pending" | "approved" | "rejected";
+/** Admin review of an uploaded document (student ID, face capture) or a partial NIN match. */
+export type DocumentReviewStatus = "pending" | "approved" | "rejected";
+
+export type KycRequirements = { nin: boolean; studentId: true; liveness: boolean };
+
+export type KycDocumentState = {
+  /** `null` until one has been uploaded. */
+  status: DocumentReviewStatus | null;
+  uploadedAt: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+};
 
 export type KycState = {
-  /** The Bachs identity check. */
+  /** The NIN check's own status. Whether the rep is verified is `canCollect`. */
   kycStatus: KycStatus;
-  payoutsActive: boolean;
   canCollect: boolean;
   canWithdraw: boolean;
-  providerReference: string | null;
-  /** Field keys Bachs still asks for, e.g. "persons.per_x.bvn" or an ID document. */
-  requirementsDue: string[];
-  governmentIdSubmittedAt: string | null;
-  /** The rep's own bank account on their Bachs account; `null` until sent. */
-  payoutDestination: {
-    bankCode: string;
-    bankName: string;
-    /** Masked, e.g. "•••• 6789". */
-    accountNumber: string;
-    accountName: string;
-    submittedAt: string;
-  } | null;
-  studentId: {
-    /** `null` until a card has been uploaded. */
-    status: StudentIdStatus | null;
-    uploadedAt: string | null;
-    reviewedAt: string | null;
-    reviewNote: string | null;
-  };
+  /** The checks the current admin policy requires; build the form from this. Absent on Bachs-era APIs. */
+  requirements?: KycRequirements;
+  /** The NIN check's outcome, and an admin's review when it only partly matched. */
+  nin?: { outcome: string | null; reviewStatus: DocumentReviewStatus | null; reviewNote: string | null };
+  studentId: KycDocumentState;
+  liveness?: KycDocumentState;
   rejectionReason: string | null;
   retryLockedUntil: string | null;
   submittedAt: string | null;
   resolvedAt: string | null;
+  /** @deprecated Always equals `canWithdraw`. */
+  payoutsActive: boolean;
+  /** @deprecated Always `[]`. */
+  requirementsDue: string[];
 };
+
+/** The policy defaults the API documents, for a Bachs-era payload with no `requirements`. */
+export const DEFAULT_KYC_REQUIREMENTS: KycRequirements = { nin: false, studentId: true, liveness: true };
+
+export function kycRequirements(state: Pick<KycState, "requirements"> | null | undefined): KycRequirements {
+  return state?.requirements ?? DEFAULT_KYC_REQUIREMENTS;
+}
 
 /** `GET /payout/kyc-status`: the space lead's state, plus the caller's own. */
 export type SpaceKycStatus = KycState & { leadRepId: string | null; mine: KycState };

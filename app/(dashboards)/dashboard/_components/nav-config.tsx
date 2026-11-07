@@ -72,6 +72,7 @@ export const REP_LINKS: NavLink[] = [
     ? [{ label: "Create Vote Poll", href: "/dashboard/polls", icon: CheckmarkSquare01Icon }]
     : []),
   { label: "Payout", href: "/dashboard/payout", icon: MoneySend01Icon },
+  { label: "Activity", href: "/dashboard/activity", icon: Analytics01Icon },
   ...(FEATURES.referrals
     ? [{ label: "Referrals", href: "/dashboard/referrals", icon: GiftIcon }]
     : []),

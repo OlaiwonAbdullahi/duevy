@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useBanks } from "@/lib/api/queries";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -56,9 +57,6 @@ export function AccountFields({
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
 
-  const [resolvedName, setResolvedName] = useState<string | null>(null);
-  const [resolving, setResolving] = useState(false);
-  const [resolveError, setResolveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (banksQuery.isError) toast.error("Couldn't load the bank list. Close this and try again.");
@@ -74,36 +72,23 @@ export function AccountFields({
   // Likely banks for the number typed so far — shown as one-tap picks above the full list.
   const suggestions = useMemo(() => predictBanks(accountNumber, banks), [accountNumber, banks]);
 
-  // Name-enquiry via `lookup` — resolves without saving.
-  // Fires once a bank + full 10-digit number are entered, and re-runs if either changes.
-  useEffect(() => {
-    setResolvedName(null);
-    setResolveError(null);
-    if (!inputsReady) return;
-
-    let cancelled = false;
-    setResolving(true);
-    (async () => {
-      try {
-        const { accountName } = await lookupRef.current({ bankCode, accountNumber });
-        if (!cancelled) setResolvedName(accountName);
-      } catch (err) {
-        if (!cancelled) {
-          setResolveError(
-            err instanceof ApiError && err.code === "ACCOUNT_UNVERIFIABLE"
-              ? "We couldn't verify this account. Check the bank and number."
-              : "Couldn't verify the account. Please try again.",
-          );
-        }
-      } finally {
-        if (!cancelled) setResolving(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [bankCode, accountNumber, inputsReady]);
+  // Name-enquiry via `lookup` — resolves without saving. Runs once a bank +
+  // full 10-digit number are entered, and again if either changes (cached per pair).
+  const enquiry = useQuery({
+    queryKey: ["name-enquiry", bankCode, accountNumber],
+    queryFn: () => lookupRef.current({ bankCode, accountNumber }),
+    enabled: inputsReady,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const resolving = inputsReady && enquiry.isFetching;
+  const resolvedName = inputsReady && enquiry.isSuccess ? enquiry.data.accountName : null;
+  const resolveError =
+    inputsReady && enquiry.isError && !enquiry.isFetching
+      ? enquiry.error instanceof ApiError && enquiry.error.code === "ACCOUNT_UNVERIFIABLE"
+        ? "The bank couldn't confirm this account. Check the bank and number."
+        : "Couldn't check the account with the bank. Please try again."
+      : null;
 
   useEffect(() => {
     onChange(

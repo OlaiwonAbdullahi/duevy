@@ -15,6 +15,7 @@ import AuthField from "./AuthField";
 import SchoolCombobox from "./SchoolCombobox";
 import { describePartnerPerk, normalizePartnerCode } from "@/lib/api/partners";
 import { usePartnerLookup } from "@/lib/api/use-partner-lookup";
+import { FEATURES } from "@/lib/features";
 
 export type SpaceKind = "department" | "association" | "faculty" | "club";
 
@@ -98,7 +99,8 @@ export default function SpaceDetailsStep({
   const [school, setSchool] = useState(defaultValues.school);
   const [schoolError, setSchoolError] = useState(false);
   const [partnerCode, setPartnerCode] = useState(defaultValues.partnerCode);
-  const lookup = usePartnerLookup(partnerCode);
+  // An empty code never hits the lookup, so nothing is called while partners are off.
+  const lookup = usePartnerLookup(FEATURES.partners ? partnerCode : "");
 
   // Alphabetical, de-duplicated list of Nigerian universities.
   const schools = useMemo(
@@ -123,7 +125,7 @@ export default function SpaceDetailsStep({
       kind,
       school,
       faculty: String(data.get("faculty") ?? "").trim(),
-      partnerCode,
+      partnerCode: FEATURES.partners ? partnerCode : "",
     });
   }
 
@@ -249,30 +251,32 @@ export default function SpaceDetailsStep({
           defaultValue={defaultValues.faculty}
         />
 
-        <div className="flex flex-col gap-2">
-          <AuthField
-            id="partnerCode"
-            name="partnerCode"
-            label="Partner code (optional)"
-            icon="tag"
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            placeholder="e.g. NACOS"
-            maxLength={20}
-            value={partnerCode}
-            aria-invalid={!!partnerError || lookup.status === "error"}
-            onChange={(event) => {
-              setPartnerCode(normalizePartnerCode(event.target.value));
-              onPartnerCodeChange?.();
-            }}
-          />
-          <PartnerCodeStatus
-            lookup={lookup}
-            serverError={partnerError}
-          />
-        </div>
+        {FEATURES.partners && (
+          <div className="flex flex-col gap-2">
+            <AuthField
+              id="partnerCode"
+              name="partnerCode"
+              label="Partner code (optional)"
+              icon="tag"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="e.g. NACOS"
+              maxLength={20}
+              value={partnerCode}
+              aria-invalid={!!partnerError || lookup.status === "error"}
+              onChange={(event) => {
+                setPartnerCode(normalizePartnerCode(event.target.value));
+                onPartnerCodeChange?.();
+              }}
+            />
+            <PartnerCodeStatus
+              lookup={lookup}
+              serverError={partnerError}
+            />
+          </div>
+        )}
       </fieldset>
 
       <div className="mt-1 flex items-center gap-3">

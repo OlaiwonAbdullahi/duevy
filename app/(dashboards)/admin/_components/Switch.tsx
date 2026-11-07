@@ -7,10 +7,15 @@ export function Switch({
   checked,
   onChange,
   label,
+  disabled = false,
+  describedBy,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label: string;
+  disabled?: boolean;
+  /** id of the text explaining the setting (or why it's disabled). */
+  describedBy?: string;
 }) {
   return (
     <button
@@ -18,9 +23,11 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      aria-describedby={describedBy}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300",
+        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-50",
         checked ? "bg-brand" : "bg-cloud",
       )}
     >

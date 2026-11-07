@@ -23,6 +23,7 @@ import {
   MoneyAdd01Icon,
   ArrowReloadHorizontalIcon,
   DiscountTag01Icon,
+  BankIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { useRepOverview, useSpaceLedger, useSpacePartner } from "@/lib/api/queries";
@@ -51,6 +52,7 @@ import { FEATURES } from "@/lib/features";
 const LEDGER_META: Record<LedgerEntryType, { icon: HugeIcon; label: string }> = {
   due_payment: { icon: Invoice01Icon, label: "Due payment" },
   manual_credit: { icon: MoneyAdd01Icon, label: "Credit" },
+  direct_deposit: { icon: BankIcon, label: "Direct deposit" },
   payout: { icon: MoneySend01Icon, label: "Withdrawal" },
   payout_fee: { icon: ReceiptDollarIcon, label: "Withdrawal fee" },
   payout_reversal: { icon: ArrowReloadHorizontalIcon, label: "Withdrawal reversed" },
@@ -92,7 +94,7 @@ export function RepOverview() {
           <span className="inline-flex w-fit items-center rounded-full bg-cloud px-3 py-1 text-[11px] font-semibold text-brand">
             Rep dashboard
           </span>
-          {spacePartner?.active && (
+          {FEATURES.partners && spacePartner?.active && (
             <Link
               href="/dashboard/manage"
               className="inline-flex w-fit items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/15"
@@ -286,7 +288,9 @@ export function RepOverview() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-ink">
-                          {entry.description || meta.label}
+                          {entry.type === "direct_deposit" && entry.description
+                            ? `From ${entry.description}`
+                            : entry.description || meta.label}
                         </p>
                         <p className="truncate text-xs text-ink-soft">
                           {meta.label} · {timeAgo(entry.createdAt)}

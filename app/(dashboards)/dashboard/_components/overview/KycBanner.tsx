@@ -8,88 +8,86 @@ import {
   ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 import { useKycStatus } from "@/lib/api/queries";
-import type { SpaceKycStatus } from "@/lib/api/types";
+import type { KycState, SpaceKycStatus } from "@/lib/api/types";
+import { joinNouns, kycChecks, kycLockedUntil, type KycCheckKey } from "@/lib/kyc";
 
 type Notice = { tone: "action" | "waiting"; title: string; body: string; cta?: string };
 
+/** What the rep has to do about their own checks, most urgent first; null once nothing is theirs to do. */
+function ownNotice(kyc: KycState): Notice | null {
+  if (kyc.canCollect) return null;
+  const checks = kycChecks(kyc);
+  const locked = kycLockedUntil(kyc);
+
+  const rejected = checks.find((c) => c.state === "rejected" && !(c.key === "nin" && locked));
+  if (rejected) {
+    const copy: Record<KycCheckKey, { title: string; body: string; cta: string }> = {
+      studentId: {
+        title: "Your student ID wasn't accepted",
+        body: "Upload a clearer photo or scan of your student ID card.",
+        cta: "Upload again",
+      },
+      liveness: {
+        title: "Your face capture wasn't accepted",
+        body: "Take a new photo of your face in good light.",
+        cta: "Retake",
+      },
+      nin: {
+        title: "Your NIN couldn't be verified",
+        body: "Check your NIN and date of birth, then try again.",
+        cta: "Try again",
+      },
+    };
+    const c = copy[rejected.key];
+    return { tone: "action", title: c.title, body: rejected.note ?? c.body, cta: c.cta };
+  }
+
+  const todo = checks.filter((c) => c.state === "todo" && !(c.key === "nin" && locked));
+  if (todo.length > 0) {
+    const nothingSent = checks.every((c) => c.state === "todo");
+    return {
+      tone: "action",
+      title: nothingSent ? "Verify to start collecting" : "Finish verification to start collecting",
+      body: nothingSent
+        ? `Students can't pay your dues until you verify. You'll need ${joinNouns(todo)}. It takes about two minutes.`
+        : `Still to do: ${joinNouns(todo)}.`,
+      cta: nothingSent ? "Start verification" : "Continue",
+    };
+  }
+
+  if (locked) {
+    return {
+      tone: "waiting",
+      title: "NIN checks are paused",
+      body: "Too many failed attempts. You can try again in 24 hours.",
+    };
+  }
+
+  const pending = checks.filter((c) => c.state === "pending");
+  return {
+    tone: "waiting",
+    title: "Verification in review",
+    body: `A Duevy admin is reviewing ${joinNouns(pending)}. Dues can be published once it's approved.`,
+  };
+}
+
 /**
- * What's still blocking the space, in the order the rep has to deal with it.
- * A space collects once Bachs verifies the lead's identity (NIN) AND an admin
- * approves their student ID; withdrawals can additionally wait on Bachs.
+ * What's still blocking the space. A space collects once its lead rep passes
+ * every check the KYC policy requires (`canCollect`); each rep also verifies
+ * themselves before they can act for it.
  */
 function noticeFor(s: SpaceKycStatus, isLead: boolean): Notice | null {
-  if (s.canWithdraw) return null;
-
-  if (!isLead) {
-    return s.canCollect
-      ? null
-      : {
-          tone: "waiting",
-          title: "Your department can't collect payments yet",
-          body: "Your lead rep needs to finish verification before dues can be published and paid.",
-        };
-  }
-
-  const identityStarted = s.kycStatus === "pending" && !!s.providerReference;
-  const locked = s.retryLockedUntil && new Date(s.retryLockedUntil) > new Date();
-
-  if (s.kycStatus === "rejected") {
-    return {
-      tone: "action",
-      title: "Identity verification failed",
-      body: locked
-        ? "Too many attempts — you can try again in 24 hours."
-        : s.rejectionReason ?? "Check your NIN and date of birth, then try again.",
-      cta: locked ? undefined : "Try again",
-    };
-  }
-  if (s.kycStatus !== "verified" && !identityStarted) {
-    return {
-      tone: "action",
-      title: "Verify your identity to start collecting",
-      body: "Students can't pay your dues until you verify with your NIN and upload your student ID. It takes about two minutes.",
-      cta: "Start verification",
-    };
-  }
-  if (s.studentId.status === "rejected") {
-    return {
-      tone: "action",
-      title: "Your student ID was rejected",
-      body: s.studentId.reviewNote ?? "Upload a clearer photo of your student ID card.",
-      cta: "Upload again",
-    };
-  }
-  if (s.studentId.status === null) {
-    return {
-      tone: "action",
-      title: "Upload your student ID",
-      body: "Your space can collect once an admin approves your student ID card.",
-      cta: "Upload ID",
-    };
-  }
-  if (s.requirementsDue.length > 0) {
-    return {
-      tone: "action",
-      title: "Our payment partner needs more information",
-      body: "Send the requested document so withdrawals can open.",
-      cta: "See what's needed",
-    };
-  }
+  if (isLead) return ownNotice(s.mine);
+  const own = ownNotice(s.mine);
+  if (own?.tone === "action") return own;
   if (!s.canCollect) {
     return {
       tone: "waiting",
-      title: "Verification in review",
-      body:
-        s.kycStatus !== "verified"
-          ? "We're confirming your identity. Dues can be published once it's approved."
-          : "An admin is reviewing your student ID. Dues can be published once it's approved.",
+      title: "Your department can't collect payments yet",
+      body: "Your lead rep needs to finish verification before dues can be published and paid.",
     };
   }
-  return {
-    tone: "waiting",
-    title: "Withdrawals open soon",
-    body: "You can collect dues now. Withdrawals unlock once our payment partner finishes its checks.",
-  };
+  return own;
 }
 
 export function KycBanner({ spaceId, isLead }: { spaceId: string; isLead: boolean }) {
